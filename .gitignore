@@ -1,0 +1,13 @@
+# Ambiente virtual
+venv/
+
+# Arquivos de configuração do PyCharm
+.idea/
+
+# Arquivos Python compilados
+__pycache__/
+*.pyc
+
+# Arquivos do sistema
+.DS_Store
+Thumbs.db
