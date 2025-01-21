@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mapa de Rede</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+
+
+        .btn {
+        display: inline-block;
+        padding: 8px 16px;
+        font-size: 16px;
+        font-weight: bold;
+        text-align: center;
+        text-decoration: none;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+
+    .btn-primary {
+        background-color: #007bff;
+        color: #fff;
+        border: 1px solid #007bff;
+    }
+
+    .btn-primary:hover {
+        background-color: #0056b3;
+        border-color: #004085;
+    }
+
+        /* Estilo geral do modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            width: 350px;
+            z-index: 1000;
+        }
+        .modal.show {
+            display: block;
+        }
+
+        /* Título do modal */
+        .modal-header {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        /* Corpo do modal */
+        .modal-body {
+            margin-bottom: 20px;
+        }
+
+        .modal-body .form-group {
+            margin-bottom: 15px;
+        }
+
+        /* Estilo para os inputs */
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: #555;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+
+        .form-group input:focus {
+            border-color: #007bff;
+            outline: none;
+        }
+
+        /* Estilo do botão de fechar */
+        .modal-footer {
+            text-align: right;
+        }
+
+        .close-modal {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .close-modal:hover {
+            background-color: #0056b3;
+        }
+
+        /* Estilo de fundo para o efeito de overlay */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+            display: none;
+        }
+        #mapa {
+            width: 100%;
+            height: 1024px;
+            border: 1px solid #ccc;
+            background-color: #ecf0f0;
+        }
+
+
+        .equipamento {
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .equipamento:hover {
+            cursor: pointer;
+            stroke: #007bff;
+            stroke-width: 4px;
+        }
+        .porta {
+            fill: #007bff;
+            cursor: pointer;
+        }
+        .porta:hover {
+            fill: #0056b3;
+        }
+
+        /* Estilo para o modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            width: 350px;
+            z-index: 1000;
+        }
+        .modal.show {
+            display: block;
+        }
+        .modal-header {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .modal-body {
+            margin-bottom: 20px;
+        }
+        .modal-footer {
+            text-align: right;
+        }
+        .close-modal {
+            background-color: #ff4d4d;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .close-modal:hover {
+            background-color: #cc0000;
+        }
+
+        /* Estilo de fundo para o efeito de overlay */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+            display: none; /* Inicialmente oculto */
+        }
+/* Estilo do modal de conexão */
+.modal-conexao {
+    display: none;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%); /* Centraliza o modal */
+    background-color: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    width: 350px;
+    z-index: 1000;
+}
+
+/* Tornar o modal visível */
+.modal-conexao.show {
+    display: block;
+}
+
+/* Cabeçalho do modal */
+.modal-conexao-header {
+    font-size: 18px;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+/* Corpo do modal */
+.modal-conexao-body {
+    margin-bottom: 20px;
+}
+
+/* Rodapé do modal */
+.modal-conexao-footer {
+    text-align: right;
+}
+
+/* Estilo do botão de fechar */
+.close-conexao-modal {
+    background-color: #ff4d4d;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.close-conexao-modal:hover {
+    background-color: #cc0000;
+}
+
+/* Estilo de fundo para o efeito de overlay */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+    display: none; /* Inicialmente oculto */
+}
+    </style>
+</head>
+<body>
+
+<div style="display: flex; align-items: center; gap: 10px;">
+    <select id="empresa-selector">
+        <option value="">Selecione a Empresa</option>
+        {% for empresa in empresas %}
+            <option value="{{ empresa.id }}">{{ empresa.nome }}</option>
+        {% endfor %}
+    </select>
+
+    <!-- Botão de voltar para a página inicial -->
+    <a href="/" class="btn btn-primary">Fechar Mapa</a>
+</div>
+
+
+<div id="mapa"></div>
+
+<!-- Modal de Detalhes do Equipamento -->
+<div class="modal-overlay" id="modalOverlay"></div>
+<div class="modal" id="modalEquipamento">
+  <div class="modal-header">
+    Equipamento {nome}
+  </div>
+  <div class="modal-body">
+    <form>
+      <div class="form-group">
+        <label for="input-ip">IP</label>
+        <input type="text" class="form-control" id="input-ip" readonly>
+      </div>
+      <div class="form-group">
+        <label for="input-usuario">Usuário</label>
+        <input type="text" class="form-control" id="input-usuario" readonly>
+      </div>
+      <div class="form-group">
+        <label for="input-senha">Senha</label>
+        <input type="text" class="form-control" id="input-senha" readonly>
+      </div>
+      <div class="form-group">
+        <label for="input-porta">Porta</label>
+        <input type="text" class="form-control" id="input-porta" readonly>
+      </div>
+      <div class="form-group">
+        <label for="input-protocolo">Protocolo</label>
+        <input type="text" class="form-control" id="input-protocolo" readonly>
+      </div>
+    </form>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="close-modal" id="closeModal">Fechar</button>
+  </div>
+</div>
+
+<!-- Modal de Detalhes de Conexão -->
+<div class="modal-overlay" id="modalOverlayConexao"></div>
+<div class="modal-conexao" id="modalConexao">
+  <div class="modal-conexao-header">
+    Conexão {tipo}
+  </div>
+  <div class="modal-conexao-body">
+    <p><strong>Tipo:</strong> {tipo}</p>
+    <p><strong>Velocidade:</strong> {velocidade}</p>
+    <p><strong>Fonte:</strong> {fonte}</p>
+    <p><strong>Destino:</strong> {destino}</p>
+  </div>
+  <div class="modal-conexao-footer">
+    <button type="button" class="close-conexao-modal" id="closeConexaoModal">Fechar</button>
+  </div>
+</div>
+
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<script>
+    const nodes = {{ nodes|safe }};
+    const links = {{ links|safe }};
+    const mapa = d3.select('#mapa');
+
+    function carregarPosicoes() {
+        const posicoesSalvas = localStorage.getItem('posicoesEquipamentos');
+        if (posicoesSalvas) {
+            const posicoes = JSON.parse(posicoesSalvas);
+            nodes.forEach((node) => {
+                const posicaoSalva = posicoes.find(p => p.id === node.id);
+                if (posicaoSalva) {
+                    node.x = posicaoSalva.x;
+                    node.y = posicaoSalva.y;
+                }
+            });
+        }
+    }
+
+    function salvarPosicoes() {
+        const posicoes = nodes.map(node => ({
+            id: node.id,
+            x: node.x,
+            y: node.y
+        }));
+        localStorage.setItem('posicoesEquipamentos', JSON.stringify(posicoes));
+    }
+
+    function renderMapa() {
+        carregarPosicoes();
+
+        const empresaId = document.getElementById('empresa-selector').value;
+
+        // Filtrar os equipamentos pela empresa selecionada
+        const equipamentosFiltrados = empresaId
+            ? nodes.filter(equipamento => equipamento.empresa === parseInt(empresaId))
+            : nodes;
+
+        mapa.selectAll('*').remove();
+
+        const width = mapa.node().offsetWidth || 800;
+        const height = mapa.node().offsetHeight || 600;
+
+        const svg = mapa.append('svg')
+            .attr('width', width)
+            .attr('height', height);
+
+        const g = svg.append('g');
+
+        const zoom = d3.zoom()
+            .scaleExtent([0.5, 3])
+            .on('zoom', (event) => {
+                g.attr('transform', event.transform);
+            });
+
+        svg.call(zoom);
+
+        const drag = d3.drag()
+            .on('start', dragStarted)
+            .on('drag', dragged)
+            .on('end', dragEnded);
+
+        // Renderizar conexões
+        const filteredConexoes = links.filter(conexao =>
+            equipamentosFiltrados.some(eq => eq.id === conexao.source) &&
+            equipamentosFiltrados.some(eq => eq.id === conexao.target)
+        );
+
+// Renderizar conexões
+const linhasConexao = g.selectAll('.linha-conexao')
+    .data(filteredConexoes)
+    .enter()
+    .append('line')
+    .attr('class', 'linha-conexao')
+    .attr('x1', d => nodes.find(node => node.id === d.source).x)
+    .attr('y1', d => nodes.find(node => node.id === d.source).y)
+    .attr('x2', d => nodes.find(node => node.id === d.target).x)
+    .attr('y2', d => nodes.find(node => node.id === d.target).y)
+    .attr('stroke', d => {
+        switch(d.tipo) {
+            case 'Fibra': return 'blue';
+            case 'Eletrico': return 'green';
+            case 'Radio': return 'orange';
+            default: return 'gray';
+        }
+    })
+    .attr('stroke-width', d => d.speed === '10G' ? 4 : 2)
+
+    // Evento para mudar a cor da linha ao passar o mouse
+    .on('mouseover', function(event, d) {
+        d3.select(this)
+            .attr('stroke', '#ff5733')
+            .attr('stroke-width', 3);
+        mostrarInformacoesConexao(d);
+    })
+
+    // Evento para restaurar a cor da linha ao sair o mouse
+    .on('mouseout', function(event, d) {
+        d3.select(this)
+            .attr('stroke', d => {
+                switch(d.tipo) {
+                    case 'Fibra': return 'blue';
+                    case 'Eletrico': return 'green';
+                    case 'Radio': return 'orange';
+                    default: return 'gray';
+                }
+            })
+            .attr('stroke-width', d => d.speed === '10G' ? 4 : 2);
+
+
+    })
+    // Evento de clique para mostrar detalhes da conexão
+    .on('click', function(event, d) {
+        mostrarInformacoesConexao(d);
+    });
+
+// Função para mostrar informações da conexão no modal
+function mostrarInformacoesConexao(d) {
+    // Encontrar os equipamentos de origem e destino
+    const equipamentoFonte = nodes.find(node => node.id === d.source);
+    const equipamentoDestino = nodes.find(node => node.id === d.target);
+
+    // Encontrar as portas associadas aos equipamentos (supondo que "d.source" e "d.target" contenham IDs das portas)
+    const portaFonte = d.source;  // Aqui você pode ajustar para obter a porta correta associada
+    const portaDestino = d.target;  // Ajuste conforme necessário
+
+    // Definindo o título e o conteúdo do modal
+    document.querySelector('.modal-conexao-header').textContent = `Conexão ${d.tipo}`;
+    document.querySelector('.modal-conexao-body').innerHTML = `
+        <p><strong>Velocidade:</strong> ${d.speed}</p>
+        <p><strong>Origem:</strong> ${equipamentoFonte.nome} (Porta: ${portaFonte})</p>
+        <p><strong>Destino:</strong> ${equipamentoDestino.nome} (Porta: ${portaDestino})</p>
+    `;
+
+    // Exibe o modal e a sobreposição de fundo
+    document.getElementById('modalConexao').classList.add('show');
+    document.getElementById('modalOverlayConexao').style.display = 'block';
+}
+
+// Fechar o modal de conexão
+document.getElementById('closeConexaoModal').addEventListener('click', () => {
+    document.getElementById('modalConexao').classList.remove('show');
+    document.getElementById('modalOverlayConexao').style.display = 'none';
+});
+
+
+        // Renderizar equipamentos
+        const equipamentosG = g.selectAll('.equipamento')
+            .data(equipamentosFiltrados)
+            .enter().append('g')
+            .attr('class', 'equipamento')
+            .attr('transform', d => `translate(${d.x},${d.y})`)
+            .call(drag)
+            .on('click', showModal);
+
+        equipamentosG.append('circle')
+            .attr('r', 20)
+            .attr('fill', d => d.status === 'Ativo' ? 'green' : 'red');
+
+        equipamentosG.append('text')
+            .text(d => d.nome)
+            .attr('x', 25)
+            .attr('y', 5)
+            .style('font-size', '12px')
+            .style('pointer-events', 'none');
+
+        // Função de arrasto
+        function dragStarted(event, d) {
+            d3.select(this).raise().classed('active', true);
+        }
+
+        function dragged(event, d) {
+            d.x = event.x;
+            d.y = event.y;
+            d3.select(this).attr('transform', `translate(${d.x},${d.y})`);
+            g.selectAll('.linha-conexao')
+                .filter(l => l.source === d.id || l.target === d.id)
+                .attr('x1', l => nodes.find(node => node.id === l.source).x)
+                .attr('y1', l => nodes.find(node => node.id === l.source).y)
+                .attr('x2', l => nodes.find(node => node.id === l.target).x)
+                .attr('y2', l => nodes.find(node => node.id === l.target).y);
+        }
+
+        function dragEnded(event, d) {
+            d3.select(this).classed('active', false);
+            salvarPosicoes();
+        }
+
+        function showModal(event, d) {
+            document.querySelector('.modal-header').textContent = `Equipamento ${d.nome}`;
+            document.getElementById('input-ip').value = d.ip || '';
+            document.getElementById('input-usuario').value = d.usuario || '';
+            document.getElementById('input-senha').value = d.senha || '';
+            document.getElementById('input-porta').value = d.porta || '';
+            document.getElementById('input-protocolo').value = d.protocolo || '';
+
+            document.getElementById('modalEquipamento').classList.add('show');
+            document.getElementById('modalOverlay').style.display = 'block';
+        }
+
+        // Fechar modal
+        document.getElementById('closeModal').addEventListener('click', () => {
+            document.getElementById('modalEquipamento').classList.remove('show');
+            document.getElementById('modalOverlay').style.display = 'none';
+        });
+
+        // Renderiza as conexões
+        svg.selectAll('.linha-conexao')
+            .data(filteredConexoes)
+            .enter()
+            .append('line')
+            .attr('x1', d => nodes.find(node => node.id === d.source).x)
+            .attr('y1', d => nodes.find(node => node.id === d.source).y)
+            .attr('x2', d => nodes.find(node => node.id === d.target).x)
+            .attr('y2', d => nodes.find(node => node.id === d.target).y)
+            .attr('stroke', d => getCorConexao(d.tipo))
+            .attr('stroke-width', d => d.speed === '10G' ? 4 : 2);
+    }
+
+    renderMapa();
+
+    // Escutando a mudança na seleção da empresa para renderizar novamente o mapa
+    document.getElementById('empresa-selector').addEventListener('change', renderMapa);
+</script>
+
+
+</body>
+</html>

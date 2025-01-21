@@ -1,0 +1,17 @@
+{% extends "/base.html" %}
+
+{% block nav-global %}
+{{ block.super }}
+<ul class="nav-global">
+    {% for link in custom_menu_links %}
+        <li>
+            <a href="{{ link.url }}" class="nav-link">
+                {% if link.icon %}
+                    <i class="{{ link.icon }}"></i>
+                {% endif %}
+                {{ link.name }}
+            </a>
+        </li>
+    {% endfor %}
+</ul>
+{% endblock %}
