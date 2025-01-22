@@ -73,6 +73,9 @@ def mapa(request):
         'links': links,        # Links de conexão entre equipamentos para o JS
     }
 
+    print("Nodes:", nodes)
+    print("Links:", links)
+
     return render(request, 'appisp/mapa.html', context)
 
 

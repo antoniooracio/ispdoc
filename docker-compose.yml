@@ -8,8 +8,8 @@ services:
       restart: always
       environment:
         MYSQL_ROOT_PASSWORD: Anas2108@@
-        MYSQL_DATABASE: backup_db
-        MYSQL_USER: backup_user
+        MYSQL_DATABASE: ispdoc_db
+        MYSQL_USER: ispdoc_user
         MYSQL_PASSWORD: Anas2108@@
       ports:
         - "33006:3306"
@@ -25,13 +25,13 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "8000:8000"
+      - "9000:9000"
     volumes:
       - .:/app
     environment:
       - DEBUG=True
     entrypoint: ["./entrypoint.sh"]
-    command: python manage.py runserver 0.0.0.0:8000
+    command: python manage.py runserver 0.0.0.0:9000
     networks:
       - mariadb_network
     depends_on:

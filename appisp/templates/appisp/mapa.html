@@ -449,8 +449,8 @@ function mostrarInformacoesConexao(d) {
     const equipamentoDestino = nodes.find(node => node.id === d.target);
 
     // Nome das portas (vindo diretamente de d.nome e d.conexao.nome)
-    const portaFonte = d.nome || 'N/A';  // Nome da porta de origem
-    const portaDestino = d.conexao_nome || 'N/A';  // Nome da porta de destino
+    const portaFonte = d.porta_origem || 'N/A';  // Nome da porta de origem
+    const portaDestino = d.porta_destino || 'N/A';  // Nome da porta de destino
 
     // Encontrar as portas associadas aos equipamentos (supondo que "d.source" e "d.target" contenham IDs das portas)
     // const portaFonte = d.source;  // Aqui você pode ajustar para obter a porta correta associada
