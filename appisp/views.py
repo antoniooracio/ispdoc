@@ -2,7 +2,8 @@ from django.shortcuts import render
 from dal import autocomplete
 from django.http import JsonResponse
 from .models import Equipamento, Porta, Empresa
-
+from django.db.models import Prefetch
+from typing import Any
 
 def atualizar_posicao(request, equipamento_id):
     if request.method == 'POST':
@@ -75,18 +76,25 @@ def mapa(request):
     return render(request, 'appisp/mapa.html', context)
 
 
-# Rota para retornar os dados em formato JSON (se necessário)
-def mapa_dados(request):
-    equipamentos = Equipamento.objects.prefetch_related('portas__conexao').all()
+# Rota para retornar os dados em formato JSON
+def mapa_dados(request) -> JsonResponse:
+    # Busca os equipamentos e prefetch das portas e conexões
+    equipamentos = Equipamento.objects.prefetch_related(
+        Prefetch('portas', queryset=Porta.objects.select_related('conexao__equipamento'))
+    ).all()
 
+    # Inicializa as listas de nodes e links
     nodes = []
     links = []
 
+    # Itera pelos equipamentos para construir os nodes e links
     for equipamento in equipamentos:
+        # Adiciona informações do equipamento ao nó
         nodes.append({
             'id': equipamento.id,
             'nome': equipamento.nome,
             'ip': equipamento.ip,
+            # Remova 'usuario' e 'senha' se forem sensíveis
             'usuario': equipamento.usuario,
             'senha': equipamento.senha,
             'porta': equipamento.porta,
@@ -98,17 +106,19 @@ def mapa_dados(request):
             'tipo': equipamento.tipo,
         })
 
+        # Adiciona informações de conexões ao link
         for porta in equipamento.portas.all():
-            if porta.conexao:
+            if porta.conexao and porta.conexao.equipamento:
                 links.append({
                     'source': porta.equipamento.id,
                     'target': porta.conexao.equipamento.id,
-                    'porta_origem': porta.nome,
-                    'porta_destino': porta.conexao.nome,
+                    "nome_origem": porta.nome,
+                    "nome_destino": porta.conexao.nome if porta.conexao else None,
                     'tipo': porta.tipo,
                     'speed': porta.speed,
                 })
 
+    # Retorna o JSON com os dados
     return JsonResponse({'nodes': nodes, 'links': links})
 
 class EquipamentoAutocomplete(autocomplete.Select2QuerySetView):

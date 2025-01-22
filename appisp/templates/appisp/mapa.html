@@ -268,7 +268,7 @@
     </select>
 
     <!-- Botão de voltar para a página inicial -->
-    <a href="/" class="btn btn-primary">Fechar Mapa</a>
+    <a href="/admin/" class="btn btn-primary">Fechar Mapa</a>
 </div>
 
 
@@ -435,9 +435,8 @@ const linhasConexao = g.selectAll('.linha-conexao')
                 }
             })
             .attr('stroke-width', d => d.speed === '10G' ? 4 : 2);
-
-
     })
+
     // Evento de clique para mostrar detalhes da conexão
     .on('click', function(event, d) {
         mostrarInformacoesConexao(d);
@@ -449,16 +448,20 @@ function mostrarInformacoesConexao(d) {
     const equipamentoFonte = nodes.find(node => node.id === d.source);
     const equipamentoDestino = nodes.find(node => node.id === d.target);
 
+    // Nome das portas (vindo diretamente de d.nome e d.conexao.nome)
+    const portaFonte = d.nome || 'N/A';  // Nome da porta de origem
+    const portaDestino = d.conexao_nome || 'N/A';  // Nome da porta de destino
+
     // Encontrar as portas associadas aos equipamentos (supondo que "d.source" e "d.target" contenham IDs das portas)
-    const portaFonte = d.source;  // Aqui você pode ajustar para obter a porta correta associada
-    const portaDestino = d.target;  // Ajuste conforme necessário
+    // const portaFonte = d.source;  // Aqui você pode ajustar para obter a porta correta associada
+    // const portaDestino = d.target;  // Ajuste conforme necessário
 
     // Definindo o título e o conteúdo do modal
     document.querySelector('.modal-conexao-header').textContent = `Conexão ${d.tipo}`;
     document.querySelector('.modal-conexao-body').innerHTML = `
         <p><strong>Velocidade:</strong> ${d.speed}</p>
-        <p><strong>Origem:</strong> ${equipamentoFonte.nome} (Porta: ${portaFonte})</p>
-        <p><strong>Destino:</strong> ${equipamentoDestino.nome} (Porta: ${portaDestino})</p>
+        <p><strong>Fonte:</strong> ${equipamentoFonte.nome} (${portaFonte})</p>
+        <p><strong>Destino:</strong> ${equipamentoDestino.nome} (${portaDestino})</p>
     `;
 
     // Exibe o modal e a sobreposição de fundo
