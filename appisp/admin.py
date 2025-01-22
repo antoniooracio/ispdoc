@@ -8,6 +8,24 @@ from django.contrib.admin import AdminSite
 from .forms import PortaForm
 from .models import Empresa, Pop, Fabricante, Modelo, Equipamento, Porta
 from .views import mapa
+from django.contrib.admin import SimpleListFilter
+
+
+# Filtro personalizado para empresa
+class EmpresaFilter(SimpleListFilter):
+    title = 'Empresa'
+    parameter_name = 'empresa'
+
+    def lookups(self, request, model_admin):
+        # Retorna uma lista de empresas disponíveis
+        empresas = Empresa.objects.all()
+        return [(empresa.id, empresa.nome) for empresa in empresas]
+
+    def queryset(self, request, queryset):
+        # Filtra as portas com base na empresa selecionada
+        if self.value():
+            return queryset.filter(equipamento__empresa__id=self.value())
+        return queryset
 
 
 @admin.register(Porta)
@@ -15,7 +33,9 @@ class PortaAdmin(admin.ModelAdmin):
     form = PortaForm
     list_display = ('nome', 'equipamento', 'conexao', 'speed', 'tipo')
     search_fields = ('nome', 'equipamento__nome', 'conexao__nome')
-    list_filter = ('equipamento', 'speed', 'tipo')
+    list_filter = (EmpresaFilter, 'equipamento', 'speed', 'tipo')
+
+
 
     def get_fields(self, request, obj=None):
         """Reordena os campos para exibir 'empresa' primeiro."""

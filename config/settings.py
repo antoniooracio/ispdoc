@@ -32,6 +32,8 @@ ALLOWED_HOSTS = ['ispdoc.idxdatacenters.com.br', 'localhost', '127.0.0.1']
 
 INSTALLED_APPS = [
     'jazzmin',
+    'django_admin_listfilter_dropdown',
+    'django_filters',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
