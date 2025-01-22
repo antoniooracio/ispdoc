@@ -3,7 +3,7 @@
 
 # Esperar o banco de dados estar disponível
 echo "Aguardando o banco de dados..."
-while ! nc -z mariadb 3406; do
+while ! nc -z mariadb 3306; do
   sleep 1
 done
 echo "Banco de dados disponível!"
