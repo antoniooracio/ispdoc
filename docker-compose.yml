@@ -30,7 +30,7 @@ services:
       - .:/app
     environment:
       - DEBUG=True
-    entrypoint: ["./entrypoint.sh"]
+    #entrypoint: ["./entrypoint.sh"]
     command: python manage.py runserver 0.0.0.0:9000
     networks:
       - mariadb_network
