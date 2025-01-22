@@ -413,29 +413,77 @@ const linhasConexao = g.selectAll('.linha-conexao')
             default: return 'gray';
         }
     })
-    .attr('stroke-width', d => d.speed === '10G' ? 4 : 2)
+    //.attr('stroke-width', d => d.speed === '10G' ? 4 : 2)
+    .attr('stroke-width', d => {
+        const widthMap = {
+            '10G': 3,
+            '20G': 4,
+            '40G': 5,
+            '100G': 6
+        };
+        return widthMap[d.speed] || 2; // Retorna 2 como valor padrão se a velocidade não estiver no mapa
+    })
 
     // Evento para mudar a cor da linha ao passar o mouse
-    .on('mouseover', function(event, d) {
-        d3.select(this)
-            .attr('stroke', '#ff5733')
-            .attr('stroke-width', 3);
-        mostrarInformacoesConexao(d);
-    })
-
-    // Evento para restaurar a cor da linha ao sair o mouse
-    .on('mouseout', function(event, d) {
-        d3.select(this)
-            .attr('stroke', d => {
-                switch(d.tipo) {
-                    case 'Fibra': return 'blue';
-                    case 'Eletrico': return 'green';
-                    case 'Radio': return 'orange';
-                    default: return 'gray';
-                }
-            })
-            .attr('stroke-width', d => d.speed === '10G' ? 4 : 2);
-    })
+//  Renderizar conexões
+//  const linhasConexao = g.selectAll('.linha-conexao')
+//    .data(filteredConexoes)
+//    .enter()
+//    .append('line')
+//    .attr('class', 'linha-conexao')
+//    .attr('x1', d => nodes.find(node => node.id === d.source).x)
+//    .attr('y1', d => nodes.find(node => node.id === d.source).y)
+//    .attr('x2', d => nodes.find(node => node.id === d.target).x)
+//    .attr('y2', d => nodes.find(node => node.id === d.target).y)
+//    .attr('stroke', d => {
+//        switch(d.tipo) {
+//            case 'Fibra': return 'blue';
+//            case 'Eletrico': return 'green';
+//            case 'Radio': return 'orange';
+//            default: return 'gray';
+//        }
+//    })
+//    //.attr('stroke-width', d => d.speed === '10G' ? 4 : 2)
+//    .attr('stroke-width', d => {
+//        const widthMap = {
+//            '10G': 3,
+//            '20G': 4,
+//            '40G': 5,
+//            '100G': 6
+//        };
+//        return widthMap[d.speed] || 2; // Retorna 2 como valor padrão se a velocidade não estiver no mapa
+//    })
+//
+//    // Evento para mudar a cor da linha ao passar o mouse
+//    .on('mouseover', function(event, d) {
+//        d3.select(this)
+//            .attr('stroke', '#ff5733')
+//            .attr('stroke-width', 3);
+//        mostrarInformacoesConexao(d);
+//    })
+//
+//    // Evento para restaurar a cor da linha ao sair o mouse
+//    .on('mouseout', function(event, d) {
+//        d3.select(this)
+//            .attr('stroke', d => {
+//                switch(d.tipo) {
+//                    case 'Fibra': return 'blue';
+//                    case 'Eletrico': return 'green';
+//                    case 'Radio': return 'orange';
+//                    default: return 'gray';
+//                }
+//            })
+//            //.attr('stroke-width', d => d.speed === '10G' ? 4 : 2);
+//            .attr('stroke-width', d => {
+//                const widthMap = {
+//                    '10G': 3,
+//                    '20G': 4,
+//                    '40G': 5,
+//                    '100G': 6
+//                };
+//                return widthMap[d.speed] || 2; // Retorna 2 como valor padrão se a velocidade não estiver no mapa
+//            })
+//    })
 
     // Evento de clique para mostrar detalhes da conexão
     .on('click', function(event, d) {
@@ -546,7 +594,16 @@ document.getElementById('closeConexaoModal').addEventListener('click', () => {
             .attr('x2', d => nodes.find(node => node.id === d.target).x)
             .attr('y2', d => nodes.find(node => node.id === d.target).y)
             .attr('stroke', d => getCorConexao(d.tipo))
-            .attr('stroke-width', d => d.speed === '10G' ? 4 : 2);
+            //.attr('stroke-width', d => d.speed === '10G' ? 4 : 2);
+            .attr('stroke-width', d => {
+                const widthMap = {
+                    '10G': 3,
+                    '20G': 4,
+                    '40G': 5,
+                    '100G': 6
+                };
+                return widthMap[d.speed] || 2; // Retorna 2 como valor padrão se a velocidade não estiver no mapa
+            });
     }
 
     renderMapa();
