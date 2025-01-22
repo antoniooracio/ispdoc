@@ -1,0 +1,44 @@
+version: '3'
+
+services:
+
+  mariadb:
+      image: mariadb:latest
+      container_name: mariadb-container
+      restart: always
+      environment:
+        MYSQL_ROOT_PASSWORD: Anas2108@@
+        MYSQL_DATABASE: backup_db
+        MYSQL_USER: backup_user
+        MYSQL_PASSWORD: Anas2108@@
+      ports:
+        - "33006:3306"
+      volumes:
+        - db_data:/var/lib/mysql
+        - /etc/localtime:/etc/localtime:ro
+        - /etc/timezone:/etc/timezone:ro
+      networks:
+        - mariadb_network
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+    environment:
+      - DEBUG=True
+    entrypoint: ["./entrypoint.sh"]
+    command: python manage.py runserver 0.0.0.0:8000
+    networks:
+      - mariadb_network
+    depends_on:
+      - mariadb
+
+volumes:
+  db_data:
+
+networks:
+  mariadb_network:
