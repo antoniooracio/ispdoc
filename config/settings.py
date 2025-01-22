@@ -83,9 +83,9 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'ispdoc_db',
-        'USER': 'backup_user',
+        'USER': 'root',
         'PASSWORD': 'Anas2108@@',
-        'HOST': '177.52.216.4',
+        'HOST': '45.177.173.19',
         'PORT': '33006',
     }
 }
