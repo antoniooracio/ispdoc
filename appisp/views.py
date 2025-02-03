@@ -24,6 +24,8 @@ def atualizar_posicao(request, equipamento_id):
 # View Mapa
 @login_required(login_url='/admin/login/')
 def mapa(request):
+    user_is_admin = request.user.groups.filter(name="Admin").exists()
+
     empresas = Empresa.objects.all()
     empresa_id = request.GET.get('empresa', None)  # Pega o parâmetro da empresa na URL
 
@@ -71,15 +73,15 @@ def mapa(request):
 
     # Contexto para enviar para o template
     context = {
-        'empresas': empresas,  # Enviando as empresas para o template
-        'nodes': nodes,        # Dados dos equipamentos (nodes) para o JS
-        'links': links,        # Links de conexão entre equipamentos para o JS
+        'userIsAdmin': user_is_admin,
+        'empresas': empresas,
+        'empresa_id': empresa_id,
+        'nodes': nodes,   # Passando nodes (equipamentos) para o JS
+        'links': links,   # Passando links (conexões) para o JS
     }
 
-    #print("Nodes:", nodes)
-    #print("Links:", links)
-
     return render(request, 'appisp/mapa.html', context)
+
 
 
 # Rota para retornar os dados em formato JSON

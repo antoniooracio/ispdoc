@@ -137,6 +137,7 @@ class Porta(models.Model):
     def __str__(self):
         return f"{self.nome} ({self.equipamento.nome} - {self.speed} - {self.tipo})"
 
+
 # modelo para Blocos de IP
 class BlocoIP(models.Model):
     empresa = models.ForeignKey('Empresa', on_delete=models.CASCADE, related_name='blocos_ip')

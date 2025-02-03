@@ -193,68 +193,68 @@
             z-index: 999;
             display: none; /* Inicialmente oculto */
         }
-/* Estilo do modal de conexão */
-.modal-conexao {
-    display: none;
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%); /* Centraliza o modal */
-    background-color: white;
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    width: 550px;
-    z-index: 1000;
-}
+        /* Estilo do modal de conexão */
+        .modal-conexao {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%); /* Centraliza o modal */
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            width: 550px;
+            z-index: 1000;
+        }
 
-/* Tornar o modal visível */
-.modal-conexao.show {
-    display: block;
-}
+        /* Tornar o modal visível */
+        .modal-conexao.show {
+            display: block;
+        }
 
-/* Cabeçalho do modal */
-.modal-conexao-header {
-    font-size: 18px;
-    font-weight: bold;
-    margin-bottom: 10px;
-}
+        /* Cabeçalho do modal */
+        .modal-conexao-header {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
 
-/* Corpo do modal */
-.modal-conexao-body {
-    margin-bottom: 20px;
-}
+        /* Corpo do modal */
+        .modal-conexao-body {
+            margin-bottom: 20px;
+        }
 
-/* Rodapé do modal */
-.modal-conexao-footer {
-    text-align: right;
-}
+        /* Rodapé do modal */
+        .modal-conexao-footer {
+            text-align: right;
+        }
 
-/* Estilo do botão de fechar */
-.close-conexao-modal {
-    background-color: #ff4d4d;
-    color: white;
-    border: none;
-    padding: 5px 10px;
-    border-radius: 5px;
-    cursor: pointer;
-}
+        /* Estilo do botão de fechar */
+        .close-conexao-modal {
+            background-color: #ff4d4d;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
 
-.close-conexao-modal:hover {
-    background-color: #cc0000;
-}
+        .close-conexao-modal:hover {
+            background-color: #cc0000;
+        }
 
-/* Estilo de fundo para o efeito de overlay */
-.modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(0, 0, 0, 0.5);
-    z-index: 999;
-    display: none; /* Inicialmente oculto */
-}
+        /* Estilo de fundo para o efeito de overlay */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+            display: none; /* Inicialmente oculto */
+        }
     </style>
 </head>
 <body>
@@ -329,7 +329,11 @@
 </div>
 
 <script src="https://d3js.org/d3.v7.min.js"></script>
+
 <script>
+    const userIsAdmin = {{ userIsAdmin|yesno:"true,false" }};
+    console.log(userIsAdmin);  // Verifique se está correto
+
     const nodes = {{ nodes|safe }};
     const links = {{ links|safe }};
     const mapa = d3.select('#mapa');
@@ -489,7 +493,11 @@ const linhasConexao = g.selectAll('.linha-conexao')
 
     // Evento de clique para mostrar detalhes da conexão
     .on('click', function(event, d) {
-        mostrarInformacoesConexao(d);
+        if (userIsAdmin) {
+            mostrarInformacoesConexao(d);
+        } else {
+            alert("Você não tem permissão para visualizar essas informações.");
+        }
     });
 
 // Função para mostrar informações da conexão no modal
@@ -536,7 +544,13 @@ document.getElementById('closeConexaoModal').addEventListener('click', () => {
             .attr('class', 'equipamento')
             .attr('transform', d => `translate(${d.x},${d.y})`)
             .call(drag)
-            .on('click', showModal);
+            .on('click', function(event, d) {
+                if (userIsAdmin) {
+                    showModal(event, d); // Mostra o modal apenas para usuários admin
+                } else {
+                    alert("Você não tem permissão para visualizar essas informações.");
+                }
+            });
 
         equipamentosG.append('circle')
             .attr('r', 20)
@@ -545,9 +559,16 @@ document.getElementById('closeConexaoModal').addEventListener('click', () => {
         equipamentosG.append('text')
             .text(d => d.nome)
             .attr('x', 25)
-            .attr('y', 5)
+            .attr('y', 0)
             .style('font-size', '12px')
             .style('pointer-events', 'none');
+
+        // Adicionar texto para o IP abaixo do nome
+        equipamentosG.append('text')
+            .attr('x', 25)
+            .attr('y', 13) // Distância do IP
+            .style('font-size', '12px')
+            .text(d => d.ip);
 
         // Função de arrasto
         function dragStarted(event, d) {

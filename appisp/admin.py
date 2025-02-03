@@ -57,7 +57,7 @@ class EmpresaFilter(SimpleListFilter):
 class BlocoIPAdmin(admin.ModelAdmin):
     list_display = ('empresa', 'bloco_cidr', 'descricao', 'parent', 'criado_em')
     search_fields = ('bloco_cidr', 'empresa__nome')
-    list_filter = ('empresa',)
+    list_filter = ('empresa', 'parent')
 
 
 @admin.register(EnderecoIP)
