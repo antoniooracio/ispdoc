@@ -272,7 +272,9 @@
 </div>
 
 
-<div id="mapa"></div>
+<div id="mapa">
+    <!-- <img src="/IDX.png" alt="Fundo do Mapa" style="width: 100%; height: 100%; object-fit: cover;"> -->
+</div>
 
 <!-- Modal de Detalhes do Equipamento -->
 <div class="modal-overlay" id="modalOverlay"></div>
@@ -499,6 +501,8 @@ function mostrarInformacoesConexao(d) {
     // Nome das portas (vindo diretamente de d.nome e d.conexao.nome)
     const portaFonte = d.porta_origem || 'N/A';  // Nome da porta de origem
     const portaDestino = d.porta_destino || 'N/A';  // Nome da porta de destino
+    // Encontra Observação
+    const portaObs = d.Obs || 'N/A';  // Nome da porta de destino
 
     // Encontrar as portas associadas aos equipamentos (supondo que "d.source" e "d.target" contenham IDs das portas)
     // const portaFonte = d.source;  // Aqui você pode ajustar para obter a porta correta associada
@@ -510,6 +514,7 @@ function mostrarInformacoesConexao(d) {
         <p><strong>Velocidade:</strong> ${d.speed}</p>
         <p><strong>Fonte:</strong> ${equipamentoFonte.nome} (${portaFonte})</p>
         <p><strong>Destino:</strong> ${equipamentoDestino.nome} (${portaDestino})</p>
+        <p><strong>Obs.:</strong> ${d.Obs} </p>
     `;
 
     // Exibe o modal e a sobreposição de fundo

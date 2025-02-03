@@ -1,4 +1,7 @@
 from django.db import models
+from ipaddress import ip_network
+from django.core.exceptions import ValidationError
+import ipaddress
 
 
 # Modelo de Empresa
@@ -60,7 +63,7 @@ class Equipamento(models.Model):
     ]
 
     nome = models.CharField(max_length=255)
-    ip = models.GenericIPAddressField(unique=True)  # Validação automática de IP
+    ip = models.GenericIPAddressField()
     usuario = models.CharField(max_length=255)
     senha = models.CharField(max_length=255)
     porta = models.PositiveIntegerField()
@@ -69,8 +72,8 @@ class Equipamento(models.Model):
     empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE)  # Vincular à Empresa
     fabricante = models.ForeignKey(Fabricante, on_delete=models.CASCADE)
     modelo = models.ForeignKey(Modelo, on_delete=models.CASCADE)
-    x = models.FloatField()  # Posição X no mapa
-    y = models.FloatField()  # Posição Y no mapa
+    x = models.FloatField(default=20.5)  # Posição X no mapa
+    y = models.FloatField(default=30.5)  # Posição Y no mapa
     tipo = models.CharField(max_length=50)  # Tipo do equipamento (ex: Switch, Roteador)
     status = models.CharField(
         max_length=20,
@@ -83,7 +86,7 @@ class Equipamento(models.Model):
         return f"{self.nome} ({self.ip})"
 
 
-# modelo de Porta
+# Modelo de Porta
 class Porta(models.Model):
     SPEED_CHOICES = [
         ('100M', '100 Mbps'),
@@ -111,6 +114,8 @@ class Porta(models.Model):
     )
     speed = models.CharField(max_length=10, choices=SPEED_CHOICES, default='1G')  # Valor padrão: 1G
     tipo = models.CharField(max_length=10, choices=TIPO_CHOICES, default='Fibra')  # Valor padrão: Fibra
+    observacao = models.TextField()
+
 
     def save(self, *args, **kwargs):
         # Salvamento inicial da instância atual
@@ -131,3 +136,66 @@ class Porta(models.Model):
 
     def __str__(self):
         return f"{self.nome} ({self.equipamento.nome} - {self.speed} - {self.tipo})"
+
+# modelo para Blocos de IP
+class BlocoIP(models.Model):
+    empresa = models.ForeignKey('Empresa', on_delete=models.CASCADE, related_name='blocos_ip')
+    bloco_cidr = models.CharField(max_length=18, unique=True)  # Exemplo: "10.0.0.0/23"
+    descricao = models.CharField(max_length=255, blank=True, null=True)
+    parent = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='sub_blocos')
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    def clean(self):
+        bloco = ipaddress.ip_network(self.bloco_cidr, strict=False)
+
+        # 1. Se o bloco tem um parent, garantir que está dentro do parent
+        if self.parent:
+            parent_bloco = ipaddress.ip_network(self.parent.bloco_cidr, strict=False)
+
+            if bloco not in parent_bloco.subnets(new_prefix=bloco.prefixlen):
+                raise ValidationError(f"O bloco {self.bloco_cidr} não pode ser filho de {self.parent.bloco_cidr}. Deve estar dentro da sub-rede.")
+
+            # 2. Obter todas as sub-redes já cadastradas dentro do parent
+            siblings = BlocoIP.objects.filter(parent=self.parent)
+            existing_blocks = {ipaddress.ip_network(sibling.bloco_cidr) for sibling in siblings}
+
+            # 3. Gerar todas as sub-redes possíveis dentro do parent
+            possible_subnets = set(parent_bloco.subnets(new_prefix=bloco.prefixlen))
+
+            # 4. Criar um conjunto com as sub-redes já ocupadas
+            used_subnets = set()
+            for existing in existing_blocks:
+                used_subnets.update(existing.subnets(new_prefix=existing.prefixlen))
+
+            # 5. Garantir que o novo bloco esteja dentro de um espaço livre
+            if bloco not in possible_subnets:
+                raise ValidationError(f"O bloco {self.bloco_cidr} não é uma subdivisão válida de {self.parent.bloco_cidr}.")
+
+            if bloco in used_subnets:
+                raise ValidationError(f"O bloco {self.bloco_cidr} se sobrepõe com outro bloco já cadastrado.")
+
+        # 6. Verifica se já existe esse bloco na empresa
+        if BlocoIP.objects.filter(empresa=self.empresa, bloco_cidr=self.bloco_cidr).exclude(id=self.id).exists():
+            raise ValidationError(f"O bloco {self.bloco_cidr} já está cadastrado para esta empresa.")
+
+    def save(self, *args, **kwargs):
+        self.clean()  # Chama a validação antes de salvar
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.bloco_cidr} - {self.empresa.nome}"
+
+
+# Modelo de Endereçamento
+class EnderecoIP(models.Model):
+    bloco = models.ForeignKey(BlocoIP, on_delete=models.CASCADE, related_name='enderecos')
+    ip = models.GenericIPAddressField(unique=False)  # Exemplo: "10.0.0.1"
+    equipamento = models.CharField(max_length=255, blank=True, null=True)
+    finalidade = models.TextField(blank=True, null=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('bloco', 'ip')  # Evita que o mesmo IP seja usado duas vezes no mesmo bloco
+
+    def __str__(self):
+        return f"{self.ip} - {self.equipamento if self.equipamento else 'Disponível'}"

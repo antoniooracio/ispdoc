@@ -16,7 +16,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Expõe a porta padrão do Django
-EXPOSE 8000
+EXPOSE 9000
 
 # Comando padrão para iniciar o servidor de desenvolvimento do Django
 CMD ["python", "manage.py", "runserver", "0.0.0.0:9000"]

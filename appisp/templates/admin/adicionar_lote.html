@@ -1,0 +1,89 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block content %}
+
+
+
+<div class="row"></div>
+    <div class="col-12 col-lg-9">
+        <div class="card">
+            <div class="card-body">
+        <form method="post" class="form-horizontal">
+            {% csrf_token %}
+            <!-- {{ form.as_p }} -->
+            <div class="form-group field-tipo">
+                <div class="row">
+                    <div class="col-sm-5 text-left">
+                        <h1>Adicionar Portas em Lote</h1>
+                    </div>
+                </div>
+            </div>
+            <div class="form-group field-tipo">
+                <div class="row">
+                    <div class="col-sm-3 text-left">
+                        {{ form.nome_base.label_tag }}
+                    </div>
+                    <div class="col-sm-7">
+                        {{ form.nome_base }}
+                    </div>
+                </div>
+            </div>
+            <div class="form-group field-tipo">
+                <div class="row">
+                    <div class="col-sm-3 text-left">
+                        {{ form.inicio.label_tag }}
+                    </div>
+                    <div class="col-sm-7">
+                        {{ form.inicio }}
+                    </div>
+                </div>
+            </div>
+            <div class="form-group field-tipo">
+                <div class="row">
+                    <div class="col-sm-3 text-left">
+                        {{ form.quantidade.label_tag }}
+                    </div>
+                    <div class="col-sm-7">
+                        {{ form.quantidade }}
+                    </div>
+                </div>
+            </div>
+            <div class="form-group field-tipo">
+                <div class="row">
+                    <div class="col-sm-3 text-left">
+                        {{ form.equipamento.label_tag }}
+                    </div>
+                    <div class="col-sm-7">
+                        {{ form.equipamento }}
+                    </div>
+                </div>
+            </div>
+            <div class="form-group field-tipo">
+                <div class="row">
+                    <div class="col-sm-3 text-left">
+                        {{ form.tipo.label_tag }}
+                    </div>
+                    <div class="col-sm-7">
+                        {{ form.tipo }}
+                    </div>
+                </div>
+            </div>
+            <div class="form-group field-tipo">
+                <div class="row">
+                    <div class="col-sm-3 text-left">
+                        {{ form.speed.label_tag }}
+                    </div>
+                    <div class="col-sm-7 selection">
+                        {{ form.speed }}
+                    </div>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary">Adicionar</button>
+            <a href="../" class="btn btn-secondary">Cancelar</a>
+        </form>
+        </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

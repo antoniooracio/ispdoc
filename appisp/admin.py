@@ -1,14 +1,39 @@
-from django.contrib import admin
+from django.contrib import admin, messages
+from django import forms
 from django.urls import path
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 from django.contrib.auth.models import Group, User
 from django.contrib.auth.admin import GroupAdmin, UserAdmin
 from django.contrib.admin import AdminSite
+from django.shortcuts import render
+from django.http import HttpResponseRedirect
 from .forms import PortaForm
-from .models import Empresa, Pop, Fabricante, Modelo, Equipamento, Porta
+from .models import Empresa, Pop, Fabricante, Modelo, Equipamento, Porta, BlocoIP, EnderecoIP
 from .views import mapa
 from django.contrib.admin import SimpleListFilter
+
+
+class LoteForm(forms.Form):
+    nome_base = forms.CharField(label="Nome Base", max_length=100)
+    inicio = forms.IntegerField(label="Número Inicial", min_value=1)
+    quantidade = forms.IntegerField(label="Quantidade", min_value=1)
+    equipamento = forms.ModelChoiceField(
+        queryset=Equipamento.objects.all(),
+        label="Equipamento",
+        required=True
+    )
+    tipo = forms.ChoiceField(
+        choices=Porta.TIPO_CHOICES,
+        label="Tipo",
+        required=True
+    )
+    speed = forms.ChoiceField(
+        choices=Porta.SPEED_CHOICES,  # Usa as opções de velocidade do modelo
+        label="Speed",
+        required=True
+    )
+
 
 
 # Filtro personalizado para empresa
@@ -28,6 +53,20 @@ class EmpresaFilter(SimpleListFilter):
         return queryset
 
 
+@admin.register(BlocoIP)
+class BlocoIPAdmin(admin.ModelAdmin):
+    list_display = ('empresa', 'bloco_cidr', 'descricao', 'parent', 'criado_em')
+    search_fields = ('bloco_cidr', 'empresa__nome')
+    list_filter = ('empresa',)
+
+
+@admin.register(EnderecoIP)
+class EnderecoIPAdmin(admin.ModelAdmin):
+    list_display = ('bloco', 'ip', 'equipamento', 'finalidade', 'criado_em')
+    search_fields = ('ip', 'equipamento', 'bloco__bloco_cidr')
+    list_filter = ('bloco__empresa',)
+
+
 @admin.register(Porta)
 class PortaAdmin(admin.ModelAdmin):
     form = PortaForm
@@ -35,6 +74,55 @@ class PortaAdmin(admin.ModelAdmin):
     search_fields = ('nome', 'equipamento__nome', 'conexao__nome')
     list_filter = (EmpresaFilter, 'equipamento', 'speed', 'tipo')
 
+    change_list_template = "admin/porta_changelist.html"  # Personalizamos o template
+
+    # Incluímos o URL da ação personalizada
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path("adicionar-lote/", self.admin_site.admin_view(self.adicionar_lote), name="adicionar_lote"),
+        ]
+        return custom_urls + urls
+
+    # Lógica para criar portas em lote
+    def adicionar_lote(self, request):
+        if request.method == "POST":
+            form = LoteForm(request.POST)
+            if form.is_valid():
+                nome_base = form.cleaned_data["nome_base"]
+                inicio = form.cleaned_data["inicio"]
+                quantidade = form.cleaned_data["quantidade"]
+                equipamento = form.cleaned_data["equipamento"]
+                tipo = form.cleaned_data["tipo"]
+                speed = form.cleaned_data["speed"]
+
+                portas_criadas = []
+                for i in range(inicio, inicio + quantidade):
+                    porta_nome = f"{nome_base}{i}"
+                    porta = Porta(
+                        nome=porta_nome,
+                        equipamento=equipamento,
+                        tipo=tipo,
+                        speed=speed
+                    )
+                    porta.save()
+                    portas_criadas.append(porta_nome)
+
+                self.message_user(
+                    request,
+                    f"Portas criadas com sucesso: {', '.join(portas_criadas)}",
+                    messages.SUCCESS
+                )
+                return HttpResponseRedirect("../")
+
+        else:
+            form = LoteForm()
+
+        context = {
+            "form": form,
+            "opts": self.model._meta,
+        }
+        return render(request, "admin/adicionar_lote.html", context)
 
 
     def get_fields(self, request, obj=None):
@@ -64,7 +152,7 @@ class EmpresaAdmin(admin.ModelAdmin):
 class PopAdmin(admin.ModelAdmin):
     list_display = ('nome', 'cidade', 'empresa')
     search_fields = ('nome', 'cidade', 'empresa__nome')
-    list_filter = ('cidade', 'empresa')
+    list_filter = ('cidade', 'empresa__nome')
 
 
 @admin.register(Fabricante)
@@ -84,7 +172,7 @@ class ModeloAdmin(admin.ModelAdmin):
 class EquipamentoAdmin(admin.ModelAdmin):
     list_display = ('nome', 'ip','usuario', 'senha', 'porta', 'status', 'protocolo', 'pop', 'empresa', 'fabricante')
     search_fields = ('nome', 'ip', 'pop__nome', 'empresa__nome', 'fabricante__nome', 'modelo__modelo')
-    list_filter = ('protocolo', 'pop', 'empresa', 'fabricante', 'modelo')
+    list_filter = ('protocolo', 'pop', 'empresa__nome', 'fabricante', 'modelo')
 
 
 # Classe personalizada de Admin
@@ -127,6 +215,8 @@ admin_site.register(Empresa, EmpresaAdmin)
 admin_site.register(Pop, PopAdmin)
 admin_site.register(Fabricante, FabricanteAdmin)
 admin_site.register(Modelo, ModeloAdmin)
+admin_site.register(BlocoIP, BlocoIPAdmin)
+
 
 
 # Em vez de usar admin.site, agora usamos admin_site

@@ -1,0 +1,11 @@
+{% extends "admin/change_list.html" %}
+{% load i18n %}
+
+{% block object-tools %}
+<div class="object-tools">
+    <a href="{% url 'admin:adicionar_lote' %}" class="btn btn-primary">
+        {% trans "Adicionar Portas em Lote" %}
+    </a>
+</div>
+{{ block.super }}
+{% endblock %}

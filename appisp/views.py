@@ -3,7 +3,8 @@ from dal import autocomplete
 from django.http import JsonResponse
 from .models import Equipamento, Porta, Empresa
 from django.db.models import Prefetch
-from typing import Any
+from django.shortcuts import render, redirect
+from django.contrib.auth.decorators import login_required
 
 def atualizar_posicao(request, equipamento_id):
     if request.method == 'POST':
@@ -21,6 +22,7 @@ def atualizar_posicao(request, equipamento_id):
         return JsonResponse({"status": "sucesso", "x": x_novo, "y": y_novo})
 
 # View Mapa
+@login_required(login_url='/admin/login/')
 def mapa(request):
     empresas = Empresa.objects.all()
     empresa_id = request.GET.get('empresa', None)  # Pega o parâmetro da empresa na URL
@@ -64,6 +66,7 @@ def mapa(request):
                     'porta_destino': porta.conexao.nome,    # Nome da porta de destino
                     'tipo': porta.tipo,                     # Tipo da conexão (Fibra, Elétrico, etc.)
                     'speed': porta.speed,                   # Velocidade da porta (100M, 1G, etc.)
+                    'Obs': porta.observacao,                # Observação da porta
                 })
 
     # Contexto para enviar para o template
