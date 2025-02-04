@@ -35,7 +35,6 @@ class LoteForm(forms.Form):
     )
 
 
-
 # Filtro personalizado para empresa
 class EmpresaFilter(SimpleListFilter):
     title = 'Empresa'
@@ -53,11 +52,20 @@ class EmpresaFilter(SimpleListFilter):
         return queryset
 
 
-@admin.register(BlocoIP)
+class BlocoIPForm(forms.ModelForm):
+    class Meta:
+        model = BlocoIP
+        fields = '__all__'
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+
 class BlocoIPAdmin(admin.ModelAdmin):
+    form = BlocoIPForm
     list_display = ('empresa', 'bloco_cidr', 'descricao', 'parent', 'criado_em')
     search_fields = ('bloco_cidr', 'empresa__nome')
-    list_filter = ('empresa', 'parent')
+    list_filter = ('empresa',)
 
 
 @admin.register(EnderecoIP)

@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-aa3!f@gebj1hdmx)86#go340h4)cha14_3k!@*wl7#$k7g+s1m
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['ispdoc.idxdatacenters.com.br', 'localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -47,6 +47,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -78,6 +79,12 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 
 
+CSRF_TRUSTED_ORIGINS = [
+    'https://ispdoc.idxdatacenters.com.br',
+    'https://ispdoc.ispbackup.com.br',
+    # Outros domínios, se necessário
+]
+
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
@@ -87,8 +94,8 @@ DATABASES = {
         'NAME': 'ispdoc_db',
         'USER': 'root',
         'PASSWORD': 'Anas2108@@',
-        'HOST': '45.177.173.19',
-        'PORT': '33006',
+        'HOST': 'mariadb-ispdoc',
+        'PORT': '3306',
     }
 }
 

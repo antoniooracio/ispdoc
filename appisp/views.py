@@ -1,10 +1,11 @@
 from django.shortcuts import render
 from dal import autocomplete
 from django.http import JsonResponse
-from .models import Equipamento, Porta, Empresa
+from .models import Equipamento, Porta, Empresa, BlocoIP
 from django.db.models import Prefetch
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
+from django.shortcuts import get_object_or_404
 
 def atualizar_posicao(request, equipamento_id):
     if request.method == 'POST':
@@ -20,6 +21,7 @@ def atualizar_posicao(request, equipamento_id):
         equipamento.save()
 
         return JsonResponse({"status": "sucesso", "x": x_novo, "y": y_novo})
+
 
 # View Mapa
 @login_required(login_url='/admin/login/')
@@ -81,7 +83,6 @@ def mapa(request):
     }
 
     return render(request, 'appisp/mapa.html', context)
-
 
 
 # Rota para retornar os dados em formato JSON

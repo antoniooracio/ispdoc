@@ -103,7 +103,7 @@ class Porta(models.Model):
         ('Radio', 'Rádio'),
     ]
 
-    nome = models.CharField(max_length=50)  # Ex: "Porta1", "Porta2"
+    nome = models.CharField(max_length=50,)  # Ex: "Porta1", "Porta2"
     equipamento = models.ForeignKey('Equipamento', on_delete=models.CASCADE, related_name='portas')
     conexao = models.OneToOneField(
         'self',
@@ -114,7 +114,7 @@ class Porta(models.Model):
     )
     speed = models.CharField(max_length=10, choices=SPEED_CHOICES, default='1G')  # Valor padrão: 1G
     tipo = models.CharField(max_length=10, choices=TIPO_CHOICES, default='Fibra')  # Valor padrão: Fibra
-    observacao = models.TextField()
+    observacao = models.TextField(help_text="Para Formata o texto, use < /br> quebra de linha, < strong><strong>Negrito</strong>< /strong>, sem espaços")
 
 
     def save(self, *args, **kwargs):
@@ -141,7 +141,7 @@ class Porta(models.Model):
 # modelo para Blocos de IP
 class BlocoIP(models.Model):
     empresa = models.ForeignKey('Empresa', on_delete=models.CASCADE, related_name='blocos_ip')
-    bloco_cidr = models.CharField(max_length=18, unique=True)  # Exemplo: "10.0.0.0/23"
+    bloco_cidr = models.CharField(max_length=18)  # Exemplo: "10.0.0.0/23"
     descricao = models.CharField(max_length=255, blank=True, null=True)
     parent = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='sub_blocos')
     criado_em = models.DateTimeField(auto_now_add=True)
@@ -175,7 +175,7 @@ class BlocoIP(models.Model):
             if bloco in used_subnets:
                 raise ValidationError(f"O bloco {self.bloco_cidr} se sobrepõe com outro bloco já cadastrado.")
 
-        # 6. Verifica se já existe esse bloco na empresa
+        # 6. Verifica se o bloco já existe dentro da mesma empresa (mas permite em outras)
         if BlocoIP.objects.filter(empresa=self.empresa, bloco_cidr=self.bloco_cidr).exclude(id=self.id).exists():
             raise ValidationError(f"O bloco {self.bloco_cidr} já está cadastrado para esta empresa.")
 
