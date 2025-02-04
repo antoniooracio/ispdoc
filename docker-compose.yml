@@ -2,14 +2,35 @@ version: '3'
 
 services:
 
-  mariadb:
+   web-ispdoc:
+      build:
+        context: .
+        dockerfile: Dockerfile
+      volumes:
+        - .:/app
+        - /etc/localtime:/etc/localtime:ro
+        - /etc/timezone:/etc/timezone:ro
+      ports:
+        - "9000:9000"
+      environment:
+        MYSQL_ROOT_PASSWORD: Anas2108@@
+        MYSQL_DATABASE: ispdoc_db
+        MYSQL_USER: ispdoc_user
+        MYSQL_PASSWORD: Anas2108@@
+      #entrypoint: ["./entrypoint.sh"]
+      depends_on:
+        - mariadb-ispdoc
+      networks:
+        - mariadb_network
+
+   mariadb-ispdoc:
       image: mariadb:latest
-      container_name: mariadb-container
+      container_name: mariadb-ispdoc
       restart: always
       environment:
         MYSQL_ROOT_PASSWORD: Anas2108@@
         MYSQL_DATABASE: ispdoc_db
-        MYSQL_USER: backup_user
+        MYSQL_USER: ispdoc_user
         MYSQL_PASSWORD: Anas2108@@
       ports:
         - "33006:3306"
@@ -19,23 +40,6 @@ services:
         - /etc/timezone:/etc/timezone:ro
       networks:
         - mariadb_network
-
-  web:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    ports:
-      - "9000:9000"
-    volumes:
-      - .:/app
-    environment:
-      - DEBUG=True
-    #entrypoint: ["./entrypoint.sh"]
-    command: python manage.py runserver 0.0.0.0:9000
-    networks:
-      - mariadb_network
-    depends_on:
-      - mariadb
 
 volumes:
   db_data:
