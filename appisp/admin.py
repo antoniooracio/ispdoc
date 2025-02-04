@@ -60,11 +60,21 @@ class BlocoIPForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        if 'empresa' in self.data:  # Se a empresa for selecionada
+            try:
+                empresa_id = int(self.data.get('empresa'))
+                self.fields['equipamento'].queryset = Equipamento.objects.filter(empresa_id=empresa_id)
+            except (ValueError, TypeError):
+                pass
+        elif self.instance.pk:  # Se for um registro existente
+            self.fields['equipamento'].queryset = Equipamento.objects.filter(empresa=self.instance.empresa)
+
 
 class BlocoIPAdmin(admin.ModelAdmin):
     list_display = ('empresa', 'equipamento', 'bloco_cidr', 'next_hop', 'descricao', 'parent', 'criado_em')
     search_fields = ('bloco_cidr', 'empresa__nome', 'equipamento__nome')
     list_filter = ('empresa', 'equipamento')
+    form = BlocoIPForm
 
 @admin.register(EnderecoIP)
 class EnderecoIPAdmin(admin.ModelAdmin):

@@ -141,7 +141,7 @@ class Porta(models.Model):
 # Modelo para Blocos de IP e CIDR
 class BlocoIP(models.Model):
     empresa = models.ForeignKey('Empresa', on_delete=models.CASCADE, related_name='blocos_ip')
-    bloco_cidr = models.CharField(max_length=18, unique=True)  # Exemplo: "10.0.0.0/23"
+    bloco_cidr = models.CharField(max_length=18)  # Exemplo: "10.0.0.0/23"
     descricao = models.CharField(max_length=255, blank=True, null=True)
     parent = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='sub_blocos')
     equipamento = models.ForeignKey('Equipamento', on_delete=models.CASCADE, related_name='blocos', null=True, blank=True)
