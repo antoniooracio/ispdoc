@@ -62,17 +62,17 @@ class BlocoIPForm(forms.ModelForm):
 
 
 class BlocoIPAdmin(admin.ModelAdmin):
-    form = BlocoIPForm
-    list_display = ('empresa', 'bloco_cidr', 'descricao', 'parent', 'criado_em')
-    search_fields = ('bloco_cidr', 'empresa__nome')
-    list_filter = ('empresa',)
-
+    list_display = ('empresa', 'equipamento', 'bloco_cidr', 'next_hop', 'descricao', 'parent', 'criado_em')
+    search_fields = ('bloco_cidr', 'empresa__nome', 'equipamento__nome')
+    list_filter = ('empresa', 'equipamento')
 
 @admin.register(EnderecoIP)
 class EnderecoIPAdmin(admin.ModelAdmin):
-    list_display = ('bloco', 'ip', 'equipamento', 'finalidade', 'criado_em')
-    search_fields = ('ip', 'equipamento', 'bloco__bloco_cidr')
-    list_filter = ('bloco__empresa',)
+    list_display = ('bloco', 'ip', 'equipamento', 'next_hop', 'finalidade', 'criado_em')
+    search_fields = ('ip', 'equipamento__nome', 'bloco__bloco_cidr')
+    list_filter = ('bloco__empresa', 'equipamento')
+
+admin.site.register(BlocoIP, BlocoIPAdmin)
 
 
 @admin.register(Porta)
