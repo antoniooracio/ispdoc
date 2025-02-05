@@ -5,7 +5,7 @@ from django.db.models import Prefetch
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404
-from .models import Equipamento, Porta, Empresa, BlocoIP, Rack, Equipamento
+from .models import Equipamento, Porta, Empresa, Pop, Rack, Equipamento
 
 
 # View para exibir o mapa de Racks
@@ -14,10 +14,12 @@ def mapa_racks(request):
     user_is_admin = request.user.groups.filter(name="Admin").exists()
 
     empresas = Empresa.objects.all()
+    pops = Pop.objects.all()
     empresa_id = request.GET.get('empresa', None)  # Filtragem por empresa
     pop_id = request.GET.get('pop', None)  # Filtragem por POP
 
     racks_query = Rack.objects.prefetch_related('equipamentos')
+
     if empresa_id:
         racks_query = racks_query.filter(pop__empresa__id=empresa_id)
     if pop_id:
@@ -53,7 +55,9 @@ def mapa_racks(request):
     context = {
         'userIsAdmin': user_is_admin,
         'empresas': empresas,
+        'pops': pops,  # Passando os POPs para o template
         'empresa_id': empresa_id,
+        'pop_id': pop_id,  # Incluindo o id do POP para o filtro persistir
         'racks': racks_data,
     }
 
@@ -62,16 +66,28 @@ def mapa_racks(request):
 
 # Rota para fornecer os dados do mapa de racks em formato JSON
 def mapa_racks_dados(request) -> JsonResponse:
-    racks = Rack.objects.prefetch_related('equipamentos').all()
+    # Obter os parâmetros de filtro da URL
+    empresa_id = request.GET.get('empresa', None)
+    pop_id = request.GET.get('pop', None)
+
+    # Filtragem de racks
+    racks_query = Rack.objects.prefetch_related('equipamentos__equipamento')
+
+    if empresa_id:
+        racks_query = racks_query.filter(pop__empresa__id=empresa_id)
+    if pop_id:
+        racks_query = racks_query.filter(pop_id=pop_id)
+
+    racks = racks_query.all()
 
     racks_data = []
     for rack in racks:
         equipamentos = [
             {
-                'id': equipamento.id,
-                'nome': equipamento.nome,
-                'u_inicio': equipamento.u_inicio,
-                'u_fim': equipamento.u_fim,
+                'id': equipamento.equipamento.id,
+                'nome': equipamento.equipamento.nome,
+                'u_inicio': equipamento.us_inicio,
+                'u_fim': equipamento.us_fim,
                 'lado': equipamento.lado,
             }
             for equipamento in rack.equipamentos.all()
