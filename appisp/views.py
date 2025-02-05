@@ -1,11 +1,94 @@
 from django.shortcuts import render
 from dal import autocomplete
 from django.http import JsonResponse
-from .models import Equipamento, Porta, Empresa, BlocoIP
 from django.db.models import Prefetch
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404
+from .models import Equipamento, Porta, Empresa, BlocoIP, Rack, Equipamento
+
+
+# View para exibir o mapa de Racks
+@login_required(login_url='/admin/login/')
+def mapa_racks(request):
+    user_is_admin = request.user.groups.filter(name="Admin").exists()
+
+    empresas = Empresa.objects.all()
+    empresa_id = request.GET.get('empresa', None)  # Filtragem por empresa
+    pop_id = request.GET.get('pop', None)  # Filtragem por POP
+
+    racks_query = Rack.objects.prefetch_related('equipamentos')
+    if empresa_id:
+        racks_query = racks_query.filter(pop__empresa__id=empresa_id)
+    if pop_id:
+        racks_query = racks_query.filter(pop_id=pop_id)
+
+    racks = racks_query.all()
+
+    # Estrutura para armazenar os racks e seus equipamentos
+    racks_data = []
+
+    for rack in racks:
+        equipamentos = [
+            {
+                'id': rack_equip.equipamento.id,
+                'nome': rack_equip.equipamento.nome,
+                'u_inicio': rack_equip.us_inicio,
+                'u_fim': rack_equip.us_fim,
+                'lado': rack_equip.lado,
+            }
+            for rack_equip in rack.equipamentos.all()
+        ]
+
+        racks_data.append({
+            'id': rack.id,
+            'nome': rack.nome,
+            'pop': rack.pop.nome,
+            'us': rack.us,
+            'modelo': rack.modelo,
+            'observacao': rack.observacao,
+            'equipamentos': equipamentos,
+        })
+
+    context = {
+        'userIsAdmin': user_is_admin,
+        'empresas': empresas,
+        'empresa_id': empresa_id,
+        'racks': racks_data,
+    }
+
+    return render(request, 'appisp/mapa_racks.html', context)
+
+
+# Rota para fornecer os dados do mapa de racks em formato JSON
+def mapa_racks_dados(request) -> JsonResponse:
+    racks = Rack.objects.prefetch_related('equipamentos').all()
+
+    racks_data = []
+    for rack in racks:
+        equipamentos = [
+            {
+                'id': equipamento.id,
+                'nome': equipamento.nome,
+                'u_inicio': equipamento.u_inicio,
+                'u_fim': equipamento.u_fim,
+                'lado': equipamento.lado,
+            }
+            for equipamento in rack.equipamentos.all()
+        ]
+
+        racks_data.append({
+            'id': rack.id,
+            'nome': rack.nome,
+            'pop': rack.pop.nome,
+            'us': rack.us,
+            'modelo': rack.modelo,
+            'observacao': rack.observacao,
+            'equipamentos': equipamentos,
+        })
+
+    return JsonResponse({'racks': racks_data})
+
 
 def atualizar_posicao(request, equipamento_id):
     if request.method == 'POST':
@@ -130,6 +213,7 @@ def mapa_dados(request) -> JsonResponse:
     # Retorna o JSON com os dados
     return JsonResponse({'nodes': nodes, 'links': links})
 
+
 class EquipamentoAutocomplete(autocomplete.Select2QuerySetView):
     def get_queryset(self):
         if not self.request.user.is_authenticated:
@@ -142,6 +226,7 @@ class EquipamentoAutocomplete(autocomplete.Select2QuerySetView):
         if empresa:
             qs = qs.filter(empresa=empresa)
         return qs
+
 
 class PortaAutocomplete(autocomplete.Select2QuerySetView):
     def get_queryset(self):

@@ -1,0 +1,115 @@
+
+<div class="container">
+    <h2 class="my-4">Visualização de Racks</h2>
+
+    <!-- Filtros -->
+    <form method="GET" class="mb-4">
+        <div class="row">
+            <div class="col-md-4">
+                <label for="empresa">Empresa:</label>
+                <select name="empresa" id="empresa" class="form-control">
+                    <option value="">Todas</option>
+                    {% for empresa in empresas %}
+                        <option value="{{ empresa.id }}" {% if request.GET.empresa == empresa.id|stringformat:"s" %}selected{% endif %}>{{ empresa.nome }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label for="pop">POP:</label>
+                <select name="pop" id="pop" class="form-control">
+                    <option value="">Todos</option>
+                    {% for pop in pops %}
+                        <option value="{{ pop.id }}" {% if request.GET.pop == pop.id|stringformat:"s" %}selected{% endif %}>{{ pop.nome }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary">Filtrar</button>
+            </div>
+        </div>
+    </form>
+
+    <!-- Exibição dos Racks -->
+    <div id="rack-container" class="row">
+        <!-- Racks serão adicionados aqui via JavaScript -->
+    </div>
+</div>
+
+<style>
+    .rack-container {
+        display: flex;
+        flex-direction: column-reverse;
+        border: 1px solid #ccc;
+        padding: 5px;
+        background: #f8f9fa;
+    }
+    .rack-slot {
+        border: 1px solid #666;
+        padding: 5px;
+        text-align: center;
+        font-size: 14px;
+        background: white;
+    }
+    .rack-slot.ocupado {
+        background: #ffc107;
+    }
+</style>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    fetch('/mapa-rack/dados/')
+        .then(response => response.json())
+        .then(data => {
+            console.log("Dados recebidos do servidor:", data);
+            renderizarMapaRack(data);
+        })
+        .catch(error => console.error('Erro ao carregar dados do mapa de rack:', error));
+});
+
+function renderizarMapaRack(data) {
+    const rackContainer = document.getElementById("rack-container");
+    rackContainer.innerHTML = ""; // Limpa antes de renderizar
+
+    if (data.racks.length === 0) {
+        rackContainer.innerHTML = "<p>Nenhum rack encontrado.</p>";
+        return;
+    }
+
+    data.racks.forEach(rack => {
+        const rackCard = document.createElement("div");
+        rackCard.classList.add("col-md-4", "mb-4");
+
+        rackCard.innerHTML = `
+            <div class="card">
+                <div class="card-header bg-primary text-white">${rack.nome}</div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6">
+                            <h6 class="text-center">Frente</h6>
+                            <div class="rack-container">
+                                ${renderizarUs(rack.us_frente)}
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <h6 class="text-center">Costas</h6>
+                            <div class="rack-container">
+                                ${renderizarUs(rack.us_costas)}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        rackContainer.appendChild(rackCard);
+    });
+}
+
+function renderizarUs(usData) {
+    return usData.map(u => `
+        <div class="rack-slot ${u.equipamento ? 'ocupado' : ''}">
+            ${u.numero}
+            ${u.equipamento ? `<br>${u.equipamento}` : ""}
+        </div>
+    `).join('');
+}
+</script>

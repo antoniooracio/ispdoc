@@ -17,7 +17,7 @@ Including another URLconf
 from django.contrib import admin
 from appisp.admin import admin_site
 from django.urls import path, include
-from appisp.views import EquipamentoAutocomplete, PortaAutocomplete, mapa, atualizar_posicao
+from appisp.views import EquipamentoAutocomplete, PortaAutocomplete, mapa, atualizar_posicao, mapa_racks, mapa_racks_dados
 
 urlpatterns = [
     path('admin/', admin_site.urls),
@@ -25,5 +25,6 @@ urlpatterns = [
     path('porta-autocomplete/', PortaAutocomplete.as_view(), name='porta-autocomplete'),
     path('mapa-rede/', mapa, name='mapa-rede'),  # Adicionando a URL para a página do mapa
     path('atualizar_posicao/<int:equipamento_id>/', atualizar_posicao, name='atualizar_posicao'),
-
+    path('mapa-rack/', mapa_racks, name='mapa_rack'),
+    path('mapa-rack/dados/', mapa_racks_dados, name='mapa_rack_dados'),
 ]

@@ -8,10 +8,29 @@ from django.contrib.auth.admin import GroupAdmin, UserAdmin
 from django.contrib.admin import AdminSite
 from django.shortcuts import render
 from django.http import HttpResponseRedirect
-from .forms import PortaForm
-from .models import Empresa, Pop, Fabricante, Modelo, Equipamento, Porta, BlocoIP, EnderecoIP
+from .forms import PortaForm, RackForm, RackEquipamentoForm
 from .views import mapa
 from django.contrib.admin import SimpleListFilter
+from .models import Empresa, Pop, Fabricante, Modelo, Equipamento, Porta, BlocoIP, EnderecoIP, Rack, RackEquipamento
+
+
+@admin.register(Rack)
+class RackAdmin(admin.ModelAdmin):
+    form = RackForm  # Usa o formulário com validação
+    list_display = ('nome', 'pop', 'empresa', 'us', 'modelo')
+    list_filter = ('empresa', 'pop')
+    search_fields = ('nome', 'pop__nome', 'empresa__nome')
+    ordering = ('empresa', 'pop', 'nome')
+    autocomplete_fields = ('pop', 'empresa')
+
+@admin.register(RackEquipamento)
+class RackEquipamentoAdmin(admin.ModelAdmin):
+    form = RackEquipamentoForm  # Usa o formulário com validação
+    list_display = ('rack', 'equipamento', 'us_inicio', 'us_fim', 'lado')
+    list_filter = ('rack', 'lado')
+    search_fields = ('rack__nome', 'equipamento__nome')
+    ordering = ('rack', 'us_inicio')
+    autocomplete_fields = ('rack', 'equipamento')
 
 
 class LoteForm(forms.Form):
@@ -234,7 +253,8 @@ admin_site.register(Pop, PopAdmin)
 admin_site.register(Fabricante, FabricanteAdmin)
 admin_site.register(Modelo, ModeloAdmin)
 admin_site.register(BlocoIP, BlocoIPAdmin)
-
+admin_site.register(Rack, RackAdmin)
+admin_site.register(RackEquipamento, RackEquipamentoAdmin)
 
 
 # Em vez de usar admin.site, agora usamos admin_site

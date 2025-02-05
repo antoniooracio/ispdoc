@@ -116,6 +116,8 @@ class Porta(models.Model):
     tipo = models.CharField(max_length=10, choices=TIPO_CHOICES, default='Fibra')  # Valor padrão: Fibra
     observacao = models.TextField(help_text="Para Formata o texto, use < /br> quebra de linha, < strong><strong>Negrito</strong>< /strong>, sem espaços")
 
+    class Meta:
+        verbose_name_plural = "Portas equipamento"
 
     def save(self, *args, **kwargs):
         # Salvamento inicial da instância atual
@@ -147,6 +149,9 @@ class BlocoIP(models.Model):
     equipamento = models.ForeignKey('Equipamento', on_delete=models.CASCADE, related_name='blocos', null=True, blank=True)
     next_hop = models.GenericIPAddressField(blank=True, null=True)  # Roteamento do bloco
     criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name_plural = "Blocos de IP"
 
     def clean(self):
         # Verifica se o equipamento pertence à mesma empresa do bloco
@@ -195,6 +200,7 @@ class BlocoIP(models.Model):
     def __str__(self):
         return f"{self.bloco_cidr} - {self.empresa.nome} ({self.equipamento.nome if self.equipamento else 'Sem equipamento'})"
 
+
 # Modelo de Endereçamento IP específico
 class EnderecoIP(models.Model):
     bloco = models.ForeignKey(BlocoIP, on_delete=models.CASCADE, related_name='enderecos')
@@ -221,3 +227,63 @@ class EnderecoIP(models.Model):
 
     def __str__(self):
         return f"{self.ip} - {self.equipamento.nome}"
+
+
+# Modelo de Rack
+class Rack(models.Model):
+    nome = models.CharField(max_length=255)
+    pop = models.ForeignKey(Pop, on_delete=models.CASCADE)  # Rack pertence a um POP
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE)  # Rack pertence a uma única empresa
+    us = models.PositiveIntegerField(default=20)  # Número total de Us (padrão: 20)
+    modelo = models.CharField(max_length=255, blank=True, null=True)
+    observacao = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return f"{self.nome} - {self.pop.nome} ({self.empresa.nome})"
+
+    def save(self, *args, **kwargs):
+        # Validação: O POP do Rack deve pertencer à mesma empresa do Rack
+        if self.pop.empresa != self.empresa:
+            raise ValueError("O POP deve pertencer à mesma empresa do Rack.")
+        super().save(*args, **kwargs)
+
+
+# Modelo de Alocação de Equipamento no Rack
+class RackEquipamento(models.Model):
+    rack = models.ForeignKey(Rack, on_delete=models.CASCADE, related_name="equipamentos")
+    equipamento = models.ForeignKey(Equipamento, on_delete=models.CASCADE)
+    us_inicio = models.PositiveIntegerField()
+    us_fim = models.PositiveIntegerField()
+    lado = models.CharField(
+        max_length=10,
+        choices=[('Frente', 'Frente'), ('Trás', 'Trás')],
+        default='Frente'
+    )
+
+    class Meta:
+        unique_together = ('rack', 'us_inicio', 'lado')  # Garante que um Us no mesmo lado não seja reutilizado
+
+    def save(self, *args, **kwargs):
+        # Validação: O equipamento deve pertencer à mesma empresa do Rack
+        if self.equipamento.empresa != self.rack.empresa:
+            raise ValueError("O equipamento deve pertencer à mesma empresa do Rack.")
+
+        # Validação: A posição final do equipamento não pode ultrapassar os Us do Rack
+        if self.us_fim > self.rack.us:
+            raise ValueError("O equipamento não pode ser alocado além da capacidade do Rack.")
+
+        # Validação: Não permitir sobreposição de Us no mesmo lado
+        conflitos = RackEquipamento.objects.filter(
+            rack=self.rack,
+            lado=self.lado,
+            us_inicio__lte=self.us_fim,
+            us_fim__gte=self.us_inicio
+        ).exclude(id=self.id)  # Exclui a própria instância ao editar
+
+        if conflitos.exists():
+            raise ValueError(f"Os Us {self.us_inicio}-{self.us_fim} já estão ocupados no lado {self.lado}.")
+
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.equipamento.nome} no Rack {self.rack.nome} (Us {self.us_inicio}-{self.us_fim}, {self.lado})"
