@@ -14,12 +14,15 @@ def mapa_racks(request):
     user_is_admin = request.user.groups.filter(name="Admin").exists()
 
     empresas = Empresa.objects.all()
-    pops = Pop.objects.all()
     empresa_id = request.GET.get('empresa', None)  # Filtragem por empresa
     pop_id = request.GET.get('pop', None)  # Filtragem por POP
 
-    racks_query = Rack.objects.prefetch_related('equipamentos')
+    # Filtrando os POPs relacionados à empresa
+    pops = Pop.objects.all()
+    if empresa_id:
+        pops = pops.filter(empresa__id=empresa_id)
 
+    racks_query = Rack.objects.prefetch_related('equipamentos')
     if empresa_id:
         racks_query = racks_query.filter(pop__empresa__id=empresa_id)
     if pop_id:
@@ -55,13 +58,13 @@ def mapa_racks(request):
     context = {
         'userIsAdmin': user_is_admin,
         'empresas': empresas,
-        'pops': pops,  # Passando os POPs para o template
         'empresa_id': empresa_id,
-        'pop_id': pop_id,  # Incluindo o id do POP para o filtro persistir
+        'pops': pops,  # Envia os POPs filtrados
         'racks': racks_data,
     }
 
     return render(request, 'appisp/mapa_racks.html', context)
+
 
 
 # Rota para fornecer os dados do mapa de racks em formato JSON
@@ -103,7 +106,14 @@ def mapa_racks_dados(request) -> JsonResponse:
             'equipamentos': equipamentos,
         })
 
-    return JsonResponse({'racks': racks_data})
+    # Se uma empresa foi selecionada, buscar os POPs relacionados a essa empresa
+    pops_data = []
+    if empresa_id:
+        pops = Pop.objects.filter(empresa__id=empresa_id)
+        pops_data = [{'id': pop.id, 'nome': pop.nome} for pop in pops]
+
+    # Retornar os racks e POPs no formato JSON
+    return JsonResponse({'racks': racks_data, 'pops': pops_data})
 
 
 def atualizar_posicao(request, equipamento_id):

@@ -3,7 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mapa de Rede</title>
+    <title>Mapa de Rack</title>
+    <!-- Link para o Bootstrap CSS -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <style>
         .container {
@@ -14,16 +18,21 @@
 
         .rack-container {
             display: flex;
-            flex-wrap: nowrap;
+            flex-wrap: wrap;
             gap: 20px;
             margin-top: 20px;
         }
 
         .rack {
-            border: 1px solid #333;
+            border: 3px solid #333;
             padding: 10px;
             background: #f8f9fa;
-            width: 380px;
+            width: calc(20% - 20px);
+            /* Aqui o valor é dinâmico com base na altura das Us */
+            /* height: auto;  Para permitir altura dinâmica */
+            min-height: 150px;
+            max-height: 100%; /* Limitar a altura máxima */
+            box-sizing: border-box;
         }
 
         .rack h4 {
@@ -48,12 +57,10 @@
         }
 
         .rack-slot {
-            border: 1px solid #666;
             padding: 5px;
             text-align: center;
             font-size: 14px;
             background: white;
-            margin: 2px 0;
         }
 
         .rack-slot.ocupado {
@@ -69,48 +76,76 @@
         select, button {
             padding: 5px;
             font-size: 14px;
+        }
 
+        @media (max-width: 1200px) {
+            .rack {
+                width: calc(25% - 20px);  /* Ajuste para 4 racks por linha em telas menores */
+            }
+        }
+
+        @media (max-width: 900px) {
+            .rack {
+                width: calc(33.33% - 20px);  /* Ajuste para 3 racks por linha em telas ainda menores */
+            }
+        }
+
+        @media (max-width: 600px) {
+            .rack {
+                width: 100%;  /* Ajuste para 1 rack por linha em telas muito pequenas */
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h2 class="my-4">Visualização de Racks</h2>
 
         <!-- Formulário de filtro -->
         <form id="filtro-form">
-    <label for="empresa">Empresa:</label>
-    <select name="empresa" id="empresa">
-        <option value="">Todas</option>
-        {% for empresa in empresas %}
-            <option value="{{ empresa.id }}" {% if empresa.id == empresa_id %}selected{% endif %}>{{ empresa.nome }}</option>
-        {% endfor %}
-    </select>
+           <!-- <div ><h2 class="my-4">Visualização de Racks</h2></div> -->
 
-    <label for="pop">POP:</label>
-    <select name="pop" id="pop">
-        <option value="">Todos</option>
-        {% for pop in pops %}
-            <option value="{{ pop.id }}" {% if pop.id == pop_id %}selected{% endif %}>{{ pop.nome }}</option>
-        {% endfor %}
-    </select>
+            <label for="empresa">EMPRESA:</label>
+            <select name="empresa" id="empresa">
+                <option value="">Todas</option>
+                {% for empresa in empresas %}
+                    <option value="{{ empresa.id }}" {% if empresa.id == empresa_id %}selected{% endif %}>
+                        {{ empresa.nome }}
+                    </option>
+                {% endfor %}
+            </select>
 
-    <button type="submit" class="btn btn-primary">Filtrar</button>
-</form>
+            <label for="pop">POP:</label>
+            <select name="pop" id="pop">
+                <option value="">Todos</option>
+                {% for pop in pops %}
+                    <option value="{{ pop.id }}" {% if pop.id == pop_id %}selected{% endif %}>
+                        {{ pop.nome }}
+                    </option>
+                {% endfor %}
+            </select>
+
+            <button type="submit" class="btn btn-primary">Selecionar</button>
+        </form>
 
         <div id="rack-container" class="rack-container"></div>
     </div>
 
     <script>
         document.addEventListener("DOMContentLoaded", function () {
-            carregarRacks();
+            carregarRacks();  // Carregar racks na primeira vez
 
             document.getElementById("filtro-form").addEventListener("submit", function (event) {
                 event.preventDefault();
                 carregarRacks();
             });
+
+            // Quando a empresa mudar, atualizar os POPs
+            document.getElementById("empresa").addEventListener("change", function () {
+                atualizarPops();  // Atualizar POPs conforme a empresa selecionada
+            });
         });
 
+        // Função para carregar racks de acordo com os filtros
         function carregarRacks() {
             const empresaId = document.getElementById("empresa").value;
             const popId = document.getElementById("pop").value;
@@ -136,7 +171,7 @@
                 .catch(error => console.error("Erro ao carregar racks:", error));
         }
 
-
+        // Função para renderizar os racks no frontend
         function renderizarMapaRack(racks) {
             const rackContainer = document.getElementById("rack-container");
             rackContainer.innerHTML = "";
@@ -149,6 +184,12 @@
             racks.forEach(rack => {
                 const rackDiv = document.createElement("div");
                 rackDiv.className = "rack";
+
+                // Calcular a altura proporcional do rack com base no número de U
+                const alturaRack = rack.us * 35;  // 40px por U
+                rackDiv.style.height = `${Math.max(alturaRack, 800)}px`;  // Garante que a altura mínima seja 150px
+                // rackDiv.style.height = `${alturaRack}px`;
+
                 rackDiv.innerHTML = `<h4>${rack.nome}</h4>`;
 
                 let usFrente = [];
@@ -176,8 +217,7 @@
                             <div class="rack-title">Frente</div>
                             ${usFrente.map(u => `
                                 <div class="rack-slot ${u.equipamento ? 'ocupado' : ''}">
-                                    ${u.numero}
-                                    ${u.equipamento ? `<br>${u.equipamento}` : ""}
+                                    ${u.numero} - ${u.equipamento ? u.equipamento : ""}
                                 </div>
                             `).join("")}
                         </div>
@@ -186,8 +226,7 @@
                             <div class="rack-title">Trás</div>
                             ${usTras.map(u => `
                                 <div class="rack-slot ${u.equipamento ? 'ocupado' : ''}">
-                                    ${u.numero}
-                                    ${u.equipamento ? `<br>${u.equipamento}` : ""}
+                                    ${u.numero} - ${u.equipamento ? u.equipamento : ""}
                                 </div>
                             `).join("")}
                         </div>
@@ -197,6 +236,36 @@
                 rackContainer.appendChild(rackDiv);
             });
         }
+
+
+        // Função para atualizar os POPs conforme a empresa selecionada
+        function atualizarPops() {
+            const empresaId = document.getElementById("empresa").value;
+
+            if (!empresaId) {
+                return;  // Se não selecionar uma empresa, não faz nada
+            }
+
+            let url = `/mapa-rack/dados/?empresa=${encodeURIComponent(empresaId)}`;
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    if (data && data.pops) {
+                        const popSelect = document.getElementById("pop");
+                        popSelect.innerHTML = "<option value=''>Todos</option>";
+
+                        data.pops.forEach(pop => {
+                            popSelect.innerHTML += `<option value="${pop.id}">${pop.nome}</option>`;
+                        });
+                    } else {
+                        console.error("Nenhum POP encontrado ou resposta inesperada:", data);
+                        const popSelect = document.getElementById("pop");
+                        popSelect.innerHTML = "<option value=''>Nenhum POP disponível</option>";
+                    }
+                })
+                .catch(error => console.error("Erro ao carregar POPs:", error));
+        }
+
     </script>
 </body>
 </html>
