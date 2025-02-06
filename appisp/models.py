@@ -50,6 +50,9 @@ class Modelo(models.Model):
     modelo = models.CharField(max_length=255)
     fabricante = models.ForeignKey(Fabricante, on_delete=models.CASCADE)
 
+    class Meta:
+        verbose_name_plural = "Equipamentos modelo"
+
     def __str__(self):
         return f"{self.fabricante.nome} - {self.modelo}"
 
@@ -117,7 +120,7 @@ class Porta(models.Model):
     observacao = models.TextField(help_text="Para Formata o texto, use < /br> quebra de linha, < strong><strong>Negrito</strong>< /strong>, sem espaços")
 
     class Meta:
-        verbose_name_plural = "Portas equipamento"
+        verbose_name_plural = "Equipamentos porta"
 
     def save(self, *args, **kwargs):
         # Salvamento inicial da instância atual
