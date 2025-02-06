@@ -1,6 +1,7 @@
 from django.db import models
 from ipaddress import ip_network
 from django.core.exceptions import ValidationError
+from django.contrib.auth.models import User  # Importe o modelo de usuário
 import ipaddress
 
 
@@ -21,6 +22,7 @@ class Empresa(models.Model):
     representante = models.CharField(max_length=255)
     email = models.EmailField()
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='ATIVA')
+    usuarios = models.ManyToManyField(User, related_name='empresas')  # Adicionando a relação
 
     def __str__(self):
         return self.nome
@@ -83,7 +85,6 @@ class Equipamento(models.Model):
         choices=[('Ativo', 'Ativo'), ('Inativo', 'Inativo')],
         default='Ativo'
     )
-    empresa = models.ForeignKey('Empresa', on_delete=models.CASCADE)
 
     def __str__(self):
         return f"{self.nome} ({self.ip})"

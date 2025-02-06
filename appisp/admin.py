@@ -23,6 +23,7 @@ class RackAdmin(admin.ModelAdmin):
     ordering = ('empresa', 'pop', 'nome')
     autocomplete_fields = ('pop', 'empresa')
 
+
 @admin.register(RackEquipamento)
 class RackEquipamentoAdmin(admin.ModelAdmin):
     form = RackEquipamentoForm  # Usa o formulário com validação
@@ -95,13 +96,26 @@ class BlocoIPAdmin(admin.ModelAdmin):
     list_filter = ('empresa', 'equipamento')
     form = BlocoIPForm
 
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+
+        if request.user.is_superuser:
+            return qs
+
+        return qs.filter(empresa__usuarios=request.user)
+
+    # Filtrar o campo empresa para mostrar apenas as empresas do usuário logado
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == "empresa" and not request.user.is_superuser:
+            kwargs["queryset"] = Empresa.objects.filter(usuarios=request.user)
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
+
 @admin.register(EnderecoIP)
 class EnderecoIPAdmin(admin.ModelAdmin):
     list_display = ('bloco', 'ip', 'equipamento', 'next_hop', 'finalidade', 'criado_em')
     search_fields = ('ip', 'equipamento__nome', 'bloco__bloco_cidr')
     list_filter = ('bloco__empresa', 'equipamento')
-
-admin.site.register(BlocoIP, BlocoIPAdmin)
 
 
 @admin.register(Porta)
@@ -178,6 +192,7 @@ class PortaAdmin(admin.ModelAdmin):
         return form
 
 
+
 @admin.register(Empresa)
 class EmpresaAdmin(admin.ModelAdmin):
     list_display = ('nome', 'cidade', 'telefone', 'representante', 'status')
@@ -190,6 +205,20 @@ class PopAdmin(admin.ModelAdmin):
     list_display = ('nome', 'cidade', 'empresa')
     search_fields = ('nome', 'cidade', 'empresa__nome')
     list_filter = ('cidade', 'empresa__nome')
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+
+        if request.user.is_superuser:
+            return qs
+
+        return qs.filter(empresa__usuarios=request.user)
+
+    # Filtrar o campo empresa para mostrar apenas as empresas do usuário logado
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == "empresa" and not request.user.is_superuser:
+            kwargs["queryset"] = Empresa.objects.filter(usuarios=request.user)
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
 
 @admin.register(Fabricante)
@@ -211,6 +240,21 @@ class EquipamentoAdmin(admin.ModelAdmin):
     search_fields = ('nome', 'ip', 'pop__nome', 'empresa__nome', 'fabricante__nome', 'modelo__modelo')
     list_filter = ('protocolo', 'pop', 'empresa__nome', 'fabricante', 'modelo')
 
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+
+        # Superuser vê todos os equipamentos
+        if request.user.is_superuser:
+            return qs
+
+        # Usuário normal só vê equipamentos das suas empresas
+        return qs.filter(empresa__usuarios=request.user)
+
+    # Filtrar o campo empresa para mostrar apenas as empresas do usuário logado
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == "empresa" and not request.user.is_superuser:
+            kwargs["queryset"] = Empresa.objects.filter(usuarios=request.user)
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
 # Classe personalizada de Admin
 class CustomAdminSite(AdminSite):

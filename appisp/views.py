@@ -1,4 +1,5 @@
-from django.shortcuts import render
+from django import forms
+from django.contrib.auth.models import User
 from dal import autocomplete
 from django.http import JsonResponse
 from django.db.models import Prefetch
@@ -6,6 +7,28 @@ from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404
 from .models import Equipamento, Porta, Empresa, Pop, Rack, Equipamento
+
+
+@login_required
+def listar_equipamentos(request):
+    usuario = request.user
+    empresas_do_usuario = usuario.empresas.all()  # Obtém todas as empresas associadas ao usuário
+
+    equipamentos = Equipamento.objects.filter(empresa__in=empresas_do_usuario)  # Filtra os equipamentos
+
+    return render(request, 'equipamentos_list.html', {'equipamentos': equipamentos})
+
+
+class EmpresaForm(forms.ModelForm):
+    usuarios = forms.ModelMultipleChoiceField(
+        queryset=User.objects.all(),
+        widget=forms.CheckboxSelectMultiple,  # Lista de checkboxes para múltiplos usuários
+        required=False
+    )
+
+    class Meta:
+        model = Empresa
+        fields = ['nome', 'endereco', 'cidade', 'estado', 'telefone', 'cpf_cnpj', 'representante', 'email', 'status', 'usuarios']
 
 
 # View para exibir o mapa de Racks

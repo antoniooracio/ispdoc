@@ -1,6 +1,20 @@
 from dal import autocomplete
 from django import forms
+from django.contrib.auth.models import User
 from .models import Porta, Empresa, Equipamento, Rack, RackEquipamento
+
+
+class EmpresaForm(forms.ModelForm):
+    usuarios = forms.ModelMultipleChoiceField(
+        queryset=User.objects.all(),
+        widget=forms.CheckboxSelectMultiple,  # Lista de checkboxes para múltiplos usuários
+        required=False
+    )
+
+    class Meta:
+        model = Empresa
+        fields = ['nome', 'endereco', 'cidade', 'estado', 'telefone', 'cpf_cnpj', 'representante', 'email', 'status', 'usuarios']
+
 
 class PortaForm(forms.ModelForm):
     empresa = forms.ModelChoiceField(
