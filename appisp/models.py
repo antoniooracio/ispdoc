@@ -312,7 +312,8 @@ class MaquinaVirtual(models.Model):
     equipamento = models.ForeignKey(
         'Equipamento',
         on_delete=models.CASCADE,
-        limit_choices_to={'tipo': 'VMWARE'}
+        limit_choices_to={'tipo': 'VMWARE'},
+        related_name='maquinas_virtuais'
     )
     memoria = models.PositiveIntegerField(help_text="Memória em MB")
     num_processadores = models.PositiveIntegerField()

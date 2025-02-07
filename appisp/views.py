@@ -97,7 +97,7 @@ def mapa_racks_dados(request) -> JsonResponse:
     pop_id = request.GET.get('pop', None)
 
     # Filtragem de racks
-    racks_query = Rack.objects.prefetch_related('equipamentos__equipamento')
+    racks_query = Rack.objects.prefetch_related('equipamentos__equipamento', 'equipamentos__equipamento__maquinas_virtuais')
 
     if empresa_id:
         racks_query = racks_query.filter(pop__empresa__id=empresa_id)
@@ -116,6 +116,8 @@ def mapa_racks_dados(request) -> JsonResponse:
                 'u_fim': equipamento.us_fim,
                 'lado': equipamento.lado,
                 'tipo': equipamento.equipamento.tipo,
+                'url_admin': f"/admin/appisp/maquinavirtual/?equipamento__id__exact={equipamento.equipamento.id}&q=",
+                'maquinas_virtuais': [vm.nome for vm in equipamento.equipamento.maquinas_virtuais.all()],
             }
             for equipamento in rack.equipamentos.all()
         ]
@@ -138,6 +140,7 @@ def mapa_racks_dados(request) -> JsonResponse:
 
     # Retornar os racks e POPs no formato JSON
     return JsonResponse({'racks': racks_data, 'pops': pops_data})
+
 
 
 def atualizar_posicao(request, equipamento_id):

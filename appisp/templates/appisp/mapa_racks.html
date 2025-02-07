@@ -7,7 +7,7 @@
     <!-- Link para o Bootstrap CSS -->
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
 
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <style>
         .container {
@@ -27,9 +27,9 @@
             border: 3px solid #333;
             padding: 10px;
             background: #f8f9fa;
-            width: calc(25% - 25px);
-            /* Aqui o valor é dinâmico com base na altura das Us */
-            /* height: auto;  Para permitir altura dinâmica */
+            width: calc(25% - 25px); /* Iniciar 5 racks por linha */
+
+
             min-height: 150px;
             max-height: 100%; /* Limitar a altura máxima */
             box-sizing: border-box;
@@ -70,7 +70,6 @@
         .rack-slot.vmware {
             background: #007bff; /* Azul forte para destacar */
             color: white;
-            font-weight: bold;
         }
 
         form {
@@ -84,21 +83,27 @@
             font-size: 14px;
         }
 
+        @media (max-width: 1400px) {
+            .rack {
+                width: calc(25% - 20px); /* Ajuste para 3 racks por linha em telas médias */
+            }
+        }
+
         @media (max-width: 1200px) {
             .rack {
-                width: calc(25% - 20px);  /* Ajuste para 4 racks por linha em telas menores */
+                width: calc(33.33% - 20px); /* Ajuste para 2 racks por linha em telas menores */
             }
         }
 
         @media (max-width: 900px) {
             .rack {
-                width: calc(33.33% - 20px);  /* Ajuste para 3 racks por linha em telas ainda menores */
+                width: calc(50% - 20px); /* Ajuste para 1 rack por linha em telas pequenas */
             }
         }
 
         @media (max-width: 600px) {
             .rack {
-                width: 100%;  /* Ajuste para 1 rack por linha em telas muito pequenas */
+                width: 100%; /* Ajuste para 1 rack por linha em telas pequenas */
             }
         }
     </style>
@@ -108,7 +113,7 @@
 
         <!-- Formulário de filtro -->
         <form id="filtro-form">
-           <!-- <div ><h2 class="my-4">Visualização de Racks</h2></div> -->
+
 
             <label for="empresa">EMPRESA:</label>
             <select name="empresa" id="empresa">
@@ -166,12 +171,10 @@
                 url += `?${params.join("&")}`;
             }
 
-            console.log("URL de requisição:", url);  // Verifique se a URL está correta
 
             fetch(url)
                 .then(response => response.json())
                 .then(data => {
-                    console.log("Dados filtrados recebidos:", data);  // Verifique se os dados estão filtrados
                     renderizarMapaRack(data.racks);
                 })
                 .catch(error => console.error("Erro ao carregar racks:", error));
@@ -194,15 +197,14 @@
                 // Calcular a altura proporcional do rack com base no número de U
                 const alturaRack = rack.us * 35;  // 35px por U
                 rackDiv.style.height = `${Math.max(alturaRack, 800)}px`;  // Garante que a altura mínima seja 150px
-                // rackDiv.style.height = `${alturaRack}px`;
 
                 rackDiv.innerHTML = `<h4>${rack.nome}</h4>`;
 
                 let usFrente = [];
                 let usTras = [];
                 for (let i = rack.us; i >= 1; i--) {
-                    usFrente.push({ numero: i, equipamento: null });
-                    usTras.push({ numero: i, equipamento: null });
+                    usFrente.push({ numero: i, equipamento: null, maquinasVirtuais: [] });
+                    usTras.push({ numero: i, equipamento: null, maquinasVirtuais: [] });
                 }
 
                 rack.equipamentos.forEach(equip => {
@@ -211,12 +213,20 @@
 
                         if (equip.lado === "Frente") {
                             let u = usFrente.find(slot => slot.numero === i);
-                            if (u) u.equipamento = equip.nome;
-                            if (isVmware) u.vmware = true;  // Marca como VMWARE
+                            if (u) {
+                                u.equipamento = equip.nome;
+                                if (isVmware) {
+                                    u.maquinasVirtuais = equip.maquinas_virtuais; // Associa as máquinas virtuais
+                                }
+                            }
                         } else if (equip.lado === "Trás") {
                             let u = usTras.find(slot => slot.numero === i);
-                            if (u) u.equipamento = equip.nome;
-                            if (isVmware) u.vmware = true;
+                            if (u) {
+                                u.equipamento = equip.nome;
+                                if (isVmware) {
+                                    u.maquinasVirtuais = equip.maquinas_virtuais; // Associa as máquinas virtuais
+                                }
+                            }
                         }
                     }
                 });
@@ -226,7 +236,8 @@
                         <div class="rack-section">
                             <div class="rack-title">Frente</div>
                             ${usFrente.map(u => `
-                                <div class="rack-slot ${u.equipamento ? 'ocupado' : ''} ${u.vmware ? 'vmware' : ''}">
+                                <div class="rack-slot ${u.equipamento ? 'ocupado' : ''} ${u.maquinasVirtuais.length > 0 ? 'vmware' : ''}"
+                                     ${u.maquinasVirtuais.length > 0 ? `onclick="mostrarMaquinasVirtuais('${encodeURIComponent(JSON.stringify(u.maquinasVirtuais))}')"` : ''}>
                                     ${u.numero} - ${u.equipamento ? u.equipamento : ""}
                                 </div>
                             `).join("")}
@@ -235,7 +246,8 @@
                         <div class="rack-section">
                             <div class="rack-title">Trás</div>
                             ${usTras.map(u => `
-                                <div class="rack-slot ${u.equipamento ? 'ocupado' : ''} ${u.vmware ? 'vmware' : ''}">
+                                <div class="rack-slot ${u.equipamento ? 'ocupado' : ''} ${u.maquinasVirtuais.length > 0 ? 'vmware' : ''}"
+                                     ${u.maquinasVirtuais.length > 0 ? `onclick="mostrarMaquinasVirtuais('${encodeURIComponent(JSON.stringify(u.maquinasVirtuais))}')"` : ''}>
                                     ${u.numero} - ${u.equipamento ? u.equipamento : ""}
                                 </div>
                             `).join("")}
@@ -247,6 +259,17 @@
             });
         }
 
+        // Função para mostrar as máquinas virtuais associadas ao equipamento
+        function mostrarMaquinasVirtuais(maquinas) {
+            const maquinasDecodificadas = JSON.parse(decodeURIComponent(maquinas));  // Decodificar e parsear o JSON
+
+            if (maquinasDecodificadas && maquinasDecodificadas.length > 0) {
+                const maquinasNomes = maquinasDecodificadas.join("\n");  // Exibe as máquinas virtuais como uma lista
+                alert(`Máquinas Virtuais do Servidor:\n${maquinasNomes}`);
+            } else {
+                alert("Nenhuma máquina virtual associada.");
+            }
+        }
 
         // Função para atualizar os POPs conforme a empresa selecionada
         function atualizarPops() {
