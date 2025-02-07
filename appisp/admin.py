@@ -9,11 +9,10 @@ from django.contrib.admin import AdminSite
 from django.shortcuts import render
 from django.http import HttpResponseRedirect
 from .forms import PortaForm, RackForm, RackEquipamentoForm
-from .views import mapa
+from .views import mapa, mapa_racks
 from django.contrib.admin import SimpleListFilter
 from .models import Empresa, Pop, Fabricante, Modelo, Equipamento, Porta, BlocoIP, EnderecoIP, Rack, RackEquipamento, MaquinaVirtual, Disco, Rede
 import json
-
 
 class DiscoInline(admin.TabularInline):  # Ou admin.StackedInline para exibição vertical
     model = Disco
@@ -295,25 +294,31 @@ class CustomAdminSite(AdminSite):
     site_title = "ISP-DOC"
     index_title = "Bem-vindo ao ISP-DOC"
 
-    # Definindo a URL do mapa
+    # Adicionando as URLs para mapa-rede e mapa-rack
     def get_urls(self):
         urls = super().get_urls()
         custom_urls = [
-            path('mapa-rede/', self.admin_view(mapa), name='mapa-rede'),  # Página personalizada
+            path('mapa-rede/', self.admin_view(mapa), name='mapa-rede'),
+            path('mapa-rack/', self.admin_view(mapa_racks), name='mapa-rack'),
         ]
         return custom_urls + urls
 
-        # Adicionando o link para o mapa ao menu
-        def each_context(self, request):
-            context = super().each_context(request)
-            context['custom_menu_links'] = [
-                {
-                    'name': _('Mapa de Rede'),
-                    'url': reverse('admin:mapa-rede'),
-                    'icon': 'fa fa-map',  # Opcional, se você usar FontAwesome ou outro conjunto de ícones
-                }
-            ]
-            return context
+    # Adicionando os links ao menu
+    def each_context(self, request):
+        context = super().each_context(request)
+        context['custom_menu_links'] = [
+            {
+                'name': _('Mapa de Rede'),
+                'url': reverse('admin:mapa-rede'),
+                'icon': 'fa fa-map',  # Opcional, ícone para o menu
+            },
+            {
+                'name': _('Mapa de Rack'),
+                'url': reverse('admin:mapa-rack'),
+                'icon': 'fa fa-cogs',  # Opcional, ícone para o menu
+            }
+        ]
+        return context
 
 # Instanciando a classe personalizada do Admin
 admin_site = CustomAdminSite(name='custom_admin')

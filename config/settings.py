@@ -11,6 +11,8 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
 from pathlib import Path
+from .jazmin import JAZZMIN_SETTINGS
+
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -60,8 +62,8 @@ TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'DIRS': [
-            BASE_DIR / 'templates',  # Se você tiver templates globais no diretório principal do projeto
-        ],
+            BASE_DIR / 'templates',  # Onde estão os templates personalizados da appisp
+            ],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -132,6 +134,13 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+JAZZMIN_SETTINGS = JAZZMIN_SETTINGS
+
+JAZZMIN_UI_TWEAKS = {
+    "theme": "slate",  # Tema padrão (claro)
+    "dark_mode_theme": "darkly",  # Tema para modo escuro
+}
 
 CSRF_TRUSTED_ORIGINS = [
     'https://ispdoc.idxdatacenters.com.br',

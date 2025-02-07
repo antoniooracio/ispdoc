@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Django Admin{% endblock %}</title>
+    {% block extrahead %}
+    {% endblock %}
+</head>
+<body>
+    <header>
+        <nav>
+            <!-- Aqui vai o conteúdo do menu de navegação global, como o menu customizado -->
+            {% block nav-global %}
+            {% endblock %}
+        </nav>
+    </header>
+
+    <main>
+        {% block content %}
+        {% endblock %}
+    </main>
+
+    {% block extra_scripts %}
+    {% endblock %}
+</body>
+</html>

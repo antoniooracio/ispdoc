@@ -1,22 +1,4 @@
-#{% extends "/base.html" %}
-
-#{% block nav-global %}
-#{{ block.super }}
-#<ul class="nav-global">
-#    {% for link in custom_menu_links %}
-#        <li>
-#            <a href="{{ link.url }}" class="nav-link">
-#                {% if link.icon %}
-#                    <i class="{{ link.icon }}"></i>
-#                {% endif %}
-#                {{ link.name }}
-#            </a>
-#        </li>
-#    {% endfor %}
-#</ul>
-#{% endblock %}
-
-{% extends "/base.html" %}
+{% extends "base.html" %}
 
 {% block nav-global %}
 {{ block.super }}
@@ -46,7 +28,6 @@
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/js/select2.min.js"></script>
 <script>
     document.addEventListener("DOMContentLoaded", function () {
-        // Seleciona todos os filtros dropdown e aplica o Select2
         const dropdowns = document.querySelectorAll(".changelist-filter select");
         dropdowns.forEach((dropdown) => {
             $(dropdown).select2({
