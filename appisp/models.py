@@ -90,6 +90,8 @@ class Equipamento(models.Model):
         choices=[('Ativo', 'Ativo'), ('Inativo', 'Inativo')],
         default='Ativo'
     )
+    observacao = models.TextField()
+
 
     def __str__(self):
         return f"{self.nome} ({self.ip})"
