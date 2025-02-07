@@ -493,11 +493,11 @@ const linhasConexao = g.selectAll('.linha-conexao')
 
     // Evento de clique para mostrar detalhes da conexão
     .on('click', function(event, d) {
-        if (userIsAdmin) {
+        // if (userIsAdmin) {
             mostrarInformacoesConexao(d);
-        } else {
-            alert("Você não tem permissão para visualizar essas informações.");
-        }
+        // } else {
+        //    alert("Você não tem permissão para visualizar essas informações.");
+        // }
     });
 
 // Função para mostrar informações da conexão no modal
