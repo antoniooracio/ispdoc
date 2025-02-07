@@ -79,7 +79,12 @@ class Equipamento(models.Model):
     modelo = models.ForeignKey(Modelo, on_delete=models.CASCADE)
     x = models.FloatField(default=20.5)  # Posição X no mapa
     y = models.FloatField(default=30.5)  # Posição Y no mapa
-    tipo = models.CharField(max_length=50)  # Tipo do equipamento (ex: Switch, Roteador)
+    tipo = models.CharField(
+        max_length=50,
+        choices=[('Switch', 'Switch'), ('Roteador', 'Roteador'), ('Servidor', 'Servidor'),
+                 ('VMWARE', 'VMWARE'), ('AccesPoint', 'AccesPoint'), ('Passivo', 'Passivo')],
+        default='Switch'
+    )  # Tipo do equipamento (ex: Switch, Roteador)
     status = models.CharField(
         max_length=20,
         choices=[('Ativo', 'Ativo'), ('Inativo', 'Inativo')],
@@ -291,3 +296,50 @@ class RackEquipamento(models.Model):
 
     def __str__(self):
         return f"{self.equipamento.nome} no Rack {self.rack.nome} (Us {self.us_inicio}-{self.us_fim}, {self.lado})"
+
+
+# Modelo de Maquina Virtual
+class MaquinaVirtual(models.Model):
+    TIPO_ACESSO_CHOICES = [
+        ('SSH', 'SSH'),
+        ('TELNET', 'Telnet'),
+        ('RDP', 'Área de Trabalho'),
+        ('WEB', 'Web'),
+    ]
+
+    empresa = models.ForeignKey('Empresa', on_delete=models.CASCADE)
+    nome = models.CharField(max_length=255)
+    equipamento = models.ForeignKey(
+        'Equipamento',
+        on_delete=models.CASCADE,
+        limit_choices_to={'tipo': 'VMWARE'}
+    )
+    memoria = models.PositiveIntegerField(help_text="Memória em MB")
+    num_processadores = models.PositiveIntegerField()
+    num_cores = models.PositiveIntegerField()
+    sistema_operacional = models.CharField(max_length=255)
+    tipo_acesso = models.CharField(max_length=10, choices=TIPO_ACESSO_CHOICES)
+    porta = models.PositiveIntegerField()
+    usuario = models.CharField(max_length=255)
+    senha = models.CharField(max_length=255)
+
+    def __str__(self):
+        return f"{self.nome} ({self.empresa})"
+
+
+
+class Disco(models.Model):
+    maquina = models.ForeignKey(MaquinaVirtual, on_delete=models.CASCADE, related_name="discos")
+    tamanho = models.CharField(max_length=50)  # Exemplo: '100GB', '1TB'
+
+    def __str__(self):
+        return f"Disco {self.tamanho} - {self.maquina.nome}"
+
+
+class Rede(models.Model):
+    maquina = models.ForeignKey(MaquinaVirtual, on_delete=models.CASCADE, related_name="redes")
+    nome = models.CharField(max_length=255)
+    ip = models.GenericIPAddressField()
+
+    def __str__(self):
+        return f"{self.nome} - {self.ip} ({self.maquina.nome})"

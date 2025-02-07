@@ -67,6 +67,12 @@
             background: #ffc107;
         }
 
+        .rack-slot.vmware {
+            background: #007bff; /* Azul forte para destacar */
+            color: white;
+            font-weight: bold;
+        }
+
         form {
             display: flex;
             gap: 10px;
@@ -201,12 +207,16 @@
 
                 rack.equipamentos.forEach(equip => {
                     for (let i = equip.u_inicio; i <= equip.u_fim; i++) {
+                        let isVmware = equip.tipo === "VMWARE"; // Verifica se é VMWARE
+
                         if (equip.lado === "Frente") {
                             let u = usFrente.find(slot => slot.numero === i);
                             if (u) u.equipamento = equip.nome;
+                            if (isVmware) u.vmware = true;  // Marca como VMWARE
                         } else if (equip.lado === "Trás") {
                             let u = usTras.find(slot => slot.numero === i);
                             if (u) u.equipamento = equip.nome;
+                            if (isVmware) u.vmware = true;
                         }
                     }
                 });
@@ -216,7 +226,7 @@
                         <div class="rack-section">
                             <div class="rack-title">Frente</div>
                             ${usFrente.map(u => `
-                                <div class="rack-slot ${u.equipamento ? 'ocupado' : ''}">
+                                <div class="rack-slot ${u.equipamento ? 'ocupado' : ''} ${u.vmware ? 'vmware' : ''}">
                                     ${u.numero} - ${u.equipamento ? u.equipamento : ""}
                                 </div>
                             `).join("")}
@@ -225,7 +235,7 @@
                         <div class="rack-section">
                             <div class="rack-title">Trás</div>
                             ${usTras.map(u => `
-                                <div class="rack-slot ${u.equipamento ? 'ocupado' : ''}">
+                                <div class="rack-slot ${u.equipamento ? 'ocupado' : ''} ${u.vmware ? 'vmware' : ''}">
                                     ${u.numero} - ${u.equipamento ? u.equipamento : ""}
                                 </div>
                             `).join("")}

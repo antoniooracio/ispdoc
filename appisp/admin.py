@@ -11,7 +11,40 @@ from django.http import HttpResponseRedirect
 from .forms import PortaForm, RackForm, RackEquipamentoForm
 from .views import mapa
 from django.contrib.admin import SimpleListFilter
-from .models import Empresa, Pop, Fabricante, Modelo, Equipamento, Porta, BlocoIP, EnderecoIP, Rack, RackEquipamento
+from .models import Empresa, Pop, Fabricante, Modelo, Equipamento, Porta, BlocoIP, EnderecoIP, Rack, RackEquipamento, MaquinaVirtual, Disco, Rede
+import json
+
+
+class DiscoInline(admin.TabularInline):  # Ou admin.StackedInline para exibição vertical
+    model = Disco
+    extra = 1  # Número inicial de campos exibidos
+
+
+class RedeInline(admin.TabularInline):
+    model = Rede
+    extra = 1  # Número inicial de campos exibidos
+
+
+@admin.register(MaquinaVirtual)
+class MaquinaVirtualAdmin(admin.ModelAdmin):
+    list_display = ('nome', 'empresa', 'equipamento', 'sistema_operacional', 'tipo_acesso')
+    search_fields = ('nome', 'empresa__nome', 'equipamento__nome', 'sistema_operacional')
+    list_filter = ('empresa', 'equipamento')
+    inlines = [DiscoInline, RedeInline]  # Adiciona os campos de discos e redes no formulário
+
+    def get_queryset(self, request):
+        """ Filtra as máquinas virtuais para que usuários comuns só vejam as da sua empresa """
+        qs = super().get_queryset(request)
+        if not request.user.is_superuser:
+            empresa_usuario = request.user.empresas.first()
+            return qs.filter(empresa=empresa_usuario)
+        return qs
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        """ Filtra os equipamentos para mostrar apenas os do tipo 'VMWARE' """
+        if db_field.name == "equipamento":
+            kwargs["queryset"] = db_field.related_model.objects.filter(tipo="VMWARE")
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
 
 @admin.register(Rack)
@@ -236,9 +269,9 @@ class ModeloAdmin(admin.ModelAdmin):
 
 @admin.register(Equipamento)
 class EquipamentoAdmin(admin.ModelAdmin):
-    list_display = ('nome', 'ip','usuario', 'senha', 'porta', 'status', 'protocolo', 'pop', 'empresa', 'fabricante')
-    search_fields = ('nome', 'ip', 'pop__nome', 'empresa__nome', 'fabricante__nome', 'modelo__modelo')
-    list_filter = ('protocolo', 'pop', 'empresa__nome', 'fabricante', 'modelo')
+    list_display = ('nome', 'ip','status', 'pop', 'empresa', 'fabricante', 'tipo')
+    search_fields = ('nome', 'ip', 'pop__nome', 'empresa__nome', 'fabricante__nome', 'modelo__modelo', 'tipo')
+    list_filter = ('protocolo', 'pop', 'empresa__nome', 'fabricante', 'modelo', 'tipo')
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
@@ -299,6 +332,8 @@ admin_site.register(Modelo, ModeloAdmin)
 admin_site.register(BlocoIP, BlocoIPAdmin)
 admin_site.register(Rack, RackAdmin)
 admin_site.register(RackEquipamento, RackEquipamentoAdmin)
+admin_site.register(MaquinaVirtual, MaquinaVirtualAdmin)
+
 
 
 # Em vez de usar admin.site, agora usamos admin_site

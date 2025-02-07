@@ -115,6 +115,7 @@ def mapa_racks_dados(request) -> JsonResponse:
                 'u_inicio': equipamento.us_inicio,
                 'u_fim': equipamento.us_fim,
                 'lado': equipamento.lado,
+                'tipo': equipamento.equipamento.tipo,
             }
             for equipamento in rack.equipamentos.all()
         ]

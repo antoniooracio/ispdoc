@@ -1,7 +1,22 @@
 from dal import autocomplete
 from django import forms
 from django.contrib.auth.models import User
-from .models import Porta, Empresa, Equipamento, Rack, RackEquipamento
+from .models import Porta, Empresa, Equipamento, Rack, RackEquipamento, MaquinaVirtual
+
+
+class MaquinaVirtualForm(forms.ModelForm):
+    class Meta:
+        model = MaquinaVirtual
+        fields = ['empresa', 'nome', 'equipamento', 'memoria', 'num_processadores',
+                  'num_cores', 'sistema_operacional', 'tipo_acesso', 'porta', 'usuario', 'senha']
+        widgets = {
+            'senha': forms.PasswordInput(),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Filtrar apenas equipamentos do tipo "VMWARE"
+        self.fields['equipamento'].queryset = Equipamento.objects.filter(tipo="VMWARE")
 
 
 class EmpresaForm(forms.ModelForm):

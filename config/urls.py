@@ -27,4 +27,5 @@ urlpatterns = [
     path('atualizar_posicao/<int:equipamento_id>/', atualizar_posicao, name='atualizar_posicao'),
     path('mapa-rack/', mapa_racks, name='mapa_rack'),
     path('mapa-rack/dados/', mapa_racks_dados, name='mapa_rack_dados'),
+
 ]
