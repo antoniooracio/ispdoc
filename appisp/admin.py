@@ -14,6 +14,25 @@ from django.contrib.admin import SimpleListFilter
 from .models import Empresa, Pop, Fabricante, Modelo, Equipamento, Porta, BlocoIP, EnderecoIP, Rack, RackEquipamento, MaquinaVirtual, Disco, Rede
 import json
 
+class RackEmpresaFilter(SimpleListFilter):
+    title = "Rack"
+    parameter_name = "rack"
+
+    def lookups(self, request, model_admin):
+        """ Lista apenas os Racks das empresas do usuário """
+        if request.user.is_superuser:
+            return [(rack.id, rack.nome) for rack in Rack.objects.all()]
+
+        racks_usuario = Rack.objects.filter(empresa__usuarios=request.user)
+        return [(rack.id, rack.nome) for rack in racks_usuario]
+
+    def queryset(self, request, queryset):
+        """ Filtra os equipamentos pelo Rack selecionado """
+        if self.value():
+            return queryset.filter(rack_id=self.value())
+        return queryset
+
+
 class DiscoInline(admin.TabularInline):  # Ou admin.StackedInline para exibição vertical
     model = Disco
     extra = 1  # Número inicial de campos exibidos
@@ -167,10 +186,16 @@ class RackAdmin(admin.ModelAdmin):
 class RackEquipamentoAdmin(admin.ModelAdmin):
     form = RackEquipamentoForm  # Usa o formulário com validação
     list_display = ('rack', 'equipamento', 'us_inicio', 'us_fim', 'lado')
-    list_filter = ('rack', 'lado')
     search_fields = ('rack__nome', 'equipamento__nome')
     ordering = ('rack', 'us_inicio')
     autocomplete_fields = ('rack', 'equipamento')
+
+    def get_list_filter(self, request):
+        """Aplica filtros personalizados para exibir apenas dados acessíveis ao usuário"""
+        if request.user.is_superuser:
+            return ('rack', 'lado')  # Superusuário vê tudo
+
+        return (EquipamentoEmpresaFilter, RackEmpresaFilter, 'lado')  # Usuário comum vê apenas racks e equipamentos da empresa
 
     def get_queryset(self, request):
         """ Lista apenas os equipamentos dentro dos racks das empresas do usuário """
@@ -190,12 +215,6 @@ class RackEquipamentoAdmin(admin.ModelAdmin):
                 kwargs["queryset"] = db_field.related_model.objects.filter(empresa__in=empresas_usuario)
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
-    def get_list_filter(self, request):
-        """Aplica filtros personalizados para exibir apenas dados acessíveis ao usuário"""
-        if request.user.is_superuser:
-            return ('rack', 'lado')  # Superusuário vê tudo
-
-        return (EquipamentoEmpresaFilter, 'rack', 'lado')  # Usuário comum vê apenas os equipamentos e racks da empresa
 
 
 class LoteForm(forms.Form):
@@ -244,23 +263,33 @@ class BlocoIPForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        if 'empresa' in self.data:  # Se a empresa for selecionada
+        if 'empresa' in self.data:  # Se a empresa for selecionada dinamicamente
             try:
                 empresa_id = int(self.data.get('empresa'))
                 self.fields['equipamento'].queryset = Equipamento.objects.filter(empresa_id=empresa_id)
+                self.fields['parent'].queryset = BlocoIP.objects.filter(empresa_id=empresa_id)  # Filtro para parent
             except (ValueError, TypeError):
                 pass
         elif self.instance.pk:  # Se for um registro existente
             self.fields['equipamento'].queryset = Equipamento.objects.filter(empresa=self.instance.empresa)
+            self.fields['parent'].queryset = BlocoIP.objects.filter(empresa=self.instance.empresa)  # Filtro para parent
 
 
+@admin.register(BlocoIP)
 class BlocoIPAdmin(admin.ModelAdmin):
     list_display = ('empresa', 'equipamento', 'bloco_cidr', 'next_hop', 'descricao', 'parent', 'criado_em')
     search_fields = ('bloco_cidr', 'empresa__nome', 'equipamento__nome')
-    list_filter = ('empresa', 'equipamento')
     form = BlocoIPForm
 
+    def get_list_filter(self, request):
+        """Aplica filtros personalizados de empresa e equipamento"""
+        if request.user.is_superuser:
+            return ('empresa', 'equipamento', 'parent')  # Superusuário vê todos os filtros
+
+        return (EmpresaUsuarioFilter, EquipamentoEmpresaFilter)  # Usuário comum vê apenas seus dados
+
     def get_queryset(self, request):
+        """ Lista apenas os blocos de IP das empresas do usuário """
         qs = super().get_queryset(request)
 
         if request.user.is_superuser:
@@ -268,10 +297,16 @@ class BlocoIPAdmin(admin.ModelAdmin):
 
         return qs.filter(empresa__usuarios=request.user)
 
-    # Filtrar o campo empresa para mostrar apenas as empresas do usuário logado
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
-        if db_field.name == "empresa" and not request.user.is_superuser:
-            kwargs["queryset"] = Empresa.objects.filter(usuarios=request.user)
+        """ Filtra as opções disponíveis ao cadastrar ou editar """
+        if not request.user.is_superuser:
+            if db_field.name == "empresa":
+                kwargs["queryset"] = Empresa.objects.filter(usuarios=request.user)
+            elif db_field.name == "equipamento":
+                kwargs["queryset"] = Equipamento.objects.filter(empresa__usuarios=request.user)
+            elif db_field.name == "parent":  # Filtro para Parent
+                kwargs["queryset"] = BlocoIP.objects.filter(empresa__usuarios=request.user)
+
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
 
