@@ -288,8 +288,13 @@ class PortaAutocomplete(autocomplete.Select2QuerySetView):
 
         qs = Porta.objects.all()
 
+        # Filtrar apenas as portas dos equipamentos das empresas do usuário
+        if not self.request.user.is_superuser:
+            qs = qs.filter(equipamento__empresa__usuarios=self.request.user)
+
         # Filtrar por empresa passada no formulário
         empresa = self.forwarded.get('empresa', None)
         if empresa:
             qs = qs.filter(equipamento__empresa=empresa)
+
         return qs

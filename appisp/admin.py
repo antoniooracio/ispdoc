@@ -52,15 +52,15 @@ class EquipamentoEmpresaFilter(SimpleListFilter):
         if request.user.is_superuser:
             equipamentos = Equipamento.objects.all()
         else:
-            empresas_usuario = request.user.empresas.all()
-            equipamentos = Equipamento.objects.filter(empresa__in=empresas_usuario)
+            equipamentos = Equipamento.objects.filter(empresa__usuarios=request.user)
 
         return [(equip.id, equip.nome) for equip in equipamentos]
 
     def queryset(self, request, queryset):
         if self.value():
-            return queryset.filter(equipamento__id=self.value())
+            return queryset.filter(equipamento_id=self.value())  # Usar equipamento_id diretamente
         return queryset
+
 
 
 class EmpresaUsuarioFilter(SimpleListFilter):
@@ -78,8 +78,9 @@ class EmpresaUsuarioFilter(SimpleListFilter):
 
     def queryset(self, request, queryset):
         if self.value():
-            return queryset.filter(empresa__id=self.value())
+            return queryset.filter(equipamento__empresa_id=self.value())  # Filtrar corretamente pela empresa
         return queryset
+
 
 
 class PopUsuarioFilter(SimpleListFilter):
@@ -322,7 +323,8 @@ class PortaAdmin(admin.ModelAdmin):
     form = PortaForm
     list_display = ('nome', 'equipamento', 'conexao', 'speed', 'tipo')
     search_fields = ('nome', 'equipamento__nome', 'conexao__nome')
-    list_filter = (EmpresaFilter, 'equipamento', 'speed', 'tipo')
+    list_filter = (EmpresaUsuarioFilter, EquipamentoEmpresaFilter, 'speed', 'tipo')
+
 
     change_list_template = "admin/porta_changelist.html"  # Personalizamos o template
 
