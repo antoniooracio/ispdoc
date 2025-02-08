@@ -356,7 +356,6 @@ class PortaAdmin(admin.ModelAdmin):
         return form
 
 
-
 @admin.register(Empresa)
 class EmpresaAdmin(admin.ModelAdmin):
     list_display = ('nome', 'cidade', 'telefone', 'representante', 'status')
