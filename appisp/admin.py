@@ -24,6 +24,64 @@ class RedeInline(admin.TabularInline):
     extra = 1  # Número inicial de campos exibidos
 
 
+class EquipamentoEmpresaFilter(SimpleListFilter):
+    """Filtro personalizado para exibir apenas equipamentos das empresas do usuário"""
+    title = "Equipamento"
+    parameter_name = "equipamento"
+
+    def lookups(self, request, model_admin):
+        if request.user.is_superuser:
+            equipamentos = Equipamento.objects.all()
+        else:
+            empresas_usuario = request.user.empresas.all()
+            equipamentos = Equipamento.objects.filter(empresa__in=empresas_usuario)
+
+        return [(equip.id, equip.nome) for equip in equipamentos]
+
+    def queryset(self, request, queryset):
+        if self.value():
+            return queryset.filter(equipamento__id=self.value())
+        return queryset
+
+
+class EmpresaUsuarioFilter(SimpleListFilter):
+    """Filtro personalizado para exibir apenas empresas às quais o usuário pertence"""
+    title = "Empresa"
+    parameter_name = "empresa"
+
+    def lookups(self, request, model_admin):
+        if request.user.is_superuser:
+            empresas = Empresa.objects.all()
+        else:
+            empresas = request.user.empresas.all()
+
+        return [(empresa.id, empresa.nome) for empresa in empresas]
+
+    def queryset(self, request, queryset):
+        if self.value():
+            return queryset.filter(empresa__id=self.value())
+        return queryset
+
+
+class PopUsuarioFilter(SimpleListFilter):
+    title = "POP"
+    parameter_name = "pop"
+
+    def lookups(self, request, model_admin):
+        """ Lista apenas os POPs das empresas do usuário """
+        if request.user.is_superuser:
+            return [(pop.id, pop.nome) for pop in model_admin.get_queryset(request).values_list('id', 'nome')]
+
+        pops_usuario = Pop.objects.filter(empresa__usuarios=request.user)
+        return [(pop.id, pop.nome) for pop in pops_usuario]
+
+    def queryset(self, request, queryset):
+        """ Filtra os equipamentos pelo POP selecionado """
+        if self.value():
+            return queryset.filter(pop_id=self.value())
+        return queryset
+
+
 @admin.register(MaquinaVirtual)
 class MaquinaVirtualAdmin(admin.ModelAdmin):
     list_display = ('nome', 'empresa', 'equipamento', 'sistema_operacional', 'tipo_acesso')
@@ -35,15 +93,39 @@ class MaquinaVirtualAdmin(admin.ModelAdmin):
         """ Filtra as máquinas virtuais para que usuários comuns só vejam as da sua empresa """
         qs = super().get_queryset(request)
         if not request.user.is_superuser:
-            empresa_usuario = request.user.empresas.first()
-            return qs.filter(empresa=empresa_usuario)
+            empresas_usuario = request.user.empresas.all()
+            return qs.filter(empresa__in=empresas_usuario)
         return qs
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
-        """ Filtra os equipamentos para mostrar apenas os do tipo 'VMWARE' """
-        if db_field.name == "equipamento":
-            kwargs["queryset"] = db_field.related_model.objects.filter(tipo="VMWARE")
+        """ Filtra os campos de chave estrangeira para mostrar apenas dados da empresa do usuário """
+        if db_field.name == "empresa":
+            if not request.user.is_superuser:
+                kwargs["queryset"] = db_field.related_model.objects.filter(usuarios=request.user)
+        elif db_field.name == "equipamento":
+            if not request.user.is_superuser:
+                empresas_usuario = request.user.empresas.all()
+                kwargs["queryset"] = db_field.related_model.objects.filter(empresa__in=empresas_usuario, tipo="VMWARE")
+            else:
+                kwargs["queryset"] = db_field.related_model.objects.filter(tipo="VMWARE")
+
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
+    def get_search_results(self, request, queryset, search_term):
+        """ Filtra os resultados da pesquisa para usuários comuns """
+        queryset, use_distinct = super().get_search_results(request, queryset, search_term)
+        if not request.user.is_superuser:
+            empresas_usuario = request.user.empresas.all()
+            queryset = queryset.filter(empresa__in=empresas_usuario)
+        return queryset, use_distinct
+
+    def get_list_filter(self, request):
+        """Aplica os filtros personalizados para exibir apenas dados acessíveis ao usuário"""
+        if request.user.is_superuser:
+            return (EmpresaUsuarioFilter, EquipamentoEmpresaFilter)  # Superusuário vê tudo
+
+        return (EmpresaUsuarioFilter, EquipamentoEmpresaFilter)  # Usuário comum vê apenas os dados acessíveis
+
 
 
 @admin.register(Rack)
@@ -53,7 +135,32 @@ class RackAdmin(admin.ModelAdmin):
     list_filter = ('empresa', 'pop')
     search_fields = ('nome', 'pop__nome', 'empresa__nome')
     ordering = ('empresa', 'pop', 'nome')
-    autocomplete_fields = ('pop', 'empresa')
+
+    def get_queryset(self, request):
+        """ Lista apenas os racks das empresas do usuário """
+        qs = super().get_queryset(request)
+        if not request.user.is_superuser:
+            empresas_usuario = request.user.empresas.all()
+            return qs.filter(empresa__in=empresas_usuario)
+        return qs
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        """ Filtra os POPs e Empresas disponíveis no cadastro do Rack """
+        if not request.user.is_superuser:
+            empresas_usuario = request.user.empresas.all()
+            if db_field.name == "empresa":
+                kwargs["queryset"] = db_field.related_model.objects.filter(id__in=empresas_usuario)
+            elif db_field.name == "pop":
+                kwargs["queryset"] = db_field.related_model.objects.filter(empresa__in=empresas_usuario)
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
+    def get_list_filter(self, request):
+        """Aplica filtros personalizados de empresa e pop."""
+        if request.user.is_superuser:
+            return ('pop', 'empresa')  # Superusuário vê tudo
+
+        return (EmpresaUsuarioFilter, 'pop')  # Usuário comum vê apenas as empresas permitidas
+
 
 
 @admin.register(RackEquipamento)
@@ -64,6 +171,31 @@ class RackEquipamentoAdmin(admin.ModelAdmin):
     search_fields = ('rack__nome', 'equipamento__nome')
     ordering = ('rack', 'us_inicio')
     autocomplete_fields = ('rack', 'equipamento')
+
+    def get_queryset(self, request):
+        """ Lista apenas os equipamentos dentro dos racks das empresas do usuário """
+        qs = super().get_queryset(request)
+        if not request.user.is_superuser:
+            empresas_usuario = request.user.empresas.all()
+            return qs.filter(rack__empresa__in=empresas_usuario)
+        return qs
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        """ Filtra Racks e Equipamentos disponíveis no cadastro """
+        if not request.user.is_superuser:
+            empresas_usuario = request.user.empresas.all()
+            if db_field.name == "rack":
+                kwargs["queryset"] = db_field.related_model.objects.filter(empresa__in=empresas_usuario)
+            elif db_field.name == "equipamento":
+                kwargs["queryset"] = db_field.related_model.objects.filter(empresa__in=empresas_usuario)
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
+    def get_list_filter(self, request):
+        """Aplica filtros personalizados para exibir apenas dados acessíveis ao usuário"""
+        if request.user.is_superuser:
+            return ('rack', 'lado')  # Superusuário vê tudo
+
+        return (EquipamentoEmpresaFilter, 'rack', 'lado')  # Usuário comum vê apenas os equipamentos e racks da empresa
 
 
 class LoteForm(forms.Form):
@@ -236,7 +368,13 @@ class EmpresaAdmin(admin.ModelAdmin):
 class PopAdmin(admin.ModelAdmin):
     list_display = ('nome', 'cidade', 'empresa')
     search_fields = ('nome', 'cidade', 'empresa__nome')
-    list_filter = ('cidade', 'empresa__nome')
+
+    def get_list_filter(self, request):
+        """ Aplica o filtro de empresa. """
+        if request.user.is_superuser:
+            return ('cidade', 'empresa')
+
+        return ('cidade', EmpresaUsuarioFilter)
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
@@ -246,8 +384,8 @@ class PopAdmin(admin.ModelAdmin):
 
         return qs.filter(empresa__usuarios=request.user)
 
-    # Filtrar o campo empresa para mostrar apenas as empresas do usuário logado
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        """ Filtra o campo empresa para mostrar apenas as empresas do usuário logado """
         if db_field.name == "empresa" and not request.user.is_superuser:
             kwargs["queryset"] = Empresa.objects.filter(usuarios=request.user)
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
@@ -268,25 +406,33 @@ class ModeloAdmin(admin.ModelAdmin):
 
 @admin.register(Equipamento)
 class EquipamentoAdmin(admin.ModelAdmin):
-    list_display = ('nome', 'ip','status', 'pop', 'empresa', 'fabricante', 'tipo')
+    list_display = ('nome', 'ip', 'status', 'pop', 'empresa', 'fabricante', 'tipo')
     search_fields = ('nome', 'ip', 'pop__nome', 'empresa__nome', 'fabricante__nome', 'modelo__modelo', 'tipo')
-    list_filter = ('protocolo', 'pop', 'empresa__nome', 'fabricante', 'modelo', 'tipo')
+
+    def get_list_filter(self, request):
+        """ Aplica os filtros personalizados de empresa e POP. """
+        if request.user.is_superuser:
+            return ('protocolo', 'pop', 'empresa', 'fabricante', 'modelo', 'tipo')
+
+        return ('protocolo', EmpresaUsuarioFilter, PopUsuarioFilter, 'fabricante', 'modelo', 'tipo')
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
 
-        # Superuser vê todos os equipamentos
         if request.user.is_superuser:
             return qs
 
-        # Usuário normal só vê equipamentos das suas empresas
         return qs.filter(empresa__usuarios=request.user)
 
-    # Filtrar o campo empresa para mostrar apenas as empresas do usuário logado
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
-        if db_field.name == "empresa" and not request.user.is_superuser:
-            kwargs["queryset"] = Empresa.objects.filter(usuarios=request.user)
+        """ Filtra os campos empresa e pop para mostrar apenas os do usuário """
+        if not request.user.is_superuser:
+            if db_field.name == "empresa":
+                kwargs["queryset"] = Empresa.objects.filter(usuarios=request.user)
+            elif db_field.name == "pop":
+                kwargs["queryset"] = Pop.objects.filter(empresa__usuarios=request.user)
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
 
 # Classe personalizada de Admin
 class CustomAdminSite(AdminSite):
