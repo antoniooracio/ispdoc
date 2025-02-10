@@ -219,11 +219,16 @@ class RackEquipamentoAdmin(admin.ModelAdmin):
 
 
 class LoteForm(forms.Form):
+    empresa = forms.ModelChoiceField(
+        queryset=Empresa.objects.none(),  # Inicialmente vazio
+        required=True,
+        label="Empresa",
+    )
     nome_base = forms.CharField(label="Nome Base", max_length=100)
     inicio = forms.IntegerField(label="Número Inicial", min_value=1)
     quantidade = forms.IntegerField(label="Quantidade", min_value=1)
     equipamento = forms.ModelChoiceField(
-        queryset=Equipamento.objects.all(),
+        queryset=Equipamento.objects.none(),  # Inicialmente vazio, será carregado via AJAX
         label="Equipamento",
         required=True
     )
@@ -237,6 +242,24 @@ class LoteForm(forms.Form):
         label="Speed",
         required=True
     )
+
+    def __init__(self, *args, **kwargs):
+        self.request = kwargs.pop('request', None)  # Obtém o request
+        super().__init__(*args, **kwargs)
+
+        if self.request and self.request.user.is_authenticated:
+            # Filtra as empresas associadas ao usuário logado
+            self.fields['empresa'].queryset = Empresa.objects.filter(usuarios=self.request.user)
+
+        empresa_id = self.data.get('empresa') or self.initial.get('empresa')
+        if empresa_id:
+            try:
+                empresa = Empresa.objects.get(id=empresa_id)
+                self.fields['equipamento'].queryset = Equipamento.objects.filter(empresa=empresa)
+            except Empresa.DoesNotExist:
+                self.fields['equipamento'].queryset = Equipamento.objects.none()
+        else:
+            self.fields['equipamento'].queryset = Equipamento.objects.none()
 
 
 # Filtro personalizado para empresa
@@ -341,6 +364,7 @@ class PortaAdmin(admin.ModelAdmin):
         if request.method == "POST":
             form = LoteForm(request.POST)
             if form.is_valid():
+                empresa = form.cleaned_data["empresa"]
                 nome_base = form.cleaned_data["nome_base"]
                 inicio = form.cleaned_data["inicio"]
                 quantidade = form.cleaned_data["quantidade"]
@@ -354,6 +378,7 @@ class PortaAdmin(admin.ModelAdmin):
                     porta = Porta(
                         nome=porta_nome,
                         equipamento=equipamento,
+                        empresa=empresa,
                         tipo=tipo,
                         speed=speed
                     )
@@ -368,7 +393,7 @@ class PortaAdmin(admin.ModelAdmin):
                 return HttpResponseRedirect("../")
 
         else:
-            form = LoteForm()
+            form = LoteForm(request=request)
 
         context = {
             "form": form,
@@ -376,6 +401,14 @@ class PortaAdmin(admin.ModelAdmin):
         }
         return render(request, "admin/adicionar_lote.html", context)
 
+    def get_queryset(self, request):
+        """Filtra as portas pela empresa do usuário logado."""
+        qs = super().get_queryset(request)
+        if request.user.is_superuser:
+            return qs  # Superusuários veem tudo
+
+        # Filtra as portas apenas das empresas associadas ao usuário
+        return qs.filter(empresa__usuarios=request.user)
 
     def get_fields(self, request, obj=None):
         """Reordena os campos para exibir 'empresa' primeiro."""
@@ -386,11 +419,16 @@ class PortaAdmin(admin.ModelAdmin):
         return fields
 
     def get_form(self, request, obj=None, **kwargs):
+        # Obtém o formulário base
         form = super().get_form(request, obj, **kwargs)
-        if obj:
-            # Passar a empresa para o formulário
-            form.base_fields['empresa'].initial = obj.equipamento.empresa
-        return form
+
+        # Sobrescreve o métod o __init__ do formulário para injetar o request
+        class CustomPortaForm(form):
+            def __init__(self, *args, **kwargs):
+                kwargs['request'] = request
+                super().__init__(*args, **kwargs)
+
+        return CustomPortaForm
 
 
 @admin.register(Empresa)

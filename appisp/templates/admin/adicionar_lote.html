@@ -3,7 +3,7 @@
 
 {% block content %}
 
-
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
 <div class="row"></div>
     <div class="col-12 col-lg-9">
@@ -16,6 +16,16 @@
                 <div class="row">
                     <div class="col-sm-5 text-left">
                         <h1>Adicionar Portas em Lote</h1>
+                    </div>
+                </div>
+            </div>
+            <div class="form-group field-tipo">
+                <div class="row">
+                    <div class="col-sm-3 text-left">
+                        {{ form.empresa.label_tag }}
+                    </div>
+                    <div class="col-sm-7">
+                        {{ form.empresa }}
                     </div>
                 </div>
             </div>
@@ -86,4 +96,32 @@
         </div>
     </div>
 </div>
+
+<script>
+    $(document).ready(function () {
+        $("#id_empresa").change(function () {
+            var empresaId = $(this).val();
+            var equipamentoSelect = $("#id_equipamento");
+
+            if (empresaId) {
+                $.ajax({
+                    url: "{% url 'get-equipamentos' %}",
+                    data: {"empresa_id": empresaId},
+                    dataType: "json",
+                    success: function (data) {
+                        equipamentoSelect.empty();
+                        equipamentoSelect.append('<option value="">---------</option>');
+                        $.each(data, function (index, equipamento) {
+                            equipamentoSelect.append('<option value="' + equipamento.id + '">' + equipamento.nome + '</option>');
+                        });
+                    }
+                });
+            } else {
+                equipamentoSelect.empty();
+                equipamentoSelect.append('<option value="">---------</option>');
+            }
+        });
+    });
+</script>
+
 {% endblock %}

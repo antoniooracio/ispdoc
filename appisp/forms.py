@@ -33,8 +33,8 @@ class EmpresaForm(forms.ModelForm):
 
 class PortaForm(forms.ModelForm):
     empresa = forms.ModelChoiceField(
-        queryset=Empresa.objects.all(),
-        required=False,
+        queryset=Empresa.objects.none(),
+        required=True,
         label="Empresa",
     )
 
@@ -53,12 +53,19 @@ class PortaForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        self.request = kwargs.pop('request', None)  # Obtém o request
         super().__init__(*args, **kwargs)
-        # Filtra os equipamentos e portas pelo campo empresa
-        if 'empresa' in self.initial:
-            empresa = self.initial['empresa']
-            self.fields['equipamento'].queryset = Equipamento.objects.filter(empresa=empresa)
-            self.fields['conexao'].queryset = Porta.objects.filter(equipamento__empresa=empresa)
+
+        if self.request and self.request.user.is_authenticated:
+            # Filtra apenas as empresas que o usuário tem acesso
+            self.fields['empresa'].queryset = Empresa.objects.filter(usuarios=self.request.user)
+
+        # Se uma empresa já estiver selecionada, filtra os equipamentos dela
+        empresa_selecionada = self.initial.get('empresa') or self.data.get('empresa')
+        if empresa_selecionada:
+            self.fields['equipamento'].queryset = Equipamento.objects.filter(empresa=empresa_selecionada)
+        else:
+            self.fields['equipamento'].queryset = Equipamento.objects.none()
 
     def clean(self):
         cleaned_data = super().clean()

@@ -7,7 +7,21 @@ from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404
 from .models import Equipamento, Porta, Empresa, Pop, Rack, Equipamento
+from .forms import PortaForm
 
+
+@login_required
+def adicionar_portas(request):
+    if request.method == "POST":
+        form = PortaForm(request.POST)
+        if form.is_valid():
+            print(request.POST)
+            form.save()
+            return redirect("/admin")  # Substitua pelo nome correto da URL
+    else:
+        form = PortaForm()
+
+    return render(request, "adicionar_lote.html", {"form": form})
 
 @login_required
 def listar_equipamentos(request):
@@ -89,7 +103,6 @@ def mapa_racks(request):
     return render(request, 'appisp/mapa_racks.html', context)
 
 
-
 # Rota para fornecer os dados do mapa de racks em formato JSON
 def mapa_racks_dados(request) -> JsonResponse:
     # Obter os parâmetros de filtro da URL
@@ -140,7 +153,6 @@ def mapa_racks_dados(request) -> JsonResponse:
 
     # Retornar os racks e POPs no formato JSON
     return JsonResponse({'racks': racks_data, 'pops': pops_data})
-
 
 
 def atualizar_posicao(request, equipamento_id):
@@ -298,3 +310,10 @@ class PortaAutocomplete(autocomplete.Select2QuerySetView):
             qs = qs.filter(equipamento__empresa=empresa)
 
         return qs
+
+
+def get_equipamentos_por_empresa(request):
+    empresa_id = request.GET.get('empresa_id')
+    equipamentos = Equipamento.objects.filter(empresa_id=empresa_id).values('id', 'nome')
+
+    return JsonResponse(list(equipamentos), safe=False)
