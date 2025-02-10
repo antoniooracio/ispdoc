@@ -147,7 +147,6 @@ class MaquinaVirtualAdmin(admin.ModelAdmin):
         return (EmpresaUsuarioFilter, EquipamentoEmpresaFilter)  # Usuário comum vê apenas os dados acessíveis
 
 
-
 @admin.register(Rack)
 class RackAdmin(admin.ModelAdmin):
     form = RackForm  # Usa o formulário com validação
@@ -182,7 +181,6 @@ class RackAdmin(admin.ModelAdmin):
         return (EmpresaUsuarioFilter, 'pop')  # Usuário comum vê apenas as empresas permitidas
 
 
-
 @admin.register(RackEquipamento)
 class RackEquipamentoAdmin(admin.ModelAdmin):
     form = RackEquipamentoForm  # Usa o formulário com validação
@@ -215,7 +213,6 @@ class RackEquipamentoAdmin(admin.ModelAdmin):
             elif db_field.name == "equipamento":
                 kwargs["queryset"] = db_field.related_model.objects.filter(empresa__in=empresas_usuario)
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
-
 
 
 class LoteForm(forms.Form):
@@ -367,10 +364,7 @@ class PortaAdmin(admin.ModelAdmin):
     from .forms import LoteForm  # Importando o formulário
 
     def adicionar_lote(self, request):
-        print("VIEW FOI CHAMADA")
-
         if request.method == "POST":
-            print("🚀 Dados Recebidos admin:", request.POST)
             form = LoteForm(request.POST, request=request)  # 🔥 Passamos a request para o form
 
             if form.is_valid():
