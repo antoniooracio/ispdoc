@@ -17,6 +17,7 @@ def get_equipamentos(request):
         return JsonResponse(list(equipamentos), safe=False)
     return JsonResponse([], safe=False)
 
+
 @login_required
 def adicionar_portas(request):
     if request.method == "POST":
@@ -34,6 +35,7 @@ def adicionar_portas(request):
 
     print(form.errors)  # Verifica erros no formulário
     return render(request, "adicionar_lote.html", {"form": form})
+
 
 @login_required
 def listar_equipamentos(request):

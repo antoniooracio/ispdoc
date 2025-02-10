@@ -4,7 +4,6 @@ from django.core.exceptions import ValidationError
 from django.contrib.auth.models import User  # Importe o modelo de usuário
 import ipaddress
 
-
 # Modelo de Empresa
 class Empresa(models.Model):
     STATUS_CHOICES = [
@@ -329,7 +328,6 @@ class MaquinaVirtual(models.Model):
 
     def __str__(self):
         return f"{self.nome} ({self.empresa})"
-
 
 
 class Disco(models.Model):

@@ -62,7 +62,6 @@ class EquipamentoEmpresaFilter(SimpleListFilter):
         return queryset
 
 
-
 class EmpresaUsuarioFilter(SimpleListFilter):
     """Filtro personalizado para exibir apenas empresas às quais o usuário pertence"""
     title = "Empresa"

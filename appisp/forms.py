@@ -3,7 +3,6 @@ from django import forms
 from django.contrib.auth.models import User
 from .models import Porta, Empresa, Equipamento, Rack, RackEquipamento, MaquinaVirtual
 
-
 class LoteForm(forms.Form):
     empresa = forms.ModelChoiceField(queryset=Empresa.objects.none(), required=True, label="Empresa")
     equipamento = forms.ModelChoiceField(queryset=Equipamento.objects.none(), required=True, label="Equipamento")
@@ -20,6 +19,7 @@ class LoteForm(forms.Form):
         if request:
             self.fields["empresa"].queryset = Empresa.objects.filter(usuario=request.user)
             self.fields["equipamento"].queryset = Equipamento.objects.all()  # Ajuste conforme necessário
+
 
 class MaquinaVirtualForm(forms.ModelForm):
     class Meta:
