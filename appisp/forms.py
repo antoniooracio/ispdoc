@@ -4,6 +4,23 @@ from django.contrib.auth.models import User
 from .models import Porta, Empresa, Equipamento, Rack, RackEquipamento, MaquinaVirtual
 
 
+class LoteForm(forms.Form):
+    empresa = forms.ModelChoiceField(queryset=Empresa.objects.none(), required=True, label="Empresa")
+    equipamento = forms.ModelChoiceField(queryset=Equipamento.objects.none(), required=True, label="Equipamento")
+    nome_base = forms.CharField(max_length=100, required=True, label="Nome Base")
+    inicio = forms.IntegerField(required=True, label="Número Inicial")
+    quantidade = forms.IntegerField(required=True, label="Quantidade")
+    tipo = forms.CharField(max_length=50, required=True, label="Tipo")
+    speed = forms.CharField(max_length=50, required=True, label="Velocidade")
+
+    def __init__(self, *args, **kwargs):
+        request = kwargs.pop("request", None)  # Pegamos a request para filtrar os dados
+        super().__init__(*args, **kwargs)
+
+        if request:
+            self.fields["empresa"].queryset = Empresa.objects.filter(usuario=request.user)
+            self.fields["equipamento"].queryset = Equipamento.objects.all()  # Ajuste conforme necessário
+
 class MaquinaVirtualForm(forms.ModelForm):
     class Meta:
         model = MaquinaVirtual
@@ -53,19 +70,17 @@ class PortaForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
-        self.request = kwargs.pop('request', None)  # Obtém o request
+        self.request = kwargs.pop('request', None)
         super().__init__(*args, **kwargs)
 
         if self.request and self.request.user.is_authenticated:
-            # Filtra apenas as empresas que o usuário tem acesso
             self.fields['empresa'].queryset = Empresa.objects.filter(usuarios=self.request.user)
 
-        # Se uma empresa já estiver selecionada, filtra os equipamentos dela
+        # Mantém a empresa no queryset mesmo se o AJAX alterar o campo
         empresa_selecionada = self.initial.get('empresa') or self.data.get('empresa')
         if empresa_selecionada:
-            self.fields['equipamento'].queryset = Equipamento.objects.filter(empresa=empresa_selecionada)
-        else:
-            self.fields['equipamento'].queryset = Equipamento.objects.none()
+            self.fields['empresa'].queryset = Empresa.objects.filter(id=empresa_selecionada)
+            self.fields['empresa'].initial = empresa_selecionada
 
     def clean(self):
         cleaned_data = super().clean()

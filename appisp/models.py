@@ -113,11 +113,10 @@ class Porta(models.Model):
         ('Fibra', 'Fibra'),
         ('Radio', 'Rádio'),
     ]
-
-    nome = models.CharField(max_length=50,)  # Ex: "Porta1", "Porta2"
-    equipamento = models.ForeignKey('Equipamento', on_delete=models.CASCADE, related_name='portas')
     empresa = models.ForeignKey('Empresa', on_delete=models.CASCADE, related_name='portas', null=True,
                                 blank=True)  # Novo campo
+    nome = models.CharField(max_length=50,)  # Ex: "Porta1", "Porta2"
+    equipamento = models.ForeignKey('Equipamento', on_delete=models.CASCADE, related_name='portas')
     conexao = models.OneToOneField(
         'self',
         on_delete=models.SET_NULL,

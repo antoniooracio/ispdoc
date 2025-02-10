@@ -10,17 +10,29 @@ from .models import Equipamento, Porta, Empresa, Pop, Rack, Equipamento
 from .forms import PortaForm
 
 
+def get_equipamentos(request):
+    empresa_id = request.GET.get("empresa_id")
+    if empresa_id:
+        equipamentos = Equipamento.objects.filter(empresa_id=empresa_id).values("id", "nome")
+        return JsonResponse(list(equipamentos), safe=False)
+    return JsonResponse([], safe=False)
+
 @login_required
 def adicionar_portas(request):
     if request.method == "POST":
+        print("🚀 Dados Recebidos views:", request.POST)
         form = PortaForm(request.POST)
+
+
         if form.is_valid():
-            print(request.POST)
+            print("✅ Empresa Selecionada views:", form.cleaned_data["empresa"])
             form.save()
             return redirect("/admin")  # Substitua pelo nome correto da URL
     else:
         form = PortaForm()
+        print("❌ Erros no formulário:", form.errors)  # Verifica os erros
 
+    print(form.errors)  # Verifica erros no formulário
     return render(request, "adicionar_lote.html", {"form": form})
 
 @login_required

@@ -6,7 +6,7 @@ from django.utils.translation import gettext_lazy as _
 from django.contrib.auth.models import Group, User
 from django.contrib.auth.admin import GroupAdmin, UserAdmin
 from django.contrib.admin import AdminSite
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404
 from django.http import HttpResponseRedirect
 from .forms import PortaForm, RackForm, RackEquipamentoForm
 from .views import mapa, mapa_racks
@@ -225,7 +225,7 @@ class LoteForm(forms.Form):
         label="Empresa",
     )
     nome_base = forms.CharField(label="Nome Base", max_length=100)
-    inicio = forms.IntegerField(label="Número Inicial", min_value=1)
+    inicio = forms.IntegerField(label="Número Inicial", min_value=0)
     quantidade = forms.IntegerField(label="Quantidade", min_value=1)
     equipamento = forms.ModelChoiceField(
         queryset=Equipamento.objects.none(),  # Inicialmente vazio, será carregado via AJAX
@@ -355,20 +355,30 @@ class PortaAdmin(admin.ModelAdmin):
     def get_urls(self):
         urls = super().get_urls()
         custom_urls = [
+
             path("adicionar-lote/", self.admin_site.admin_view(self.adicionar_lote), name="adicionar_lote"),
         ]
         return custom_urls + urls
 
     # Lógica para criar portas em lote
+    from django.shortcuts import render, get_object_or_404
+    from django.http import HttpResponseRedirect
+    from django.contrib import messages
+    from .forms import LoteForm  # Importando o formulário
+
     def adicionar_lote(self, request):
+        print("VIEW FOI CHAMADA")
+
         if request.method == "POST":
-            form = LoteForm(request.POST)
+            print("🚀 Dados Recebidos admin:", request.POST)
+            form = LoteForm(request.POST, request=request)  # 🔥 Passamos a request para o form
+
             if form.is_valid():
                 empresa = form.cleaned_data["empresa"]
+                equipamento = form.cleaned_data["equipamento"]
                 nome_base = form.cleaned_data["nome_base"]
                 inicio = form.cleaned_data["inicio"]
                 quantidade = form.cleaned_data["quantidade"]
-                equipamento = form.cleaned_data["equipamento"]
                 tipo = form.cleaned_data["tipo"]
                 speed = form.cleaned_data["speed"]
 
@@ -391,9 +401,11 @@ class PortaAdmin(admin.ModelAdmin):
                     messages.SUCCESS
                 )
                 return HttpResponseRedirect("../")
+            else:
+                print("❌ Erros no formulário:", form.errors)
 
         else:
-            form = LoteForm(request=request)
+            form = LoteForm(request=request)  # 🔥 Passamos a request para o form
 
         context = {
             "form": form,

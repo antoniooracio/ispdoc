@@ -9,7 +9,7 @@
     <div class="col-12 col-lg-9">
         <div class="card">
             <div class="card-body">
-        <form method="post" class="form-horizontal">
+        <form method="post" action="{% url 'admin:adicionar_lote' %}" class="form-horizontal">
             {% csrf_token %}
             <!-- {{ form.as_p }} -->
             <div class="form-group field-tipo">
@@ -92,15 +92,25 @@
             <button type="submit" class="btn btn-primary">Adicionar</button>
             <a href="../" class="btn btn-secondary">Cancelar</a>
         </form>
+                {% if form.errors %}
+                    <div class="alert alert-danger">
+                        <strong>Erros no formulário:</strong>
+                        <ul>
+                            {% for field, errors in form.errors.items %}
+                                <li><strong>{{ field }}:</strong> {{ errors|join:", " }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                {% endif %}
         </div>
         </div>
     </div>
-</div>
-
-<script>
+    <script>
     $(document).ready(function () {
         $("#id_empresa").change(function () {
             var empresaId = $(this).val();
+            console.log("Empresa selecionada antes do AJAX:", empresaId);
+
             var equipamentoSelect = $("#id_equipamento");
 
             if (empresaId) {
@@ -114,14 +124,17 @@
                         $.each(data, function (index, equipamento) {
                             equipamentoSelect.append('<option value="' + equipamento.id + '">' + equipamento.nome + '</option>');
                         });
+
+                        // 👇 Restaura o valor da empresa após o AJAX
+                        $("#id_empresa").val(empresaId);
                     }
                 });
-            } else {
-                equipamentoSelect.empty();
-                equipamentoSelect.append('<option value="">---------</option>');
             }
         });
+
     });
 </script>
+</div>
+
 
 {% endblock %}
