@@ -57,6 +57,7 @@
         }
 
         .rack-slot {
+            border: 1px solid #333;
             padding: 5px;
             text-align: center;
             font-size: 14px;
@@ -64,10 +65,26 @@
         }
 
         .rack-slot.ocupado {
+            font-size: 12px; /* Reduzindo um pouco o tamanho da fonte */
+            white-space: nowrap; /* Impede a quebra de linha */
+            overflow: hidden; /* Corta qualquer texto que ultrapasse o limite */
+            text-overflow: ellipsis; /* Adiciona "..." para indicar texto cortado */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2px;
             background: #ffc107;
         }
 
         .rack-slot.vmware {
+            font-size: 12px; /* Reduzindo um pouco o tamanho da fonte */
+            white-space: nowrap; /* Impede a quebra de linha */
+            overflow: hidden; /* Corta qualquer texto que ultrapasse o limite */
+            text-overflow: ellipsis; /* Adiciona "..." para indicar texto cortado */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2px;
             background: #007bff; /* Azul forte para destacar */
             color: white;
         }
@@ -199,7 +216,7 @@
                 rackDiv.className = "rack";
 
                 // Calcular a altura proporcional do rack com base no número de U
-                const alturaRack = rack.us * 35;  // 35px por U
+                const alturaRack = rack.us * 40;  // 35px por U
                 rackDiv.style.height = `${Math.max(alturaRack, 800)}px`;  // Garante que a altura mínima seja 150px
 
                 rackDiv.innerHTML = `<h4>${rack.nome}</h4>`;
@@ -239,22 +256,54 @@
                     <div class="rack-content">
                         <div class="rack-section">
                             <div class="rack-title">Frente</div>
-                            ${usFrente.map(u => `
-                                <div class="rack-slot ${u.equipamento ? 'ocupado' : ''} ${u.maquinasVirtuais.length > 0 ? 'vmware' : ''}"
-                                     ${u.maquinasVirtuais.length > 0 ? `onclick="mostrarMaquinasVirtuais('${encodeURIComponent(JSON.stringify(u.maquinasVirtuais))}')"` : ''}>
-                                    ${u.numero} - ${u.equipamento ? u.equipamento : ""}
-                                </div>
-                            `).join("")}
+                            ${usFrente.map((u, index, arr) => {
+                                if (u.equipamento && (index === 0 || arr[index - 1].equipamento !== u.equipamento)) {
+                                    const equipamento = arr.filter(slot => slot.equipamento === u.equipamento);
+                                    const altura = equipamento.length * 35; // Ajusta a altura conforme os Us ocupados
+                                    const vmwareClass = u.maquinasVirtuais.length > 0 ? 'vmware' : '';
+
+                                    return `
+                                        <div class="rack-slot ocupado ${vmwareClass}"
+                                             style="height: ${altura}px; line-height: ${altura}px;"
+                                             ${u.maquinasVirtuais.length > 0 ? `onclick="mostrarMaquinasVirtuais('${encodeURIComponent(JSON.stringify(u.maquinasVirtuais))}')"` : ''}>
+                                            ${u.equipamento}
+                                        </div>
+                                    `;
+                                } else if (!u.equipamento) {
+                                    return `
+                                        <div class="rack-slot">
+                                            ${u.numero}
+                                        </div>
+                                    `;
+                                }
+                                return ""; // Ignora Us duplicados para o mesmo equipamento
+                            }).join("")}
                         </div>
 
                         <div class="rack-section">
                             <div class="rack-title">Trás</div>
-                            ${usTras.map(u => `
-                                <div class="rack-slot ${u.equipamento ? 'ocupado' : ''} ${u.maquinasVirtuais.length > 0 ? 'vmware' : ''}"
-                                     ${u.maquinasVirtuais.length > 0 ? `onclick="mostrarMaquinasVirtuais('${encodeURIComponent(JSON.stringify(u.maquinasVirtuais))}')"` : ''}>
-                                    ${u.numero} - ${u.equipamento ? u.equipamento : ""}
-                                </div>
-                            `).join("")}
+                            ${usTras.map((u, index, arr) => {
+                                if (u.equipamento && (index === 0 || arr[index - 1].equipamento !== u.equipamento)) {
+                                    const equipamento = arr.filter(slot => slot.equipamento === u.equipamento);
+                                    const altura = equipamento.length * 35; // Ajusta a altura conforme os Us ocupados
+                                    const vmwareClass = u.maquinasVirtuais.length > 0 ? 'vmware' : '';
+
+                                    return `
+                                        <div class="rack-slot ocupado ${vmwareClass}"
+                                             style="height: ${altura}px; line-height: ${altura}px;"
+                                             ${u.maquinasVirtuais.length > 0 ? `onclick="mostrarMaquinasVirtuais('${encodeURIComponent(JSON.stringify(u.maquinasVirtuais))}')"` : ''}>
+                                            ${u.equipamento}
+                                        </div>
+                                    `;
+                                } else if (!u.equipamento) {
+                                    return `
+                                        <div class="rack-slot">
+                                            ${u.numero}
+                                        </div>
+                                    `;
+                                }
+                                return ""; // Ignora Us duplicados para o mesmo equipamento
+                            }).join("")}
                         </div>
                     </div>
                 `;
