@@ -112,10 +112,14 @@ class Porta(models.Model):
         ('Fibra', 'Fibra'),
         ('Radio', 'Rádio'),
     ]
-    empresa = models.ForeignKey('Empresa', on_delete=models.CASCADE, related_name='portas', null=True,
-                                blank=True)  # Novo campo
-    nome = models.CharField(max_length=50,)  # Ex: "Porta1", "Porta2"
-    equipamento = models.ForeignKey('Equipamento', on_delete=models.CASCADE, related_name='portas')
+
+    empresa = models.ForeignKey(
+        'Empresa', on_delete=models.CASCADE, related_name='portas', null=True, blank=True
+    )
+    nome = models.CharField(max_length=50)
+    equipamento = models.ForeignKey(
+        'Equipamento', on_delete=models.CASCADE, related_name='portas'
+    )
     conexao = models.OneToOneField(
         'self',
         on_delete=models.SET_NULL,
@@ -123,29 +127,35 @@ class Porta(models.Model):
         blank=True,
         related_name='conexao_inversa'
     )
-    speed = models.CharField(max_length=10, choices=SPEED_CHOICES, default='1G')  # Valor padrão: 1G
-    tipo = models.CharField(max_length=10, choices=TIPO_CHOICES, default='Fibra')  # Valor padrão: Fibra
-    observacao = models.TextField(help_text="Para Formata o texto, use < /br> quebra de linha, < strong><strong>Negrito</strong>< /strong>, sem espaços")
+    speed = models.CharField(max_length=10, choices=SPEED_CHOICES, default='1G')
+    tipo = models.CharField(max_length=10, choices=TIPO_CHOICES, default='Fibra')
+    observacao = models.TextField(
+        help_text="Para formatar o texto, use <br> para quebra de linha, <strong>Negrito</strong> para negrito."
+    )
 
     class Meta:
         verbose_name_plural = "Equipamentos porta"
 
     def save(self, *args, **kwargs):
-        # Salvamento inicial da instância atual
-        is_new_instance = self.pk is None
+        # Armazena o estado anterior da conexão para comparação
+        if self.pk:
+            porta_atual = Porta.objects.filter(pk=self.pk).first()
+            conexao_anterior = porta_atual.conexao if porta_atual else None
+        else:
+            conexao_anterior = None
+
         super().save(*args, **kwargs)
 
-        # Se esta porta está conectada a outra porta
-        if self.conexao and not is_new_instance:
+        # Se a porta está conectada a outra porta
+        if self.conexao:
             if self.conexao.conexao != self:
                 self.conexao.conexao = self
-                self.conexao.save()
-        elif not is_new_instance:
-            # Se a conexão foi removida, remove a conexão inversa também
-            conexao_inversa = Porta.objects.filter(conexao=self).first()
-            if conexao_inversa:
-                conexao_inversa.conexao = None
-                conexao_inversa.save()
+                self.conexao.save(update_fields=['conexao'])  # Evita chamar save() completamente e recursivamente
+
+        # Se a conexão foi removida, limpa a conexão inversa
+        if conexao_anterior and conexao_anterior != self.conexao:
+            conexao_anterior.conexao = None
+            conexao_anterior.save(update_fields=['conexao'])
 
     def __str__(self):
         return f"{self.nome} ({self.equipamento.nome} - {self.speed} - {self.tipo})"
@@ -325,6 +335,8 @@ class MaquinaVirtual(models.Model):
     porta = models.PositiveIntegerField()
     usuario = models.CharField(max_length=255)
     senha = models.CharField(max_length=255)
+    observacao = models.TextField(
+        help_text="Para Formata o texto, use < /br> quebra de linha, < strong><strong>Negrito</strong>< /strong>, sem espaços")
 
     def __str__(self):
         return f"{self.nome} ({self.empresa})"
