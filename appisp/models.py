@@ -335,7 +335,7 @@ class MaquinaVirtual(models.Model):
     porta = models.PositiveIntegerField()
     usuario = models.CharField(max_length=255)
     senha = models.CharField(max_length=255)
-    observacao = models.TextField(
+    obs = models.TextField(
         help_text="Para Formata o texto, use < /br> quebra de linha, < strong><strong>Negrito</strong>< /strong>, sem espaços")
 
     def __str__(self):
