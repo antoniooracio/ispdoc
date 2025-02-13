@@ -163,8 +163,14 @@ class Porta(models.Model):
 
 # Modelo para Blocos de IP e CIDR
 class BlocoIP(models.Model):
+    TIPO_CHOICES = [
+        ('IPv4', 'IPv4'),
+        ('IPv6', 'IPv6'),
+    ]
+
     empresa = models.ForeignKey('Empresa', on_delete=models.CASCADE, related_name='blocos_ip')
-    bloco_cidr = models.CharField(max_length=18)  # Exemplo: "10.0.0.0/23"
+    tipo_ip = models.CharField(max_length=4, choices=TIPO_CHOICES, default='IPv4')  # Indica se é IPv4 ou IPv6
+    bloco_cidr = models.CharField(max_length=43)  # IPv6 precisa de mais espaço
     descricao = models.CharField(max_length=255, blank=True, null=True)
     parent = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='sub_blocos')
     equipamento = models.ForeignKey('Equipamento', on_delete=models.CASCADE, related_name='blocos', null=True, blank=True)
@@ -175,44 +181,44 @@ class BlocoIP(models.Model):
         verbose_name_plural = "Blocos de IP"
 
     def clean(self):
-        # Verifica se o equipamento pertence à mesma empresa do bloco
-        if self.equipamento.empresa != self.empresa:
-            raise ValidationError("O bloco de IP só pode ser cadastrado em um equipamento da mesma empresa.")
+        try:
+            bloco = ipaddress.ip_network(self.bloco_cidr, strict=False)
+        except ValueError:
+            raise ValidationError(f"O bloco {self.bloco_cidr} não é um CIDR válido.")
 
-    def clean(self):
-        bloco = ipaddress.ip_network(self.bloco_cidr, strict=False)
+        # 1. Garante que o tipo (IPv4/IPv6) está correto
+        if (bloco.version == 4 and self.tipo_ip != 'IPv4') or (bloco.version == 6 and self.tipo_ip != 'IPv6'):
+            raise ValidationError(f"O bloco {self.bloco_cidr} não corresponde ao tipo {self.tipo_ip}.")
 
-        # 1. Se tiver parent, garantir que o bloco está dentro do parent
+        # 2. Se tiver parent, garantir que o bloco está dentro do parent
         if self.parent:
             parent_bloco = ipaddress.ip_network(self.parent.bloco_cidr, strict=False)
 
             if not bloco.subnet_of(parent_bloco):
                 raise ValidationError(f"O bloco {self.bloco_cidr} não está dentro de {self.parent.bloco_cidr}.")
 
-        # 2. Evitar sobreposição com blocos **sem Parent** (blocos raiz da mesma empresa)
-        overlapping = BlocoIP.objects.filter(empresa=self.empresa, parent__isnull=True).exclude(id=self.id)
+        # 3. Evitar sobreposição com blocos sem Parent (blocos raiz da mesma empresa e do mesmo tipo)
+        overlapping = BlocoIP.objects.filter(empresa=self.empresa, parent__isnull=True, tipo_ip=self.tipo_ip).exclude(id=self.id)
 
         for existing in overlapping:
             existing_bloco = ipaddress.ip_network(existing.bloco_cidr, strict=False)
-
-            # Se não houver Parent, impedir sobreposição
             if not self.parent and bloco.overlaps(existing_bloco):
                 raise ValidationError(f"O bloco {self.bloco_cidr} se sobrepõe com {existing.bloco_cidr}.")
 
-        # 3. Se o bloco tem um parent, verificar se há sobreposição entre irmãos
+        # 4. Se tem parent, verificar sobreposição entre irmãos
         if self.parent:
             siblings = BlocoIP.objects.filter(parent=self.parent).exclude(id=self.id)
 
             for sibling in siblings:
                 sibling_bloco = ipaddress.ip_network(sibling.bloco_cidr, strict=False)
                 if bloco.overlaps(sibling_bloco):
-                    raise ValidationError(
-                        f"O bloco {self.bloco_cidr} se sobrepõe com outro bloco irmão ({sibling.bloco_cidr}).")
+                    raise ValidationError(f"O bloco {self.bloco_cidr} se sobrepõe com outro bloco irmão ({sibling_bloco}).")
 
-        # 4. Verificar se o parent pertence à mesma empresa
+        # 5. Verificar se o parent pertence à mesma empresa
         if self.parent and self.parent.empresa != self.empresa:
             raise ValidationError(
-                f"O bloco {self.bloco_cidr} pertence à empresa {self.empresa.nome}, mas o parent {self.parent.bloco_cidr} pertence à empresa {self.parent.empresa.nome}. Não é possível associá-los.")
+                f"O bloco {self.bloco_cidr} pertence à empresa {self.empresa.nome}, mas o parent {self.parent.bloco_cidr} pertence a {self.parent.empresa.nome}."
+            )
 
     def save(self, *args, **kwargs):
         self.clean()
@@ -235,12 +241,16 @@ class EnderecoIP(models.Model):
         unique_together = ('bloco', 'ip', 'equipamento')  # Evita repetição de IPs no mesmo equipamento
 
     def clean(self):
-        # Verifica se o IP pertence ao bloco
-        bloco_rede = ipaddress.ip_network(self.bloco.bloco_cidr, strict=False)
-        ip_address = ipaddress.ip_address(self.ip)
+        """Valida se o IP pertence ao bloco CIDR informado"""
+        if self.bloco:
+            try:
+                bloco_rede = ipaddress.ip_network(self.bloco.bloco_cidr, strict=False)
+                ip_address = ipaddress.ip_address(self.ip)
 
-        if ip_address not in bloco_rede:
-            raise ValidationError(f"O IP {self.ip} não pertence ao bloco {self.bloco.bloco_cidr}.")
+                if ip_address not in bloco_rede:
+                    raise ValidationError(f"O IP {self.ip} não pertence ao bloco {self.bloco.bloco_cidr}.")
+            except ValueError as e:
+                raise ValidationError(f"Erro ao validar o IP: {str(e)}")
 
     def save(self, *args, **kwargs):
         self.clean()

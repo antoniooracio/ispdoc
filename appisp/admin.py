@@ -12,7 +12,7 @@ from .forms import PortaForm, RackForm, RackEquipamentoForm
 from .views import mapa, mapa_racks
 from django.contrib.admin import SimpleListFilter
 from .models import Empresa, Pop, Fabricante, Modelo, Equipamento, Porta, BlocoIP, EnderecoIP, Rack, RackEquipamento, MaquinaVirtual, Disco, Rede
-import json
+import ipaddress
 
 class RackEmpresaFilter(SimpleListFilter):
     title = "Rack"
@@ -280,6 +280,16 @@ class BlocoIPForm(forms.ModelForm):
         model = BlocoIP
         fields = '__all__'
 
+    def clean_bloco_cidr(self):
+        bloco_cidr = self.cleaned_data['bloco_cidr']
+
+        try:
+            bloco = ipaddress.ip_network(bloco_cidr, strict=False)  # Verifica se é um bloco válido
+        except ValueError:
+            raise forms.ValidationError("Formato inválido para um bloco CIDR.")
+
+        return bloco_cidr
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -297,16 +307,17 @@ class BlocoIPForm(forms.ModelForm):
 
 @admin.register(BlocoIP)
 class BlocoIPAdmin(admin.ModelAdmin):
-    list_display = ('empresa', 'equipamento', 'bloco_cidr', 'next_hop', 'descricao', 'parent', 'criado_em')
+    list_display = ('empresa', 'equipamento', 'bloco_cidr', 'tipo_ip', 'next_hop', 'descricao', 'parent', 'criado_em')
     search_fields = ('bloco_cidr', 'empresa__nome', 'equipamento__nome')
+    list_filter = ('tipo_ip', 'empresa', 'equipamento', 'parent')  # Filtro por tipo de IP
     form = BlocoIPForm
 
     def get_list_filter(self, request):
         """Aplica filtros personalizados de empresa e equipamento"""
         if request.user.is_superuser:
-            return ('empresa', 'equipamento', 'parent')  # Superusuário vê todos os filtros
+            return ('empresa', 'equipamento', 'bloco_cidr', 'parent')  # Superusuário vê todos os filtros
 
-        return (EmpresaUsuarioFilter, EquipamentoEmpresaFilter)  # Usuário comum vê apenas seus dados
+        return (EmpresaUsuarioFilter, EquipamentoEmpresaFilter, 'bloco_cidr', 'tipo_ip')  # Usuário comum vê apenas seus dados
 
     def get_queryset(self, request):
         """ Lista apenas os blocos de IP das empresas do usuário """
