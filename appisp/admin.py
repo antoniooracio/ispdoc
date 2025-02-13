@@ -315,7 +315,7 @@ class BlocoIPAdmin(admin.ModelAdmin):
     def get_list_filter(self, request):
         """Aplica filtros personalizados de empresa e equipamento"""
         if request.user.is_superuser:
-            return ('empresa', 'equipamento', 'bloco_cidr', 'parent')  # Superusuário vê todos os filtros
+            return ('empresa', 'equipamento', 'bloco_cidr', 'parent', 'tipo_ip')  # Superusuário vê todos os filtros
 
         return (EmpresaUsuarioFilter, EquipamentoEmpresaFilter, 'bloco_cidr', 'tipo_ip')  # Usuário comum vê apenas seus dados
 
