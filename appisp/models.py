@@ -173,7 +173,8 @@ class BlocoIP(models.Model):
     bloco_cidr = models.CharField(max_length=43)  # IPv6 precisa de mais espaço
     descricao = models.CharField(max_length=255, blank=True, null=True)
     parent = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='sub_blocos')
-    equipamento = models.ForeignKey('Equipamento', on_delete=models.CASCADE, related_name='blocos', null=True, blank=True)
+    equipamento = models.ForeignKey('Equipamento', on_delete=models.CASCADE, related_name='blocos', null=True,
+                                    blank=True)
     next_hop = models.GenericIPAddressField(blank=True, null=True)  # Roteamento do bloco
     criado_em = models.DateTimeField(auto_now_add=True)
 
@@ -181,6 +182,7 @@ class BlocoIP(models.Model):
         verbose_name_plural = "Blocos de IP"
 
     def clean(self):
+        """Validações para garantir que o bloco é correto e não se sobrepõe a outros blocos"""
         try:
             bloco = ipaddress.ip_network(self.bloco_cidr, strict=False)
         except ValueError:
@@ -198,7 +200,8 @@ class BlocoIP(models.Model):
                 raise ValidationError(f"O bloco {self.bloco_cidr} não está dentro de {self.parent.bloco_cidr}.")
 
         # 3. Evitar sobreposição com blocos sem Parent (blocos raiz da mesma empresa e do mesmo tipo)
-        overlapping = BlocoIP.objects.filter(empresa=self.empresa, parent__isnull=True, tipo_ip=self.tipo_ip).exclude(id=self.id)
+        overlapping = BlocoIP.objects.filter(empresa=self.empresa, parent__isnull=True, tipo_ip=self.tipo_ip).exclude(
+            id=self.id)
 
         for existing in overlapping:
             existing_bloco = ipaddress.ip_network(existing.bloco_cidr, strict=False)
@@ -212,13 +215,25 @@ class BlocoIP(models.Model):
             for sibling in siblings:
                 sibling_bloco = ipaddress.ip_network(sibling.bloco_cidr, strict=False)
                 if bloco.overlaps(sibling_bloco):
-                    raise ValidationError(f"O bloco {self.bloco_cidr} se sobrepõe com outro bloco irmão ({sibling_bloco}).")
+                    raise ValidationError(
+                        f"O bloco {self.bloco_cidr} se sobrepõe com outro bloco irmão ({sibling_bloco}).")
 
         # 5. Verificar se o parent pertence à mesma empresa
         if self.parent and self.parent.empresa != self.empresa:
             raise ValidationError(
                 f"O bloco {self.bloco_cidr} pertence à empresa {self.empresa.nome}, mas o parent {self.parent.bloco_cidr} pertence a {self.parent.empresa.nome}."
             )
+
+    def sugerir_proximo_ip(self):
+        """ Retorna o próximo IP disponível dentro do bloco """
+        bloco_rede = ipaddress.ip_network(self.bloco_cidr, strict=False)
+        ips_ocupados = set(EnderecoIP.objects.filter(bloco=self).values_list('ip', flat=True))
+
+        for ip in bloco_rede.hosts():  # Percorre todos os IPs disponíveis no bloco
+            if str(ip) not in ips_ocupados:
+                return str(ip)
+
+        return None  # Se não houver IP disponível
 
     def save(self, *args, **kwargs):
         self.clean()
@@ -228,36 +243,74 @@ class BlocoIP(models.Model):
         return f"{self.bloco_cidr} - {self.empresa.nome} ({self.equipamento.nome if self.equipamento else 'Sem equipamento'})"
 
 
-# Modelo de Endereçamento IP específico
+# Classe para cadastro de IP individual
 class EnderecoIP(models.Model):
     bloco = models.ForeignKey(BlocoIP, on_delete=models.CASCADE, related_name='enderecos')
-    ip = models.GenericIPAddressField()
+    ip = models.GenericIPAddressField(blank=True, null=True)  # Permite sugestão automática
     equipamento = models.ForeignKey('Equipamento', on_delete=models.CASCADE, related_name='ips')
+    porta = models.ForeignKey('Porta', on_delete=models.CASCADE, related_name='ips')
+
     finalidade = models.TextField(blank=True, null=True)
-    next_hop = models.GenericIPAddressField(blank=True, null=True)  # Roteamento do IP
+    next_hop = models.GenericIPAddressField(blank=True, null=True)
+    is_gateway = models.BooleanField(default=False)
     criado_em = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        unique_together = ('bloco', 'ip', 'equipamento')  # Evita repetição de IPs no mesmo equipamento
+        unique_together = ('bloco', 'ip', 'equipamento')
 
     def clean(self):
-        """Valida se o IP pertence ao bloco CIDR informado"""
-        if self.bloco:
-            try:
-                bloco_rede = ipaddress.ip_network(self.bloco.bloco_cidr, strict=False)
-                ip_address = ipaddress.ip_address(self.ip)
+        """Validações antes de salvar"""
+        if not self.bloco:
+            raise ValidationError("O bloco de IP é obrigatório.")
 
-                if ip_address not in bloco_rede:
-                    raise ValidationError(f"O IP {self.ip} não pertence ao bloco {self.bloco.bloco_cidr}.")
-            except ValueError as e:
-                raise ValidationError(f"Erro ao validar o IP: {str(e)}")
+        if self.porta.equipamento != self.equipamento:
+            raise ValidationError("A porta selecionada não pertence ao equipamento escolhido.")
+
+        rede = ipaddress.ip_network(self.bloco.bloco_cidr, strict=False)
+
+        if not self.ip:
+            return  # Se não há IP informado, não realiza validações que dependem dele
+
+        ip_obj = ipaddress.ip_address(self.ip)
+
+        # 1️⃣ Validação: O IP pertence ao bloco?
+        if ip_obj not in rede:
+            raise ValidationError(f"O IP {self.ip} não pertence ao bloco {rede}")
+
+        # 2️⃣ Validação: IP já cadastrado no bloco
+        if EnderecoIP.objects.filter(bloco=self.bloco, ip=self.ip).exclude(id=self.id).exists():
+            raise ValidationError(f"O IP {self.ip} já está cadastrado neste bloco.")
+
+        # 3️⃣ Validação: Equipamento já tem um IP deste bloco
+        if EnderecoIP.objects.filter(bloco=self.bloco, equipamento=self.equipamento).exclude(id=self.id).exists():
+            raise ValidationError(f"O equipamento '{self.equipamento}' já possui um IP deste bloco.")
+
+        # 4️⃣ Validação: IP de rede e broadcast
+        if rede.version == 4 and rede.prefixlen <= 30:  # IPv4
+            if ip_obj in (rede.network_address, rede.broadcast_address):
+                raise ValidationError(f"O IP {self.ip} é um endereço de rede ou broadcast e não pode ser usado.")
+
+        if rede.version == 6 and rede.prefixlen <= 126:  # IPv6
+            if ip_obj in (rede.network_address, rede.broadcast_address):
+                raise ValidationError(f"O IP {self.ip} é um endereço de rede ou broadcast e não pode ser usado.")
+
+        # 5️⃣ Validação: Apenas um gateway por bloco
+        if self.is_gateway and EnderecoIP.objects.filter(bloco=self.bloco, is_gateway=True).exclude(id=self.id).exists():
+            raise ValidationError(f"Já existe um gateway para o bloco {self.bloco.bloco_cidr}. Apenas um é permitido.")
 
     def save(self, *args, **kwargs):
-        self.clean()
-        super().save(*args, **kwargs)
+        """Sugere um IP caso não tenha sido fornecido"""
+        if not self.ip:
+            proximo_ip = self.bloco.sugerir_proximo_ip()
+            if not proximo_ip:
+                raise ValidationError("Não há IPs disponíveis neste bloco.")
+            self.ip = proximo_ip  # Atribui automaticamente o próximo IP disponível
+
+        super().save(*args, **kwargs)  # Salva após sugerir um IP
 
     def __str__(self):
-        return f"{self.ip} - {self.equipamento.nome}"
+        gateway_status = " (Gateway)" if self.is_gateway else ""
+        return f"{self.ip} - {self.equipamento.nome} (Porta: {self.porta.nome}){gateway_status}"
 
 
 # Modelo de Rack

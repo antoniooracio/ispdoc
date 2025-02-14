@@ -43,6 +43,25 @@ class RedeInline(admin.TabularInline):
     extra = 1  # Número inicial de campos exibidos
 
 
+class EnderecoIPEmpresaFilter(SimpleListFilter):
+    """Filtro para exibir apenas os IPs dos equipamentos da empresa do usuário"""
+    title = "Empresa"
+    parameter_name = "empresa"
+
+    def lookups(self, request, model_admin):
+        if request.user.is_superuser:
+            empresas = Empresa.objects.all()
+        else:
+            empresas = request.user.empresas.all()
+
+        return [(empresa.id, empresa.nome) for empresa in empresas]
+
+    def queryset(self, request, queryset):
+        if self.value():
+            return queryset.filter(equipamento__empresa_id=self.value())  # Filtrar por empresa
+        return queryset
+
+
 class EquipamentoEmpresaFilter(SimpleListFilter):
     """Filtro personalizado para exibir apenas equipamentos das empresas do usuário"""
     title = "Equipamento"
@@ -80,6 +99,24 @@ class EmpresaUsuarioFilter(SimpleListFilter):
             return queryset.filter(equipamento__empresa_id=self.value())  # Filtrar corretamente pela empresa
         return queryset
 
+
+class BlocoEmpresaFilter(SimpleListFilter):
+    """Filtro para exibir apenas os blocos de IP pertencentes à empresa do usuário"""
+    title = "Bloco de IP"
+    parameter_name = "bloco"
+
+    def lookups(self, request, model_admin):
+        if request.user.is_superuser:
+            blocos = BlocoIP.objects.all()
+        else:
+            blocos = BlocoIP.objects.filter(empresa__usuarios=request.user)
+
+        return [(bloco.id, bloco.bloco_cidr) for bloco in blocos]
+
+    def queryset(self, request, queryset):
+        if self.value():
+            return queryset.filter(bloco_id=self.value())  # Filtra os IPs do bloco selecionado
+        return queryset
 
 
 class PopUsuarioFilter(SimpleListFilter):
@@ -275,6 +312,12 @@ class EmpresaFilter(SimpleListFilter):
         return queryset
 
 
+from django.contrib import admin
+from django import forms
+from django.utils.html import format_html
+from .models import BlocoIP, EnderecoIP, Equipamento, Empresa
+
+
 class BlocoIPForm(forms.ModelForm):
     class Meta:
         model = BlocoIP
@@ -293,49 +336,49 @@ class BlocoIPForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        if 'empresa' in self.data:  # Se a empresa for selecionada dinamicamente
+        if 'empresa' in self.data:
             try:
                 empresa_id = int(self.data.get('empresa'))
                 self.fields['equipamento'].queryset = Equipamento.objects.filter(empresa_id=empresa_id)
                 self.fields['parent'].queryset = BlocoIP.objects.filter(empresa_id=empresa_id)  # Filtro para parent
             except (ValueError, TypeError):
                 pass
-        elif self.instance.pk:  # Se for um registro existente
+        elif self.instance.pk:
             self.fields['equipamento'].queryset = Equipamento.objects.filter(empresa=self.instance.empresa)
             self.fields['parent'].queryset = BlocoIP.objects.filter(empresa=self.instance.empresa)  # Filtro para parent
 
 
 @admin.register(BlocoIP)
 class BlocoIPAdmin(admin.ModelAdmin):
-    list_display = ('empresa', 'equipamento', 'bloco_cidr', 'tipo_ip', 'next_hop', 'descricao', 'parent', 'criado_em')
+    list_display = ('empresa', 'equipamento', 'bloco_cidr', 'tipo_ip', 'next_hop', 'descricao', 'gateway', 'parent', 'criado_em')
     search_fields = ('bloco_cidr', 'empresa__nome', 'equipamento__nome')
-    list_filter = ('tipo_ip', 'empresa', 'equipamento', 'parent')  # Filtro por tipo de IP
+    list_filter = ('tipo_ip', 'empresa', 'equipamento', 'parent')
     form = BlocoIPForm
 
-    def get_list_filter(self, request):
-        """Aplica filtros personalizados de empresa e equipamento"""
-        if request.user.is_superuser:
-            return ('empresa', 'equipamento', 'bloco_cidr', 'parent', 'tipo_ip')  # Superusuário vê todos os filtros
+    def gateway(self, obj):
+        """Mostra o IP configurado como Gateway"""
+        gw = obj.enderecos.filter(is_gateway=True).first()
+        return gw.ip if gw else "Nenhum"
+    gateway.short_description = "Gateway"
 
-        return (EmpresaUsuarioFilter, EquipamentoEmpresaFilter, 'bloco_cidr', 'tipo_ip')  # Usuário comum vê apenas seus dados
+    def get_list_filter(self, request):
+        if request.user.is_superuser:
+            return ('empresa', 'equipamento', 'bloco_cidr', 'parent', 'tipo_ip')
+        return (EmpresaUsuarioFilter, EquipamentoEmpresaFilter, 'bloco_cidr', 'tipo_ip')
 
     def get_queryset(self, request):
-        """ Lista apenas os blocos de IP das empresas do usuário """
         qs = super().get_queryset(request)
-
         if request.user.is_superuser:
             return qs
-
         return qs.filter(empresa__usuarios=request.user)
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
-        """ Filtra as opções disponíveis ao cadastrar ou editar """
         if not request.user.is_superuser:
             if db_field.name == "empresa":
                 kwargs["queryset"] = Empresa.objects.filter(usuarios=request.user)
             elif db_field.name == "equipamento":
                 kwargs["queryset"] = Equipamento.objects.filter(empresa__usuarios=request.user)
-            elif db_field.name == "parent":  # Filtro para Parent
+            elif db_field.name == "parent":
                 kwargs["queryset"] = BlocoIP.objects.filter(empresa__usuarios=request.user)
 
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
@@ -343,9 +386,46 @@ class BlocoIPAdmin(admin.ModelAdmin):
 
 @admin.register(EnderecoIP)
 class EnderecoIPAdmin(admin.ModelAdmin):
-    list_display = ('bloco', 'ip', 'equipamento', 'next_hop', 'finalidade', 'criado_em')
-    search_fields = ('ip', 'equipamento__nome', 'bloco__bloco_cidr')
-    list_filter = ('bloco__empresa', 'equipamento')
+    list_display = ("ip", "equipamento", "porta", "bloco", "is_gateway", "criado_em")
+    list_filter = (EnderecoIPEmpresaFilter, EquipamentoEmpresaFilter, BlocoEmpresaFilter,
+                   'is_gateway')  # Aplica os filtros na listagem
+    search_fields = ("ip", "equipamento__nome", "porta__nome")
+
+    def get_queryset(self, request):
+        """Restringe os registros de EnderecoIP para a empresa do usuário"""
+        qs = super().get_queryset(request)
+        if request.user.is_superuser:
+            return qs
+        return qs.filter(equipamento__empresa__usuarios=request.user)
+
+    def get_form(self, request, obj=None, **kwargs):
+        """
+        Personaliza o formulário para filtrar os campos de BlocoIP e Equipamento de acordo com o usuário logado
+        """
+        form_class = super().get_form(request, obj, **kwargs)
+
+        # Filtro para o campo 'bloco' baseado no usuário logado
+        if not request.user.is_superuser:
+            form_class.base_fields["bloco"].queryset = BlocoIP.objects.filter(empresa__usuarios=request.user)
+
+        # Filtro para o campo 'equipamento' baseado no usuário logado
+        if not request.user.is_superuser:
+            form_class.base_fields["equipamento"].queryset = Equipamento.objects.filter(empresa__usuarios=request.user)
+
+        return form_class
+
+    actions = ['sugerir_proximo_ip']
+
+    def sugerir_proximo_ip(self, request, queryset):
+        """Sugere e preenche o próximo IP disponível para cada registro"""
+        for endereco in queryset:
+            if not endereco.ip:
+                endereco.ip = endereco.bloco.sugerir_proximo_ip()
+                endereco.save()
+
+        self.message_user(request, "IP sugerido e salvo automaticamente.")
+
+    sugerir_proximo_ip.short_description = "Sugerir próximo IP disponível"
 
 
 @admin.register(Porta)
@@ -571,6 +651,7 @@ admin_site.register(Pop, PopAdmin)
 admin_site.register(Fabricante, FabricanteAdmin)
 admin_site.register(Modelo, ModeloAdmin)
 admin_site.register(BlocoIP, BlocoIPAdmin)
+admin_site.register(EnderecoIP, EnderecoIPAdmin)
 admin_site.register(Rack, RackAdmin)
 admin_site.register(RackEquipamento, RackEquipamentoAdmin)
 admin_site.register(MaquinaVirtual, MaquinaVirtualAdmin)

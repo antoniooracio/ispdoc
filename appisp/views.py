@@ -6,7 +6,7 @@ from django.db.models import Prefetch
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404
-from .models import Equipamento, Porta, Empresa, Pop, Rack, Equipamento
+from .models import Equipamento, Porta, Empresa, Pop, Rack, Equipamento, BlocoIP, EnderecoIP
 from .forms import PortaForm
 
 
@@ -15,6 +15,43 @@ def get_equipamentos(request):
     if empresa_id:
         equipamentos = Equipamento.objects.filter(empresa_id=empresa_id).values("id", "nome")
         return JsonResponse(list(equipamentos), safe=False)
+    return JsonResponse([], safe=False)
+
+
+
+def get_ips(request):
+    blocos = BlocoIP.objects.all()
+    data = []
+
+    for bloco in blocos:
+        sub_blocos = bloco.sub_blocos.all()
+        enderecos = EnderecoIP.objects.filter(bloco=bloco)
+
+        bloco_data = {
+            "id": bloco.id,
+            "subnet": bloco.bloco_cidr,
+            "ips": [
+                {"ip": ip.ip, "equipamento": ip.equipamento.nome if ip.equipamento else "Livre"}
+                for ip in enderecos
+            ],
+            "sub_blocos": [
+                {"id": sub.id, "subnet": sub.bloco_cidr} for sub in sub_blocos
+            ]
+        }
+        data.append(bloco_data)
+
+    return JsonResponse({"blocos": data})
+
+
+def ip_management_view(request):
+    return render(request, "ip_management.html")
+
+
+def get_portas(request):
+    equipamento_id = request.GET.get("equipamento_id")
+    if equipamento_id:
+        portas = Porta.objects.filter(equipamento_id=equipamento_id).values("id", "nome")
+        return JsonResponse(list(portas), safe=False)
     return JsonResponse([], safe=False)
 
 
