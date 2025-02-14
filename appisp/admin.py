@@ -8,7 +8,7 @@ from django.contrib.auth.admin import GroupAdmin, UserAdmin
 from django.contrib.admin import AdminSite
 from django.shortcuts import render, get_object_or_404
 from django.http import HttpResponseRedirect
-from .forms import PortaForm, RackForm, RackEquipamentoForm
+from .forms import PortaForm, RackForm, RackEquipamentoForm, EnderecoIPForm
 from .views import mapa, mapa_racks
 from django.contrib.admin import SimpleListFilter
 from .models import Empresa, Pop, Fabricante, Modelo, Equipamento, Porta, BlocoIP, EnderecoIP, Rack, RackEquipamento, MaquinaVirtual, Disco, Rede
@@ -387,9 +387,18 @@ class BlocoIPAdmin(admin.ModelAdmin):
 @admin.register(EnderecoIP)
 class EnderecoIPAdmin(admin.ModelAdmin):
     list_display = ("ip", "equipamento", "porta", "bloco", "is_gateway", "criado_em")
-    list_filter = (EnderecoIPEmpresaFilter, EquipamentoEmpresaFilter, BlocoEmpresaFilter,
-                   'is_gateway')  # Aplica os filtros na listagem
+    list_filter = (EnderecoIPEmpresaFilter, EquipamentoEmpresaFilter, BlocoEmpresaFilter, "is_gateway")
     search_fields = ("ip", "equipamento__nome", "porta__nome")
+
+    change_list_template = "admin/endereco_ip_changelist.html"  # Template personalizado
+
+    def response_add(self, request, obj, post_url_continue=None):
+        """Força o redirecionamento para a listagem correta após adicionar um EnderecoIP"""
+        return HttpResponseRedirect(reverse("admin:appisp_enderecoip_changelist"))
+
+    def response_change(self, request, obj):
+        """Força o redirecionamento correto após edição"""
+        return HttpResponseRedirect(reverse("admin:appisp_enderecoip_changelist"))
 
     def get_queryset(self, request):
         """Restringe os registros de EnderecoIP para a empresa do usuário"""
@@ -414,7 +423,7 @@ class EnderecoIPAdmin(admin.ModelAdmin):
 
         return form_class
 
-    actions = ['sugerir_proximo_ip']
+    actions = ["sugerir_proximo_ip"]
 
     def sugerir_proximo_ip(self, request, queryset):
         """Sugere e preenche o próximo IP disponível para cada registro"""
@@ -426,6 +435,45 @@ class EnderecoIPAdmin(admin.ModelAdmin):
         self.message_user(request, "IP sugerido e salvo automaticamente.")
 
     sugerir_proximo_ip.short_description = "Sugerir próximo IP disponível"
+
+    # Adicionamos a URL personalizada para o botão de adicionar IPs em lote
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path("adicionar-endereco-ip/", self.admin_site.admin_view(self.adicionar_endereco_ip), name="adicionar_endereco_ip"),
+        ]
+        return custom_urls + urls
+
+    def adicionar_endereco_ip(self, request):
+        """Tela personalizada para adicionar IPs"""
+        if request.method == "POST":
+            form = EnderecoIPForm(request.POST)
+
+            if form.is_valid():
+                empresa = form.cleaned_data["empresa"]
+                bloco = form.cleaned_data["bloco"]
+                quantidade = form.cleaned_data["quantidade"]
+
+                ips_criados = []
+                for i in range(quantidade):
+                    endereco = f"{bloco}.{i}"  # Exemplo de lógica para IPs sequenciais
+                    ip = EnderecoIP(ip=endereco, bloco=bloco, equipamento=None)
+                    ip.save()
+                    ips_criados.append(endereco)
+
+                self.message_user(
+                    request,
+                    f"Endereços IP criados com sucesso: {', '.join(ips_criados)}",
+                    messages.SUCCESS,
+                )
+                return HttpResponseRedirect("../")
+
+        else:
+            form = EnderecoIPForm()
+
+        context = {"form": form, "opts": self.model._meta}
+        return render(request, "admin/adicionar_endereco_ip.html", context)
+
 
 
 @admin.register(Porta)

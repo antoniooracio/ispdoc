@@ -16,9 +16,17 @@ Including another URLconf
 """
 from django.contrib import admin
 from appisp.admin import admin_site
+from django.http import JsonResponse
 from django.urls import path, include
 from appisp.views import (EquipamentoAutocomplete, PortaAutocomplete, mapa, atualizar_posicao, mapa_racks,
-                          mapa_racks_dados, get_equipamentos_por_empresa)
+                          mapa_racks_dados, get_equipamentos_por_empresa, adicionar_endereco_ip, listar_ips_por_bloco
+                          )
+from appisp.models import Porta
+
+def get_portas_por_equipamento(request, equipamento_id):
+    portas = Porta.objects.filter(equipamento_id=equipamento_id)
+    portas_data = [{'id': porta.id, 'nome': porta.nome} for porta in portas]
+    return JsonResponse({'portas': portas_data})
 
 urlpatterns = [
     path('admin/', admin_site.urls),
@@ -29,5 +37,8 @@ urlpatterns = [
     path('mapa-rack/', mapa_racks, name='mapa_rack'),
     path('mapa-rack/dados/', mapa_racks_dados, name='mapa_rack_dados'),
     path('get-equipamentos/', get_equipamentos_por_empresa, name='get-equipamentos'),
-
+    path('endereco_ip/', adicionar_endereco_ip, name='endereco_ip'),
+    path('ajax/portas_por_equipamento/<int:equipamento_id>/', get_portas_por_equipamento,
+         name='portas_por_equipamento'),
+    path("ajax/ips_por_bloco/<int:bloco_id>/", listar_ips_por_bloco, name="listar_ips_por_bloco"),
 ]

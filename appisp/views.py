@@ -7,7 +7,28 @@ from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404
 from .models import Equipamento, Porta, Empresa, Pop, Rack, Equipamento, BlocoIP, EnderecoIP
-from .forms import PortaForm
+from .forms import PortaForm, EnderecoIPForm
+
+def listar_ips_por_bloco(request, bloco_id):
+    """Retorna os IPs cadastrados dentro de um bloco específico."""
+    ips = EnderecoIP.objects.filter(bloco_id=bloco_id).values("id", "ip", "equipamento__nome", "porta__nome",
+                                                              "next_hop", "is_gateway")
+    return JsonResponse({"ips": list(ips)})
+
+
+def adicionar_endereco_ip(request):
+    user = request.user
+
+    if request.method == "POST":
+        form = EnderecoIPForm(request.POST, user=user)  # Passa o usuário para o formulário
+        if form.is_valid():
+            form.save()
+            #messages.success(request, "Endereço IP adicionado com sucesso!")
+            return redirect("/admin/appisp/enderecoip")  # Substitua pelo nome correto da URL
+    else:
+        form = EnderecoIPForm(user=user)  # Passa o usuário para o formulário
+
+    return render(request, "appisp/endereco_ip.html", {"form": form})
 
 
 def get_equipamentos(request):
@@ -16,7 +37,6 @@ def get_equipamentos(request):
         equipamentos = Equipamento.objects.filter(empresa_id=empresa_id).values("id", "nome")
         return JsonResponse(list(equipamentos), safe=False)
     return JsonResponse([], safe=False)
-
 
 
 def get_ips(request):

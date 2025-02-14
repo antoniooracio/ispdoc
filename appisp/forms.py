@@ -1,7 +1,38 @@
+import ipaddress
+
 from dal import autocomplete
 from django import forms
 from django.contrib.auth.models import User
-from .models import Porta, Empresa, Equipamento, Rack, RackEquipamento, MaquinaVirtual
+from .models import Porta, Empresa, Equipamento, Rack, RackEquipamento, MaquinaVirtual, EnderecoIP, BlocoIP
+
+class EnderecoIPForm(forms.ModelForm):
+    class Meta:
+        model = EnderecoIP
+        fields = ['bloco', 'equipamento', 'porta', 'ip', 'finalidade', 'next_hop', 'is_gateway']
+
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        if user:
+            if user.is_superuser:
+                self.fields['bloco'].queryset = BlocoIP.objects.all()
+                self.fields['equipamento'].queryset = Equipamento.objects.all()
+            else:
+                empresas_usuario = Empresa.objects.filter(usuarios=user)
+                self.fields['bloco'].queryset = BlocoIP.objects.filter(empresa__in=empresas_usuario)
+                self.fields['equipamento'].queryset = Equipamento.objects.filter(empresa__in=empresas_usuario)
+
+    def clean(self):
+        cleaned_data = super().clean()
+
+        if cleaned_data.get('ip') and cleaned_data.get('bloco'):
+            ip_obj = ipaddress.ip_address(cleaned_data['ip'])
+            rede = ipaddress.ip_network(cleaned_data['bloco'].bloco_cidr, strict=False)
+            if ip_obj not in rede:
+                raise forms.ValidationError(f"O IP {cleaned_data['ip']} não pertence ao bloco {rede}")
+
+        return cleaned_data
+
 
 class LoteForm(forms.Form):
     empresa = forms.ModelChoiceField(queryset=Empresa.objects.none(), required=True, label="Empresa")

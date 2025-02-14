@@ -1,0 +1,11 @@
+{% extends "admin/change_list.html" %}
+{% load i18n %}
+
+{% block object-tools %}
+<div class="object-tools">
+    <a href="/endereco_ip/" class="btn btn-primary">
+        {% trans "Endereço Personalizado" %}
+    </a>
+</div>
+{{ block.super }}
+{% endblock %}
