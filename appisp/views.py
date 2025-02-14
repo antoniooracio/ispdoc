@@ -9,6 +9,31 @@ from django.shortcuts import get_object_or_404
 from .models import Equipamento, Porta, Empresa, Pop, Rack, Equipamento, BlocoIP, EnderecoIP
 from .forms import PortaForm, EnderecoIPForm
 
+
+def detalhes_bloco(request, bloco_id):
+    bloco = BlocoIP.objects.get(id=bloco_id)
+
+    # Buscar sub-blocos diretamente ligados a esse bloco
+    sub_blocos = BlocoIP.objects.filter(parent=bloco)
+
+    # Criar um dicionário para armazenar IPs dentro de cada sub-bloco
+    blocos_com_ips = {sub_bloco: EnderecoIP.objects.filter(bloco=sub_bloco) for sub_bloco in sub_blocos}
+
+    return render(request, 'seu_template.html', {
+        'bloco': bloco,
+        'blocos_com_ips': blocos_com_ips
+    })
+
+
+
+def get_sub_blocos(request, bloco_id):
+    sub_blocos = BlocoIP.objects.filter(parent_id=bloco_id).select_related("parent", "equipamento").values(
+        'id', 'bloco_cidr', 'tipo_ip', 'parent__bloco_cidr', 'equipamento__nome'
+    )
+    return JsonResponse({'sub_blocos': list(sub_blocos)})
+
+
+
 def listar_ips_por_bloco(request, bloco_id):
     """Retorna os IPs cadastrados dentro de um bloco específico."""
     ips = EnderecoIP.objects.filter(bloco_id=bloco_id).values("id", "ip", "equipamento__nome", "porta__nome",

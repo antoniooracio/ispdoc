@@ -19,7 +19,8 @@ from appisp.admin import admin_site
 from django.http import JsonResponse
 from django.urls import path, include
 from appisp.views import (EquipamentoAutocomplete, PortaAutocomplete, mapa, atualizar_posicao, mapa_racks,
-                          mapa_racks_dados, get_equipamentos_por_empresa, adicionar_endereco_ip, listar_ips_por_bloco
+                          mapa_racks_dados, get_equipamentos_por_empresa, adicionar_endereco_ip, listar_ips_por_bloco,
+                          get_sub_blocos
                           )
 from appisp.models import Porta
 
@@ -41,4 +42,5 @@ urlpatterns = [
     path('ajax/portas_por_equipamento/<int:equipamento_id>/', get_portas_por_equipamento,
          name='portas_por_equipamento'),
     path("ajax/ips_por_bloco/<int:bloco_id>/", listar_ips_por_bloco, name="listar_ips_por_bloco"),
+    path('ajax/sub_blocos_por_bloco/<int:bloco_id>/', get_sub_blocos, name='ajax_sub_blocos_por_bloco'),
 ]

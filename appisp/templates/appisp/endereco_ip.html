@@ -3,182 +3,282 @@
 
 {% block content %}
 
-  <h1>{% if endereco_ip %}Editar{% else %}Adicionar{% endif %} Endereço IP</h1>
+<h1>{% if endereco_ip %}Editar{% else %}Adicionar{% endif %} Endereço IP</h1>
 
 <div class="row"></div>
-    <div class="col-12 col-lg-9">
-        <div class="card">
-            <div class="card-body">
-        <form method="post" action="{% url 'admin:adicionar_lote' %}" class="form-horizontal">
-            {% csrf_token %}
+<div class="col-12 col-lg-9">
+    <div class="card">
+        <div class="card-body">
+            <form method="post" action="{% url 'admin:adicionar_lote' %}" class="form-horizontal">
+                {% csrf_token %}
 
-                    <!-- Bloco -->
-                      <div class="form-group field-tipo">
-                          <div class="row">
-                              <div class="col-sm-3 text-left">
-                                  <label for="id_bloco" class="form-label">Bloco:</label>
-                              </div>
-                              <div class="col-sm-7">
-                                  {{ form.bloco }}
-                              </div>
-                          </div>
-                      </div>
-
-                    <!-- Equipamento -->
-                      <div class="form-group field-tipo">
-                          <div class="row">
-                              <div class="col-sm-3 text-left">
-                                  <label for="id_equipamento" class="form-label">Equipamento:</label>
-                              </div>
-                              <div class="col-sm-7">
-                                  {{ form.equipamento }}
-                              </div>
-                          </div>
-                      </div>
-
-                    <!-- Porta -->
-                    <div class="form-group field-tipo">
-                          <div class="row">
-                              <div class="col-sm-3 text-left">
-                                  <label for="id_porta" class="form-label">Porta:</label>
-                              </div>
-                              <div class="col-sm-7">
-                                  {{ form.porta }}
-                              </div>
-                          </div>
-                      </div>
-
-                    <!-- IP -->
-                    <div class="form-group field-tipo">
-                          <div class="row">
-                              <div class="col-sm-3 text-left">
-                                  <label for="id_ip" class="form-label">IP:</label>
-                              </div>
-                              <div class="col-sm-7">
-                                  {{ form.ip }}
-                              </div>
-                          </div>
-                      </div>
-
-                    <!-- Finalidade -->
-                    <div class="form-group field-tipo">
-                          <div class="row">
-                              <div class="col-sm-3 text-left">
-                                  <label for="id_finalidade" class="form-label">Finalidade:</label>
-                              </div>
-                              <div class="col-sm-7">
-                                  {{ form.finalidade }}
-                              </div>
-                          </div>
-                      </div>
-
-                    <!-- Next Hop -->
-                    <div class="form-group field-tipo">
-                          <div class="row">
-                              <div class="col-sm-3 text-left">
-                                  <label for="id_next_hop" class="form-label">Next Hop:</label>
-                              </div>
-                              <div class="col-sm-7">
-                                  {{ form.next_hop }}
-                              </div>
-                          </div>
-                      </div>
-
-                    <!-- Gateway -->
-                    <div class="form-group field-tipo">
-                          <div class="row">
-                              <div class="col-sm-3 text-left">
-                                  <label class="form-check-label" for="id_is_gateway">É o Gateway</label>
-                              </div>
-                              <div class="col-sm-7">
-                                  {{ form.is_gateway }}
-                              </div>
-                          </div>
-                      </div>
-
-            <button type="submit" class="btn btn-primary">Adicionar</button>
-            <a href="../" class="btn btn-secondary">Cancelar</a>
-        </form>
-                {% if form.errors %}
-                    <div class="alert alert-danger">
-                        <strong>Erros no formulário:</strong>
-                        <ul>
-                            {% for field, errors in form.errors.items %}
-                                <li><strong>{{ field }}:</strong> {{ errors|join:", " }}</li>
-                            {% endfor %}
-                        </ul>
+                <!-- Bloco -->
+                <div class="form-group field-tipo">
+                    <div class="row">
+                        <div class="col-sm-3 text-left">
+                            <label for="id_bloco" class="form-label">Bloco:</label>
+                        </div>
+                        <div class="col-sm-7">
+                            {{ form.bloco }}
+                        </div>
                     </div>
-                {% endif %}
+                </div>
+
+                <!-- Equipamento -->
+                <div class="form-group field-tipo">
+                    <div class="row">
+                        <div class="col-sm-3 text-left">
+                            <label for="id_equipamento" class="form-label">Equipamento:</label>
+                        </div>
+                        <div class="col-sm-7">
+                            {{ form.equipamento }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Porta -->
+                <div class="form-group field-tipo">
+                    <div class="row">
+                        <div class="col-sm-3 text-left">
+                            <label for="id_porta" class="form-label">Porta:</label>
+                        </div>
+                        <div class="col-sm-7">
+                            {{ form.porta }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- IP -->
+                <div class="form-group field-tipo">
+                    <div class="row">
+                        <div class="col-sm-3 text-left">
+                            <label for="id_ip" class="form-label">IP:</label>
+                        </div>
+                        <div class="col-sm-7">
+                            {{ form.ip }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Finalidade -->
+                <div class="form-group field-tipo">
+                    <div class="row">
+                        <div class="col-sm-3 text-left">
+                            <label for="id_finalidade" class="form-label">Finalidade:</label>
+                        </div>
+                        <div class="col-sm-7">
+                            {{ form.finalidade }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Next Hop -->
+                <div class="form-group field-tipo">
+                    <div class="row">
+                        <div class="col-sm-3 text-left">
+                            <label for="id_next_hop" class="form-label">Next Hop:</label>
+                        </div>
+                        <div class="col-sm-7">
+                            {{ form.next_hop }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gateway -->
+                <div class="form-group field-tipo">
+                    <div class="row">
+                        <div class="col-sm-3 text-left">
+                            <label class="form-check-label" for="id_is_gateway">É o Gateway</label>
+                        </div>
+                        <div class="col-sm-7">
+                            {{ form.is_gateway }}
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary">Adicionar</button>
+                <a href="../" class="btn btn-secondary">Cancelar</a>
+            </form>
+            {% if form.errors %}
+            <div class="alert alert-danger">
+                <strong>Erros no formulário:</strong>
+                <ul>
+                    {% for field, errors in form.errors.items %}
+                    <li><strong>{{ field }}:</strong> {{ errors|join:", " }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
         </div>
-        </div>
- <h3>IPs Cadastrados no Bloco</h3>
-<table id="tabela-ips" class="table table-striped" style="display: none;">
-    <thead>
-        <tr>
-            <th>IP</th>
-            <th>Finalidade</th>
-            <th>Equipamento</th>
-        </tr>
-    </thead>
-    <tbody id="tabela-ips-body"></tbody>
-</table>
     </div>
 
-  <script>
-    // Função para filtrar portas com base no equipamento selecionado
-    document.getElementById('id_equipamento').addEventListener('change', function () {
-      var equipamentoId = this.value;
-      var portaSelect = document.getElementById('id_porta');
+        <div class="col-12 col-lg-12">
+        <div class="card">
+            <div class="card-body">
+                <!-- Mostra a Tabela dos Blocos pertencentes ao bloco selecionado -->
+                <table id="tabela-sub-blocos" class="table table-striped" style="display: none;">
 
-      // Limpa as portas atuais
-      portaSelect.innerHTML = '';
+                    <thead>
+                    <h4>Sub-blocos do Bloco Selecionado</h4>
+                    <tr>
+                        <th>Subnet</th>
+                        <th>Máscara</th>
+                        <th>Parente</th>
+                        <th>Equipamento</th>
+                    </tr>
+                    </thead>
+                    <tbody id="tabela-sub-blocos-body"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 
-      if (equipamentoId) {
-        // Fazer a requisição AJAX para buscar as portas relacionadas ao equipamento
-        fetch(`/ajax/portas_por_equipamento/${equipamentoId}/`)
-          .then(response => response.json())
-          .then(data => {
-            // Preencher as opções de porta
-            data.portas.forEach(function (porta) {
-              var option = document.createElement('option');
-              option.value = porta.id;
-              option.textContent = porta.nome;
-              portaSelect.appendChild(option);
-            });
-          });
-      }
-    });
-  </script>
+    <div class="col-12 col-lg-12">
+        <div class="card">
+            <div class="card-body">
+                <!-- Mostra a Tabela dos IPs pertencentes ao bloco selecionado -->
+                <h4>IPs Cadastrados no Bloco</h4>
+                <table id="tabela-ips" class="table table-striped" style="display: none;">
+                    <thead>
+                    <tr>
+                        <th>IP</th>
+                        <th>Equipamento</th>
+                        <th>Porta</th>
+                        <th>Next Hop</th>
+                        <th>Gateway?</th>
+                    </tr>
+                    </thead>
+                    <tbody id="tabela-ips-body"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
 </div>
 
+</div>
+
+<!-- Script para filtrar as portas pelo Equipamento selecionado-->
 <script>
-document.getElementById('id_bloco').addEventListener('change', function () {
-    var blocoId = this.value;
-    var tabelaIps = document.getElementById('tabela-ips');
-    var tbody = document.getElementById('tabela-ips-body');
+    document.addEventListener('DOMContentLoaded', function () {
+        var portaSelect = document.getElementById('id_porta');
+        portaSelect.innerHTML = '<option value="" selected>Selecione um equipamento primeiro</option>';
+    });
 
-    tbody.innerHTML = '';  // Limpa a tabela antes de carregar novos dados
+    document.getElementById('id_equipamento').addEventListener('change', function () {
+        var equipamentoId = this.value;
+        var portaSelect = document.getElementById('id_porta');
 
-    if (blocoId) {
-        fetch(`/ajax/ips_por_bloco/${blocoId}/`)
-            .then(response => response.json())
-            .then(data => {
-                data.ips.forEach(function (ip) {
-                    var row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td>${ip.ip}</td>
-                        <td>${ip.finalidade || 'N/A'}</td>
-                        <td>${ip.equipamento__nome || 'N/A'}</td>
-                    `;
-                    tbody.appendChild(row);
+        // Limpa as opções atuais e mantém a mensagem padrão
+        portaSelect.innerHTML = '<option value="" selected>Carregando...</option>';
+
+        if (equipamentoId) {
+            fetch(`/ajax/portas_por_equipamento/${equipamentoId}/`)
+                .then(response => response.json())
+                .then(data => {
+                    portaSelect.innerHTML = '<option value="" selected>Selecione uma porta</option>';
+                    data.portas.forEach(function (porta) {
+                        var option = document.createElement('option');
+                        option.value = porta.id;
+                        option.textContent = porta.nome;
+                        portaSelect.appendChild(option);
+                    });
                 });
+        } else {
+            portaSelect.innerHTML = '<option value="" selected>Selecione um equipamento primeiro</option>';
+        }
+    });
+</script>
 
-                // Exibir a tabela somente se houver IPs cadastrados
-                tabelaIps.style.display = data.ips.length > 0 ? 'table' : 'none';
-            });
-    } else {
-        tabelaIps.style.display = 'none'; // Esconder a tabela se nenhum bloco for selecionado
+
+<!-- Script para mostrar os Blocos pertencentes ao bloco selecionado -->
+<script>
+    document.getElementById('id_bloco').addEventListener('change', function () {
+        var blocoId = this.value;
+        var tabelaSubBlocos = document.getElementById('tabela-sub-blocos');
+        var tbodySubBlocos = document.getElementById('tabela-sub-blocos-body');
+
+        tbodySubBlocos.innerHTML = '';  // Limpa a tabela antes de carregar novos dados
+
+        if (blocoId) {
+            fetch(`/ajax/sub_blocos_por_bloco/${blocoId}/`)
+                .then(response => response.json())
+                .then(data => {
+                    data.sub_blocos.forEach(function (sub_bloco) {
+                        var bloco_cidr = sub_bloco.bloco_cidr;
+                        var [ip, cidr] = bloco_cidr.split('/'); // Separa IP e máscara CIDR
+                        var mascara = cidrParaMascara(cidr); // Converte /XX para máscara
+
+                        var parente = sub_bloco.parent__bloco_cidr || 'N/A'; // Exibe o CIDR do parente
+                        var equipamento = sub_bloco.equipamento__nome || 'N/A'; // Exibe o nome do equipamento
+
+                        var row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${bloco_cidr}</td>
+                            <td>${mascara}</td>
+                            <td>${parente}</td>
+                            <td>${equipamento}</td>
+                        `;
+                        tbodySubBlocos.appendChild(row);
+                    });
+
+                    // Exibir a tabela somente se houver sub-blocos cadastrados
+                    tabelaSubBlocos.style.display = data.sub_blocos.length > 0 ? 'table' : 'none';
+                })
+                .catch(error => console.error('Erro ao buscar sub-blocos:', error));
+        } else {
+            tabelaSubBlocos.style.display = 'none'; // Esconder a tabela se nenhum bloco for selecionado
+        }
+    });
+
+    // Função para converter sufixo CIDR para máscara de sub-rede
+    function cidrParaMascara(cidr) {
+        var cidrMap = {
+            "0": "0.0.0.0", "1": "128.0.0.0", "2": "192.0.0.0", "3": "224.0.0.0",
+            "4": "240.0.0.0", "5": "248.0.0.0", "6": "252.0.0.0", "7": "254.0.0.0",
+            "8": "255.0.0.0", "9": "255.128.0.0", "10": "255.192.0.0", "11": "255.224.0.0",
+            "12": "255.240.0.0", "13": "255.248.0.0", "14": "255.252.0.0", "15": "255.254.0.0",
+            "16": "255.255.0.0", "17": "255.255.128.0", "18": "255.255.192.0", "19": "255.255.224.0",
+            "20": "255.255.240.0", "21": "255.255.248.0", "22": "255.255.252.0", "23": "255.255.254.0",
+            "24": "255.255.255.0", "25": "255.255.255.128", "26": "255.255.255.192", "27": "255.255.255.224",
+            "28": "255.255.255.240", "29": "255.255.255.248", "30": "255.255.255.252", "31": "255.255.255.254",
+            "32": "255.255.255.255"
+        };
+        return cidrMap[cidr] || "N/A";
     }
-});
+</script>
+
+<!-- Script que mostra os IPs Pertencentes ao Bloco selecionado-->
+<script>
+    document.getElementById('id_bloco').addEventListener('change', function () {
+        var blocoId = this.value;
+        var tabelaIps = document.getElementById('tabela-ips');
+        var tbody = document.getElementById('tabela-ips-body');
+
+        tbody.innerHTML = '';  // Limpa a tabela antes de carregar novos dados
+
+        if (blocoId) {
+            fetch(`/ajax/ips_por_bloco/${blocoId}/`)
+                .then(response => response.json())
+                .then(data => {
+                    data.ips.forEach(function (ip) {
+                        var row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${ip.ip}</td>
+                            <td>${ip.equipamento__nome || ''}</td>
+                            <td>${ip.porta__nome || ''}</td>
+                            <td>${ip.next_hope || ''}</td>
+                            <td>${ip.is_gateway ? 'Sim' : 'Não'}</td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+
+                    // Exibir a tabela somente se houver IPs cadastrados
+                    tabelaIps.style.display = data.ips.length > 0 ? 'table' : 'none';
+                });
+        } else {
+            tabelaIps.style.display = 'none'; // Esconder a tabela se nenhum bloco for selecionado
+        }
+    });
 </script>
 {% endblock %}
