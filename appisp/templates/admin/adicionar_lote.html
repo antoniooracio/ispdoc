@@ -1,9 +1,47 @@
 {% extends "admin/base_site.html" %}
 {% load static %}
-
+{% load custom_filters %}
 {% block content %}
 
+<style>
+    /* Estiliza todos os selects */
+    select {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ced4da;
+        border-radius: 5px;
+        background-color: #fff;
+        font-size: 16px;
+        appearance: none; /* Remove o estilo padrão do navegador */
+        -webkit-appearance: none;
+        -moz-appearance: none;
+    }
+
+    /* Adiciona uma seta personalizada no select */
+    .form-group select {
+        background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='24' height='24'><path fill='gray' d='M7 10l5 5 5-5z'/></svg>");
+        background-repeat: no-repeat;
+        background-position: right 10px center;
+        background-size: 18px;
+        padding-right: 30px;
+    }
+
+    /* Estiliza o hover e foco */
+    select:hover, select:focus {
+        border-color: #80bdff;
+        box-shadow: 0 0 5px rgba(0, 123, 255, 0.25);
+        outline: none;
+    }
+
+    /* Ajusta os selects dentro das colunas */
+    .col-sm-7 select {
+        width: 100%;
+    }
+</style>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
 
 <div class="row"></div>
     <div class="col-12 col-lg-9">
@@ -25,7 +63,7 @@
                         {{ form.empresa.label_tag }}
                     </div>
                     <div class="col-sm-7">
-                        {{ form.empresa }}
+                        {{ form.empresa|add_class:"select2" }}
                     </div>
                 </div>
             </div>
@@ -132,6 +170,16 @@
             }
         });
 
+    });
+</script>
+
+<script>
+    $(document).ready(function() {
+        $('select').select2({
+            width: '100%',  // Ajusta a largura automaticamente
+            placeholder: "Selecione uma opção",  // Define um placeholder
+            allowClear: true  // Adiciona a opção de limpar seleção
+        });
     });
 </script>
 </div>
