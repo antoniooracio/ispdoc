@@ -3,13 +3,13 @@
 
 {% block content %}
 
-<h1>{% if endereco_ip %}Editar{% else %}Adicionar{% endif %} Endereço IP</h1>
+<h3>{% if endereco_ip %}Editar{% else %}Adicionar{% endif %} Endereço IP</h3>
 
 <div class="row"></div>
 <div class="col-12 col-lg-9">
     <div class="card">
         <div class="card-body">
-            <form method="post" action="{% url 'admin:adicionar_lote' %}" class="form-horizontal">
+            <form method="post" action="{% url 'endereco_ip'  %}" class="form-horizontal">
                 {% csrf_token %}
 
                 <!-- Bloco -->
