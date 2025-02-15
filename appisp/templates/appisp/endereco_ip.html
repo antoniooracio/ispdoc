@@ -10,7 +10,7 @@
         padding: 8px;
         border: 1px solid #ced4da;
         border-radius: 5px;
-        background-color: #fff;
+        background-color: #000;
         font-size: 16px;
         appearance: none; /* Remove o estilo padrão do navegador */
         -webkit-appearance: none;
@@ -38,8 +38,6 @@
         width: 100%;
     }
 </style>
-<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
 
 <div class="row"></div>
@@ -135,7 +133,7 @@
                 </div>
 
                 <button type="submit" class="btn btn-primary">Adicionar</button>
-                <a href="../" class="btn btn-secondary">Cancelar</a>
+                <a href="/admin/" class="btn btn-secondary">Cancelar</a>
             </form>
             {% if form.errors %}
             <div class="alert alert-danger">
@@ -200,19 +198,15 @@
 
 <!-- Script para filtrar as portas pelo Equipamento selecionado-->
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
-        var portaSelect = document.getElementById('id_porta');
-        portaSelect.innerHTML = '<option value="" selected>Selecione um equipamento primeiro</option>';
-    });
+document.addEventListener('DOMContentLoaded', function () {
+    var equipamentoSelect = document.getElementById('id_equipamento');
+    var portaSelect = document.getElementById('id_porta');
 
-    document.getElementById('id_equipamento').addEventListener('change', function () {
-        var equipamentoId = this.value;
-        var portaSelect = document.getElementById('id_porta');
-
-        // Limpa as opções atuais e mantém a mensagem padrão
-        portaSelect.innerHTML = '<option value="" selected>Carregando...</option>';
+    function carregarPortas() {
+        var equipamentoId = equipamentoSelect.value;
 
         if (equipamentoId) {
+            portaSelect.innerHTML = '<option value="" selected>Carregando...</option>';
             fetch(`/ajax/portas_por_equipamento/${equipamentoId}/`)
                 .then(response => response.json())
                 .then(data => {
@@ -223,35 +217,56 @@
                         option.textContent = porta.nome;
                         portaSelect.appendChild(option);
                     });
+
+                    // Mantém a seleção da porta após erro de validação
+                    var portaSelecionada = "{{ form.porta.value }}";
+                    if (portaSelecionada) {
+                        portaSelect.value = portaSelecionada;
+                    }
                 });
         } else {
             portaSelect.innerHTML = '<option value="" selected>Selecione um equipamento primeiro</option>';
         }
-    });
+    }
+
+    // Executa ao carregar a página para manter seleção após erro de validação
+    carregarPortas();
+
+    // Atualiza portas sempre que um equipamento for selecionado
+    equipamentoSelect.addEventListener('change', carregarPortas);
+});
+
 </script>
 
-
-<!-- Script para mostrar os Blocos pertencentes ao bloco selecionado -->
 <script>
     document.getElementById('id_bloco').addEventListener('change', function () {
         var blocoId = this.value;
+
+        // Elementos da tabela de sub-blocos
         var tabelaSubBlocos = document.getElementById('tabela-sub-blocos');
         var tbodySubBlocos = document.getElementById('tabela-sub-blocos-body');
 
-        tbodySubBlocos.innerHTML = '';  // Limpa a tabela antes de carregar novos dados
+        // Elementos da tabela de IPs
+        var tabelaIps = document.getElementById('tabela-ips');
+        var tbodyIps = document.getElementById('tabela-ips-body');
+
+        // Limpa as tabelas antes de carregar novos dados
+        tbodySubBlocos.innerHTML = '';
+        tbodyIps.innerHTML = '';
 
         if (blocoId) {
+            // Buscar Sub-Blocos
             fetch(`/ajax/sub_blocos_por_bloco/${blocoId}/`)
                 .then(response => response.json())
                 .then(data => {
                     data.sub_blocos.forEach(function (sub_bloco) {
                         var bloco_cidr = sub_bloco.bloco_cidr;
                         var descricao = sub_bloco.descrcao || '';
-                        var [ip, cidr] = bloco_cidr.split('/'); // Separa IP e máscara CIDR
-                        var mascara = cidrParaMascara(cidr); // Converte /XX para máscara
+                        var [ip, cidr] = bloco_cidr.split('/');
+                        var mascara = cidrParaMascara(cidr);
 
-                        var parente = sub_bloco.parent__bloco_cidr || 'N/A'; // Exibe o CIDR do parente
-                        var equipamento = sub_bloco.equipamento__nome || 'N/A'; // Exibe o nome do equipamento
+                        var parente = sub_bloco.parent__bloco_cidr || 'N/A';
+                        var equipamento = sub_bloco.equipamento__nome || 'N/A';
 
                         var row = document.createElement('tr');
                         row.innerHTML = `
@@ -264,12 +279,45 @@
                         tbodySubBlocos.appendChild(row);
                     });
 
-                    // Exibir a tabela somente se houver sub-blocos cadastrados
                     tabelaSubBlocos.style.display = data.sub_blocos.length > 0 ? 'table' : 'none';
                 })
                 .catch(error => console.error('Erro ao buscar sub-blocos:', error));
+
+            // Buscar IPs
+            fetch(`/ajax/ips_por_bloco/${blocoId}/`)
+                .then(response => response.json())
+                .then(data => {
+                    data.ips.forEach(function (ip) {
+                        var row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${ip.ip}</td>
+                            <td>${ip.equipamento__nome || ''}</td>
+                            <td>${ip.porta__nome || ''}</td>
+                            <td>${ip.finalidade || ''}</td>
+                            <td>${ip.next_hope || ''}</td>
+                            <td>${ip.is_gateway ? 'Sim' : 'Não'}</td>
+                            <td>
+                                <button class="btn-alterar" data-ip='${JSON.stringify(ip)}'>Alterar</button>
+                            </td>
+                        `;
+                        tbodyIps.appendChild(row);
+                    });
+
+                    tabelaIps.style.display = data.ips.length > 0 ? 'table' : 'none';
+
+                    // Adiciona evento para os botões de alteração
+                    document.querySelectorAll('.btn-alterar').forEach(btn => {
+                        btn.addEventListener('click', function () {
+                            var ipData = JSON.parse(this.getAttribute('data-ip'));
+                            preencherFormulario(ipData);
+                        });
+                    });
+
+                })
+                .catch(error => console.error('Erro ao buscar IPs:', error));
         } else {
-            tabelaSubBlocos.style.display = 'none'; // Esconder a tabela se nenhum bloco for selecionado
+            tabelaSubBlocos.style.display = 'none';
+            tabelaIps.style.display = 'none';
         }
     });
 
@@ -288,50 +336,71 @@
         };
         return cidrMap[cidr] || "N/A";
     }
-</script>
 
-<!-- Script que mostra os IPs Pertencentes ao Bloco selecionado-->
-<script>
-    document.getElementById('id_bloco').addEventListener('change', function () {
-        var blocoId = this.value;
-        var tabelaIps = document.getElementById('tabela-ips');
-        var tbody = document.getElementById('tabela-ips-body');
+    // Função para preencher o formulário com os dados do IP selecionado
+    function preencherFormulario(ipData) {
+        document.getElementById('id_ip').value = ipData.ip;
+        document.getElementById('id_equipamento').value = ipData.equipamento__nome;
+        document.getElementById('id_finalidade').value = ipData.finalidade;
+        document.getElementById('id_next_hop').value = ipData.next_hop;
 
-        tbody.innerHTML = '';  // Limpa a tabela antes de carregar novos dados
+        // Marcar checkbox de Gateway se necessário
+        document.getElementById('id_is_gateway').checked = ipData.is_gateway;
 
-        if (blocoId) {
-            fetch(`/ajax/ips_por_bloco/${blocoId}/`)
+        // Atualiza a lista de portas para carregar corretamente a porta selecionada
+        carregarPortas(() => {
+            document.getElementById('id_porta').value = ipData.porta;
+        });
+        // console.log("Equipamento selecionado:", ipData.equipamento__nome);
+    }
+
+    function carregarPortas(callback = null) {
+        var equipamentoId = document.getElementById('id_equipamento').value;
+        var portaSelect = document.getElementById('id_porta');
+
+        if (equipamentoId) {
+            portaSelect.innerHTML = '<option value="" selected>Carregando...</option>';
+            fetch(`/ajax/portas_por_equipamento/${equipamentoId}/`)
                 .then(response => response.json())
                 .then(data => {
-                    data.ips.forEach(function (ip) {
-                        var row = document.createElement('tr');
-                        row.innerHTML = `
-                            <td>${ip.ip}</td>
-                            <td>${ip.equipamento__nome || ''}</td>
-                            <td>${ip.porta__nome || ''}</td>
-                            <td>${ip.finalidade || ''}</td>
-                            <td>${ip.next_hope || ''}</td>
-                            <td>${ip.is_gateway ? 'Sim' : 'Não'}</td>
-                        `;
-                        tbody.appendChild(row);
+                    portaSelect.innerHTML = '<option value="" selected>Selecione uma porta</option>';
+                    data.portas.forEach(function (porta) {
+                        var option = document.createElement('option');
+                        option.value = porta.id;
+                        option.textContent = porta.nome;
+                        portaSelect.appendChild(option);
                     });
 
-                    // Exibir a tabela somente se houver IPs cadastrados
-                    tabelaIps.style.display = data.ips.length > 0 ? 'table' : 'none';
+                    // Se houver um callback, chama após as portas serem carregadas
+                    if (callback) {
+                        callback();
+                    }
                 });
         } else {
-            tabelaIps.style.display = 'none'; // Esconder a tabela se nenhum bloco for selecionado
+            portaSelect.innerHTML = '<option value="" selected>Selecione um equipamento primeiro</option>';
         }
-    });
+    }
+
 </script>
 
+<!-- Script para selecionar automaticamente o equipamento -->
 <script>
-    $(document).ready(function() {
-        $('select').select2({
-            width: '100%',  // Ajusta a largura automaticamente
-            placeholder: "Selecione uma opção",  // Define um placeholder
-            allowClear: true  // Adiciona a opção de limpar seleção
-        });
-    });
+document.addEventListener("DOMContentLoaded", function() {
+    const equipamentoNome = "{{ ip.equipamento__nome }}".trim().toLowerCase();
+    const equipamentoSelect = document.getElementById('id_equipamento');
+
+    //console.log("Nome vindo do backend:", equipamentoNome);
+
+    for (let option of equipamentoSelect.options) {
+       // console.log("Opção disponível:", option.text.trim().toLowerCase());
+
+        if (option.text.trim().toLowerCase() === equipamentoNome) {
+            equipamentoSelect.value = option.value;
+            //console.log("Equipamento selecionado:", option.text);
+            break;
+        }
+    }
+});
 </script>
+
 {% endblock %}
