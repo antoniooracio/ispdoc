@@ -81,6 +81,24 @@ class EquipamentoEmpresaFilter(SimpleListFilter):
         return queryset
 
 
+class EquipamentoPortaFilter(SimpleListFilter):
+    """Filtro personalizado para exibir apenas portas das empresas do usuário"""
+    title = "Porta"
+    parameter_name = "nome"
+
+    def lookups(self, request, model_admin):
+        if request.user.is_superuser:
+            portas = Porta.objects.all()
+        else:
+            portas = Porta.objects.filter(empresa__usuarios=request.user)
+
+        return [(porta.id, porta.nome) for porta in portas]
+
+    def queryset(self, request, queryset):
+        if self.value():
+            return queryset.filter(porta_id=self.value())  # Usar porta_id diretamente
+        return queryset
+
 class EmpresaUsuarioFilter(SimpleListFilter):
     """Filtro personalizado para exibir apenas empresas às quais o usuário pertence"""
     title = "Empresa"
@@ -420,6 +438,11 @@ class EnderecoIPAdmin(admin.ModelAdmin):
         # Filtro para o campo 'equipamento' baseado no usuário logado
         if not request.user.is_superuser:
             form_class.base_fields["equipamento"].queryset = Equipamento.objects.filter(empresa__usuarios=request.user)
+
+            # Filtro para o campo 'equipamento' baseado no usuário logado
+            if not request.user.is_superuser:
+                form_class.base_fields["porta"].queryset = Porta.objects.filter(
+                    empresa__usuarios=request.user)
 
         return form_class
 

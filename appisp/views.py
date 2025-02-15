@@ -27,7 +27,7 @@ def detalhes_bloco(request, bloco_id):
 
 def get_sub_blocos(request, bloco_id):
     sub_blocos = BlocoIP.objects.filter(parent_id=bloco_id).select_related("parent", "equipamento").values(
-        'id', 'bloco_cidr', 'tipo_ip', 'parent__bloco_cidr', 'equipamento__nome'
+        'id', 'bloco_cidr', 'tipo_ip', 'parent__bloco_cidr', 'equipamento__nome', 'descricao'
     )
     return JsonResponse({'sub_blocos': list(sub_blocos)})
 
@@ -35,7 +35,7 @@ def get_sub_blocos(request, bloco_id):
 def listar_ips_por_bloco(request, bloco_id):
     """Retorna os IPs cadastrados dentro de um bloco específico."""
     ips = EnderecoIP.objects.filter(bloco_id=bloco_id).values("id", "ip", "equipamento__nome", "porta__nome",
-                                                              "next_hop", "is_gateway")
+                                                              "next_hop", "is_gateway", 'finalidade')
     return JsonResponse({"ips": list(ips)})
 
 

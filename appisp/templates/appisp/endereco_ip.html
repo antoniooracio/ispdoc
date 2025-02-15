@@ -6,7 +6,7 @@
 
 
 <div class="row"></div>
-<div class="col-12 col-lg-9">
+<div class="col-12 col-lg-12">
     <div class="card">
         <div class="card-body">
             <form method="post" action="{% url 'endereco_ip'  %}" class="form-horizontal">
@@ -113,10 +113,10 @@
         </div>
     </div>
 
+        <!-- Mostra a Tabela dos Blocos pertencentes ao bloco selecionado -->
         <div class="col-12 col-lg-12">
         <div class="card">
             <div class="card-body">
-                <!-- Mostra a Tabela dos Blocos pertencentes ao bloco selecionado -->
                 <table id="tabela-sub-blocos" class="table table-striped" style="display: none;">
 
                     <thead>
@@ -126,6 +126,7 @@
                         <th>Máscara</th>
                         <th>Parente</th>
                         <th>Equipamento</th>
+                        <th>Descrição</th>
                     </tr>
                     </thead>
                     <tbody id="tabela-sub-blocos-body"></tbody>
@@ -145,6 +146,7 @@
                         <th>IP</th>
                         <th>Equipamento</th>
                         <th>Porta</th>
+                        <th>Finalidade</th>
                         <th>Next Hop</th>
                         <th>Gateway?</th>
                     </tr>
@@ -207,6 +209,7 @@
                 .then(data => {
                     data.sub_blocos.forEach(function (sub_bloco) {
                         var bloco_cidr = sub_bloco.bloco_cidr;
+                        var descricao = sub_bloco.descrcao || '';
                         var [ip, cidr] = bloco_cidr.split('/'); // Separa IP e máscara CIDR
                         var mascara = cidrParaMascara(cidr); // Converte /XX para máscara
 
@@ -219,6 +222,7 @@
                             <td>${mascara}</td>
                             <td>${parente}</td>
                             <td>${equipamento}</td>
+                            <td>${descricao}</td>
                         `;
                         tbodySubBlocos.appendChild(row);
                     });
@@ -268,6 +272,7 @@
                             <td>${ip.ip}</td>
                             <td>${ip.equipamento__nome || ''}</td>
                             <td>${ip.porta__nome || ''}</td>
+                            <td>${ip.finalidade || ''}</td>
                             <td>${ip.next_hope || ''}</td>
                             <td>${ip.is_gateway ? 'Sim' : 'Não'}</td>
                         `;
