@@ -5,6 +5,7 @@ from django import forms
 from django.contrib.auth.models import User
 from .models import Porta, Empresa, Equipamento, Rack, RackEquipamento, MaquinaVirtual, EnderecoIP, BlocoIP
 
+
 class EnderecoIPForm(forms.ModelForm):
     class Meta:
         model = EnderecoIP
@@ -15,12 +16,14 @@ class EnderecoIPForm(forms.ModelForm):
 
         if user:
             if user.is_superuser:
-                self.fields['bloco'].queryset = BlocoIP.objects.all()
-                self.fields['equipamento'].queryset = Equipamento.objects.all()
+                self.fields['bloco'].queryset = BlocoIP.objects.all().order_by('bloco_cidr')
+                self.fields['equipamento'].queryset = Equipamento.objects.all().order_by('nome')
             else:
                 empresas_usuario = Empresa.objects.filter(usuarios=user)
-                self.fields['bloco'].queryset = BlocoIP.objects.filter(empresa__in=empresas_usuario)
-                self.fields['equipamento'].queryset = Equipamento.objects.filter(empresa__in=empresas_usuario)
+                self.fields['bloco'].queryset = BlocoIP.objects.filter(empresa__in=empresas_usuario).order_by(
+                    'bloco_cidr')
+                self.fields['equipamento'].queryset = Equipamento.objects.filter(empresa__in=empresas_usuario).order_by(
+                    'nome')
 
     def clean(self):
         cleaned_data = super().clean()
@@ -44,12 +47,12 @@ class LoteForm(forms.Form):
     speed = forms.CharField(max_length=50, required=True, label="Velocidade")
 
     def __init__(self, *args, **kwargs):
-        request = kwargs.pop("request", None)  # Pegamos a request para filtrar os dados
+        request = kwargs.pop("request", None)
         super().__init__(*args, **kwargs)
 
         if request:
-            self.fields["empresa"].queryset = Empresa.objects.filter(usuario=request.user)
-            self.fields["equipamento"].queryset = Equipamento.objects.all()  # Ajuste conforme necessário
+            self.fields["empresa"].queryset = Empresa.objects.filter(usuario=request.user).order_by('nome')
+            self.fields["equipamento"].queryset = Equipamento.objects.all().order_by('nome')
 
 
 class MaquinaVirtualForm(forms.ModelForm):
@@ -63,20 +66,21 @@ class MaquinaVirtualForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Filtrar apenas equipamentos do tipo "VMWARE"
-        self.fields['equipamento'].queryset = Equipamento.objects.filter(tipo="VMWARE")
+
+        self.fields['equipamento'].queryset = Equipamento.objects.filter(tipo="VMWARE").order_by('nome')
 
 
 class EmpresaForm(forms.ModelForm):
     usuarios = forms.ModelMultipleChoiceField(
-        queryset=User.objects.all(),
-        widget=forms.CheckboxSelectMultiple,  # Lista de checkboxes para múltiplos usuários
+        queryset=User.objects.all().order_by('username'),
+        widget=forms.CheckboxSelectMultiple,
         required=False
     )
 
     class Meta:
         model = Empresa
-        fields = ['nome', 'endereco', 'cidade', 'estado', 'telefone', 'cpf_cnpj', 'representante', 'email', 'status', 'usuarios']
+        fields = ['nome', 'endereco', 'cidade', 'estado', 'telefone', 'cpf_cnpj', 'representante', 'email', 'status',
+                  'usuarios']
 
 
 class PortaForm(forms.ModelForm):
@@ -92,11 +96,11 @@ class PortaForm(forms.ModelForm):
         widgets = {
             'equipamento': autocomplete.ModelSelect2(
                 url='equipamento-autocomplete',
-                forward=['empresa'],  # Filtra equipamentos pela empresa
+                forward=['empresa'],
             ),
             'conexao': autocomplete.ModelSelect2(
                 url='porta-autocomplete',
-                forward=['empresa'],  # Filtra conexões pela empresa
+                forward=['empresa'],
             ),
         }
 
@@ -105,12 +109,11 @@ class PortaForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
 
         if self.request and self.request.user.is_authenticated:
-            self.fields['empresa'].queryset = Empresa.objects.filter(usuarios=self.request.user)
+            self.fields['empresa'].queryset = Empresa.objects.filter(usuarios=self.request.user).order_by('nome')
 
-        # Mantém a empresa no queryset mesmo se o AJAX alterar o campo
         empresa_selecionada = self.initial.get('empresa') or self.data.get('empresa')
         if empresa_selecionada:
-            self.fields['empresa'].queryset = Empresa.objects.filter(id=empresa_selecionada)
+            self.fields['empresa'].queryset = Empresa.objects.filter(id=empresa_selecionada).order_by('nome')
             self.fields['empresa'].initial = empresa_selecionada
 
     def clean(self):
@@ -125,7 +128,7 @@ class PortaForm(forms.ModelForm):
 class RackForm(forms.ModelForm):
     class Meta:
         model = Rack
-        fields = '__all__'  # Todos os campos do modelo
+        fields = '__all__'
 
     def clean(self):
         cleaned_data = super().clean()
@@ -141,7 +144,7 @@ class RackForm(forms.ModelForm):
 class RackEquipamentoForm(forms.ModelForm):
     class Meta:
         model = RackEquipamento
-        fields = '__all__'  # Todos os campos do modelo
+        fields = '__all__'
 
     def clean(self):
         cleaned_data = super().clean()
@@ -157,13 +160,12 @@ class RackEquipamentoForm(forms.ModelForm):
         if rack and us_fim > rack.us:
             raise forms.ValidationError("A alocação ultrapassa os Us do Rack.")
 
-        # Validação para evitar alocação duplicada
         conflitos = RackEquipamento.objects.filter(
             rack=rack,
             lado=lado,
             us_inicio__lte=us_fim,
             us_fim__gte=us_inicio
-        ).exclude(id=self.instance.id)  # Exclui o próprio objeto ao editar
+        ).exclude(id=self.instance.id)
 
         if conflitos.exists():
             raise forms.ValidationError(f"Os Us {us_inicio}-{us_fim} já estão ocupados no lado {lado}.")

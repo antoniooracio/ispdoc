@@ -23,6 +23,9 @@ class Empresa(models.Model):
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='ATIVA')
     usuarios = models.ManyToManyField(User, related_name='empresas')  # Adicionando a relação
 
+    class Meta:
+        ordering = ['nome']
+
     def __str__(self):
         return self.nome
 
@@ -34,6 +37,9 @@ class Pop(models.Model):
     cidade = models.CharField(max_length=100)
     empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE)  # Vincular à Empresa
 
+    class Meta:
+        ordering = ['nome']
+
     def __str__(self):
         return self.nome
 
@@ -41,6 +47,9 @@ class Pop(models.Model):
 # Modelo de Fabricante
 class Fabricante(models.Model):
     nome = models.CharField(max_length=255, unique=True)
+
+    class Meta:
+        ordering = ['nome']
 
     def __str__(self):
         return self.nome
@@ -51,8 +60,10 @@ class Modelo(models.Model):
     modelo = models.CharField(max_length=255)
     fabricante = models.ForeignKey(Fabricante, on_delete=models.CASCADE)
 
+
     class Meta:
         verbose_name_plural = "Equipamentos modelo"
+        ordering = ['modelo']
 
     def __str__(self):
         return f"{self.fabricante.nome} - {self.modelo}"
@@ -91,6 +102,8 @@ class Equipamento(models.Model):
     )
     observacao = models.TextField()
 
+    class Meta:
+        ordering = ['nome']
 
     def __str__(self):
         return f"{self.nome} ({self.ip})"
@@ -135,6 +148,7 @@ class Porta(models.Model):
 
     class Meta:
         verbose_name_plural = "Equipamentos porta"
+        ordering = ['nome']
 
     def save(self, *args, **kwargs):
         # Armazena o estado anterior da conexão para comparação
@@ -180,6 +194,7 @@ class BlocoIP(models.Model):
 
     class Meta:
         verbose_name_plural = "Blocos de IP"
+        ordering = ['bloco_cidr']
 
     def clean(self):
         """Validações para garantir que o bloco é correto e não se sobrepõe a outros blocos"""
@@ -257,6 +272,7 @@ class EnderecoIP(models.Model):
 
     class Meta:
         unique_together = ('bloco', 'ip', 'equipamento')
+        ordering = ['ip']
 
     def clean(self):
         """Validações antes de salvar"""
@@ -322,6 +338,9 @@ class Rack(models.Model):
     modelo = models.CharField(max_length=255, blank=True, null=True)
     observacao = models.TextField(blank=True, null=True)
 
+    class Meta:
+        ordering = ['nome']
+
     def __str__(self):
         return f"{self.nome} - {self.pop.nome} ({self.empresa.nome})"
 
@@ -346,6 +365,7 @@ class RackEquipamento(models.Model):
 
     class Meta:
         unique_together = ('rack', 'us_inicio', 'lado')  # Garante que um Us no mesmo lado não seja reutilizado
+        ordering = ['equipamento']
 
     def save(self, *args, **kwargs):
         # Validação: O equipamento deve pertencer à mesma empresa do Rack
@@ -400,6 +420,9 @@ class MaquinaVirtual(models.Model):
     senha = models.CharField(max_length=255)
     observacao = models.TextField(
         help_text="Para Formata o texto, use < /br> quebra de linha, < strong><strong>Negrito</strong>< /strong>, sem espaços")
+
+    class Meta:
+        ordering = ['nome']
 
     def __str__(self):
         return f"{self.nome} ({self.empresa})"
