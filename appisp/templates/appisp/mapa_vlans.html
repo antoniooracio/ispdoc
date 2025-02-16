@@ -105,7 +105,8 @@
 
                 const equipamentos = data.equipamentos;
                 const spacingX = 250;
-                const spacingY = 100;
+                const spacingY = 60;
+                const spacingCY = 30;
 
                 equipamentos.forEach((equip, i) => {
                     let yEquip = i * spacingY + 50;
@@ -128,7 +129,7 @@
 
                     equip.vlans.forEach((vlan, j) => {
                         let xVlan = 300;
-                        let yVlan = j * spacingY + 50;
+                        let yVlan = j * spacingCY + 50;
 
                         g.append("line")
                             .attr("x1", 250)
