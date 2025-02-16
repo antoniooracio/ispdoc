@@ -465,3 +465,13 @@ def alertas_vlans(request):
 def lista_empresas_json(request):
     empresas = list(Empresa.objects.values("id", "nome"))
     return JsonResponse({"empresas": empresas})
+
+
+def lista_vlans_json(request):
+    empresa_id = request.GET.get('empresa_id')
+    vlans = Vlan.objects.all()
+    if empresa_id:
+        vlans = vlans.filter(empresa_id=empresa_id)
+
+    data = {"vlans": list(vlans.values("id", "numero", "nome", "empresa_id"))}
+    return JsonResponse(data)
