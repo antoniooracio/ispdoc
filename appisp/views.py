@@ -6,7 +6,7 @@ from django.db.models import Prefetch
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404
-from .models import Equipamento, Porta, Empresa, Pop, Rack, Equipamento, BlocoIP, EnderecoIP
+from .models import Equipamento, Porta, Empresa, Pop, Rack, Equipamento, BlocoIP, EnderecoIP, VlanPorta, Vlan
 from .forms import PortaForm, EnderecoIPForm
 
 
@@ -46,7 +46,7 @@ def adicionar_endereco_ip(request):
         form = EnderecoIPForm(request.POST, user=user)  # Passa o usuário para o formulário
         if form.is_valid():
             form.save()
-            #messages.success(request, "Endereço IP adicionado com sucesso!")
+            # messages.success(request, "Endereço IP adicionado com sucesso!")
             return redirect("/admin/appisp/enderecoip")  # Substitua pelo nome correto da URL
     else:
         form = EnderecoIPForm(user=user)  # Passa o usuário para o formulário
@@ -104,7 +104,6 @@ def adicionar_portas(request):
         print("🚀 Dados Recebidos views:", request.POST)
         form = PortaForm(request.POST)
 
-
         if form.is_valid():
             print("✅ Empresa Selecionada views:", form.cleaned_data["empresa"])
             form.save()
@@ -136,7 +135,8 @@ class EmpresaForm(forms.ModelForm):
 
     class Meta:
         model = Empresa
-        fields = ['nome', 'endereco', 'cidade', 'estado', 'telefone', 'cpf_cnpj', 'representante', 'email', 'status', 'usuarios']
+        fields = ['nome', 'endereco', 'cidade', 'estado', 'telefone', 'cpf_cnpj', 'representante', 'email', 'status',
+                  'usuarios']
 
 
 # View para exibir o mapa de Racks
@@ -204,7 +204,8 @@ def mapa_racks_dados(request) -> JsonResponse:
     pop_id = request.GET.get('pop', None)
 
     # Filtragem de racks
-    racks_query = Rack.objects.prefetch_related('equipamentos__equipamento', 'equipamentos__equipamento__maquinas_virtuais')
+    racks_query = Rack.objects.prefetch_related('equipamentos__equipamento',
+                                                'equipamentos__equipamento__maquinas_virtuais')
 
     if empresa_id:
         racks_query = racks_query.filter(pop__empresa__id=empresa_id)
@@ -306,13 +307,13 @@ def mapa(request):
         for porta in equipamento.portas.all():
             if porta.conexao:
                 links.append({
-                    'source': porta.equipamento.id,         # Equipamento de origem
-                    'target': porta.conexao.equipamento.id, # Equipamento de destino
-                    'porta_origem': porta.nome,             # Nome da porta de origem
-                    'porta_destino': porta.conexao.nome,    # Nome da porta de destino
-                    'tipo': porta.tipo,                     # Tipo da conexão (Fibra, Elétrico, etc.)
-                    'speed': porta.speed,                   # Velocidade da porta (100M, 1G, etc.)
-                    'Obs': porta.observacao,                # Observação da porta
+                    'source': porta.equipamento.id,  # Equipamento de origem
+                    'target': porta.conexao.equipamento.id,  # Equipamento de destino
+                    'porta_origem': porta.nome,  # Nome da porta de origem
+                    'porta_destino': porta.conexao.nome,  # Nome da porta de destino
+                    'tipo': porta.tipo,  # Tipo da conexão (Fibra, Elétrico, etc.)
+                    'speed': porta.speed,  # Velocidade da porta (100M, 1G, etc.)
+                    'Obs': porta.observacao,  # Observação da porta
                 })
 
     # Contexto para enviar para o template
@@ -320,8 +321,8 @@ def mapa(request):
         'userIsAdmin': user_is_admin,
         'empresas': empresas,
         'empresa_id': empresa_id,
-        'nodes': nodes,   # Passando nodes (equipamentos) para o JS
-        'links': links,   # Passando links (conexões) para o JS
+        'nodes': nodes,  # Passando nodes (equipamentos) para o JS
+        'links': links,  # Passando links (conexões) para o JS
     }
 
     return render(request, 'appisp/mapa.html', context)
@@ -411,3 +412,56 @@ def get_equipamentos_por_empresa(request):
     equipamentos = Equipamento.objects.filter(empresa_id=empresa_id).values('id', 'nome')
 
     return JsonResponse(list(equipamentos), safe=False)
+
+
+def visualizar_vlans_por_equipamento(request, equipamento_id):
+    equipamento = get_object_or_404(Equipamento, id=equipamento_id)
+    vlans = VlanPorta.objects.filter(porta__equipamento=equipamento)
+
+    return render(request, 'appisp/vlan_por_equipamento.html', {'equipamento': equipamento, 'vlans': vlans})
+
+
+def mapa_vlans_json(request):
+    empresa_id = request.GET.get("empresa_id")  # Obtém a empresa selecionada
+
+    # Filtra os equipamentos da empresa selecionada
+    if empresa_id:
+        equipamentos = Equipamento.objects.filter(empresa_id=empresa_id)
+    else:
+        equipamentos = Equipamento.objects.all()
+
+    equipamentos_data = []
+
+    for equip in equipamentos:
+        vlan_portas = VlanPorta.objects.filter(equipamento=equip)
+        vlans = [{"vlan": vp.vlan.numero, "porta": vp.porta.nome} for vp in vlan_portas]
+
+        equipamentos_data.append({
+            "equipamento": equip.nome,
+            "vlans": vlans
+        })
+
+    return JsonResponse({"equipamentos": equipamentos_data})
+
+
+def relatorio_vlans(request):
+    vlans = Vlan.objects.all().select_related('empresa')
+    vlans_por_empresa = {}
+
+    for vlan in vlans:
+        if vlan.empresa.nome not in vlans_por_empresa:
+            vlans_por_empresa[vlan.empresa.nome] = []
+        vlans_por_empresa[vlan.empresa.nome].append(vlan)
+
+    return render(request, 'appisp/relatorio_vlans.html', {'vlans_por_empresa': vlans_por_empresa})
+
+
+def alertas_vlans(request):
+    vlans_sem_porta = Vlan.objects.filter(vlan_portas__isnull=True)
+
+    return render(request, 'appisp/alertas_vlans.html', {'vlans_sem_porta': vlans_sem_porta})
+
+
+def lista_empresas_json(request):
+    empresas = list(Empresa.objects.values("id", "nome"))
+    return JsonResponse({"empresas": empresas})

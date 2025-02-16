@@ -4,6 +4,7 @@ from django.core.exceptions import ValidationError
 from django.contrib.auth.models import User  # Importe o modelo de usuário
 import ipaddress
 
+
 # Modelo de Empresa
 class Empresa(models.Model):
     STATUS_CHOICES = [
@@ -59,7 +60,6 @@ class Fabricante(models.Model):
 class Modelo(models.Model):
     modelo = models.CharField(max_length=255)
     fabricante = models.ForeignKey(Fabricante, on_delete=models.CASCADE)
-
 
     class Meta:
         verbose_name_plural = "Equipamentos modelo"
@@ -173,6 +173,88 @@ class Porta(models.Model):
 
     def __str__(self):
         return f"{self.nome} ({self.equipamento.nome} - {self.speed} - {self.tipo})"
+
+
+# Modelo de VLAN
+class Vlan(models.Model):
+    STATUS_CHOICES = [
+        ('Ativa', 'Ativa'),
+        ('Inativa', 'Inativa'),
+    ]
+
+    TIPOS_VLAN = [
+        ('Acesso', 'Acesso'),
+        ('Trunk', 'Trunk'),
+    ]
+
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name='vlans')
+    equipamento = models.ForeignKey(Equipamento, on_delete=models.CASCADE, related_name='vlans', null=True, blank=True)
+    numero = models.PositiveIntegerField()  # VLAN ID (1-4095)
+    nome = models.CharField(max_length=255, blank=True, null=True)
+    tipo = models.CharField(max_length=10, choices=TIPOS_VLAN, default='Acesso')
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='Ativa')
+
+    class Meta:
+        ordering = ['numero']
+        unique_together = ('empresa', 'numero')  # Garante que o número da VLAN é único dentro da empresa
+
+    def __str__(self):
+        return f"VLAN {self.numero} - {self.nome if self.nome else 'Sem nome'} ({self.empresa.nome})"
+
+    def clean(self):
+        """ Validações para garantir que a VLAN está dentro do intervalo correto e não existe duplicidade """
+        if self.numero < 1 or self.numero > 4095:
+            raise ValidationError("O número da VLAN deve estar entre 1 e 4095.")
+
+        if Vlan.objects.filter(empresa=self.empresa, numero=self.numero).exclude(id=self.id).exists():
+            raise ValidationError(f"A VLAN {self.numero} já está cadastrada para a empresa {self.empresa.nome}.")
+
+
+# Modelo para VlanPorta
+class VlanPorta(models.Model):
+    TIPOS_VLAN_PORTA = [
+        ("Access", "Access"),
+        ("Trunk", "Trunk"),
+        ("Ibrida", "Ibrida"),
+    ]
+
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="vlan_portas")
+    equipamento = models.ForeignKey(Equipamento, on_delete=models.CASCADE, related_name="vlan_portas")
+    vlan = models.ForeignKey(Vlan, on_delete=models.CASCADE, related_name="vlan_portas")
+    porta = models.ForeignKey(Porta, on_delete=models.CASCADE, related_name="vlan_portas")
+    tipo = models.CharField(max_length=10, choices=TIPOS_VLAN_PORTA, default="Access")
+
+    vlan_nativa = models.BooleanField(default=False)  # Se for Trunk, indica se é VLAN nativa
+    vlans_permitidas = models.ManyToManyField(Vlan, blank=True, related_name="permitidas_em_portas")
+
+    class Meta:
+        unique_together = ("vlan", "porta")  # Evita duplicidade
+
+    def __str__(self):
+        return f"VLAN {self.vlan.numero} - {self.porta.nome} ({self.tipo})"
+
+    def clean(self):
+        """ Validações antes de salvar """
+        if self.tipo == "Access" and self.vlan_nativa:
+            raise ValidationError("Uma porta Access não pode ter VLAN nativa.")
+
+    def save(self, *args, **kwargs):
+        """ Garante que as regras sejam aplicadas antes e depois de salvar """
+        self.clean()  # Aplica validações básicas
+
+        super().save(*args, **kwargs)  # Salva o objeto primeiro (gera um ID)
+
+        # Agora podemos acessar ManyToManyField sem erro
+        if self.tipo == "Access":
+            self.vlans_permitidas.clear()  # Remove qualquer VLAN permitida
+
+        if self.tipo == "Trunk":
+            if not self.vlans_permitidas.exists() and not self.vlan_nativa:
+                raise ValidationError("Uma porta Trunk deve ter VLANs permitidas ou uma VLAN nativa.")
+
+        # Se for VLAN nativa, ela não pode estar na lista de VLANs permitidas
+        if self.vlan_nativa and self.vlan in self.vlans_permitidas.all():
+            self.vlans_permitidas.remove(self.vlan)
 
 
 # Modelo para Blocos de IP e CIDR
@@ -311,7 +393,8 @@ class EnderecoIP(models.Model):
                 raise ValidationError(f"O IP {self.ip} é um endereço de rede ou broadcast e não pode ser usado.")
 
         # 5️⃣ Validação: Apenas um gateway por bloco
-        if self.is_gateway and EnderecoIP.objects.filter(bloco=self.bloco, is_gateway=True).exclude(id=self.id).exists():
+        if self.is_gateway and EnderecoIP.objects.filter(bloco=self.bloco, is_gateway=True).exclude(
+                id=self.id).exists():
             raise ValidationError(f"Já existe um gateway para o bloco {self.bloco.bloco_cidr}. Apenas um é permitido.")
 
     def save(self, *args, **kwargs):

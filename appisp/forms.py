@@ -3,7 +3,13 @@ import ipaddress
 from dal import autocomplete
 from django import forms
 from django.contrib.auth.models import User
-from .models import Porta, Empresa, Equipamento, Rack, RackEquipamento, MaquinaVirtual, EnderecoIP, BlocoIP
+from .models import Porta, Empresa, Equipamento, Rack, RackEquipamento, MaquinaVirtual, EnderecoIP, BlocoIP, Vlan
+
+
+class VlanForm(forms.ModelForm):
+    class Meta:
+        model = Vlan
+        fields = ['empresa', 'equipamento', 'numero', 'nome', 'tipo', 'status']
 
 
 class EnderecoIPForm(forms.ModelForm):

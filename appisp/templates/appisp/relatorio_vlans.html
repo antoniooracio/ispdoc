@@ -1,0 +1,99 @@
+
+
+
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block content %}
+<style>
+    /* Estiliza todos os selects */
+    select {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ced4da;
+        border-radius: 5px;
+        background-color: #000;
+        font-size: 16px;
+        appearance: none; /* Remove o estilo padrão do navegador */
+        -webkit-appearance: none;
+        -moz-appearance: none;
+    }
+
+    /* Adiciona uma seta personalizada no select */
+    .form-group select {
+        background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='24' height='24'><path fill='gray' d='M7 10l5 5 5-5z'/></svg>");
+        background-repeat: no-repeat;
+        background-position: right 10px center;
+        background-size: 18px;
+        padding-right: 30px;
+    }
+
+    /* Estiliza o hover e foco */
+    select:hover, select:focus {
+        border-color: #80bdff;
+        box-shadow: 0 0 5px rgba(0, 123, 255, 0.25);
+        outline: none;
+    }
+
+    /* Ajusta os selects dentro das colunas */
+    .col-sm-7 select {
+        width: 100%;
+    }
+</style>
+
+<div class="row">
+    <div class="col-12 col-lg-12">
+        <div class="card">
+            <div class="card-body">
+                        <!-- Formulário de filtro -->
+                <form id="filtro-form">
+                    <div class="row">
+                        <div class="col-sm-7">
+                            <select name="empresa" id="empresa-selector">
+                                <option value="">Selecione uma Empresa</option>
+                                {% for empresa in empresas %}
+                                    <option value="{{ empresa.id }}" {% if empresa.id == empresa_id %}selected{% endif %}>
+                                        {{ empresa.nome }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-sm-2">
+                            <button type="submit" class="btn btn-primary">Filtrar</button>
+                        </div>
+                        <div class="col-sm-2">
+                            <a href="/admin/appisp/vlanporta/" class="btn btn-secondary">voltar</a>
+                        </div>
+                    </div>
+                </form>
+                </br>
+                <form >
+                    {% csrf_token %}
+                        {% for empresa, vlans in vlans_por_empresa.items %}
+                            <h3>{{ empresa }}</h3>
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Nome</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for vlan in vlans %}
+                                    <tr>
+                                        <td>{{ vlan.numero }}</td>
+                                        <td>{{ vlan.nome }}</td>
+                                        <td>{{ vlan.status }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        {% endfor %}
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

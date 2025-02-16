@@ -18,16 +18,24 @@ from django.contrib import admin
 from appisp.admin import admin_site
 from django.http import JsonResponse
 from django.urls import path, include
+from django.shortcuts import render
 from appisp.views import (EquipamentoAutocomplete, PortaAutocomplete, mapa, atualizar_posicao, mapa_racks,
                           mapa_racks_dados, get_equipamentos_por_empresa, adicionar_endereco_ip, listar_ips_por_bloco,
-                          get_sub_blocos
+                          get_sub_blocos, visualizar_vlans_por_equipamento, mapa_vlans_json, relatorio_vlans,
+                          alertas_vlans, lista_empresas_json,
                           )
 from appisp.models import Porta
+
 
 def get_portas_por_equipamento(request, equipamento_id):
     portas = Porta.objects.filter(equipamento_id=equipamento_id)
     portas_data = [{'id': porta.id, 'nome': porta.nome} for porta in portas]
     return JsonResponse({'portas': portas_data})
+
+
+def mapa_vlans(request):
+    return render(request, 'appisp/mapa_vlans.html')
+
 
 urlpatterns = [
     path('admin/', admin_site.urls),
@@ -39,8 +47,14 @@ urlpatterns = [
     path('mapa-rack/dados/', mapa_racks_dados, name='mapa_rack_dados'),
     path('get-equipamentos/', get_equipamentos_por_empresa, name='get-equipamentos'),
     path('endereco_ip/', adicionar_endereco_ip, name='endereco_ip'),
+    path('equipamento/<int:equipamento_id>/vlans/', visualizar_vlans_por_equipamento, name='vlans_por_equipamento'),
+    path('mapa_vlans/', mapa_vlans, name='mapa_vlans'),
+    path('mapa_vlans_json/', mapa_vlans_json, name='mapa_vlans_json'),
+    path('relatorio_vlans/', relatorio_vlans, name='relatorio_vlans'),
+    path('alertas_vlans/', alertas_vlans, name='alertas_vlans'),
     path('ajax/portas_por_equipamento/<int:equipamento_id>/', get_portas_por_equipamento,
          name='portas_por_equipamento'),
     path("ajax/ips_por_bloco/<int:bloco_id>/", listar_ips_por_bloco, name="listar_ips_por_bloco"),
     path('ajax/sub_blocos_por_bloco/<int:bloco_id>/', get_sub_blocos, name='ajax_sub_blocos_por_bloco'),
+    path("lista_empresas_json/", lista_empresas_json, name="lista_empresas_json"),
 ]

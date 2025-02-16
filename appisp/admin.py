@@ -11,8 +11,10 @@ from django.http import HttpResponseRedirect
 from .forms import PortaForm, RackForm, RackEquipamentoForm, EnderecoIPForm
 from .views import mapa, mapa_racks
 from django.contrib.admin import SimpleListFilter
-from .models import Empresa, Pop, Fabricante, Modelo, Equipamento, Porta, BlocoIP, EnderecoIP, Rack, RackEquipamento, MaquinaVirtual, Disco, Rede
+from .models import Empresa, Pop, Fabricante, Modelo, Equipamento, Porta, BlocoIP, EnderecoIP, Rack, RackEquipamento, \
+    MaquinaVirtual, Disco, Rede, Vlan, VlanPorta
 import ipaddress
+
 
 class RackEmpresaFilter(SimpleListFilter):
     title = "Rack"
@@ -99,6 +101,7 @@ class EquipamentoPortaFilter(SimpleListFilter):
             return queryset.filter(porta_id=self.value())  # Usar porta_id diretamente
         return queryset
 
+
 class EmpresaUsuarioFilter(SimpleListFilter):
     """Filtro personalizado para exibir apenas empresas às quais o usuário pertence"""
     title = "Empresa"
@@ -154,6 +157,71 @@ class PopUsuarioFilter(SimpleListFilter):
         if self.value():
             return queryset.filter(pop_id=self.value())
         return queryset
+
+
+@admin.register(Vlan)
+class VlanAdmin(admin.ModelAdmin):
+    list_display = ('numero', 'nome', 'empresa', 'equipamento', 'tipo', 'status')
+    list_filter = ('empresa', 'tipo', 'status')
+    search_fields = ('numero', 'nome', 'empresa__nome')
+
+    def get_list_filter(self, request):
+        if request.user.is_superuser:
+            return ('empresa', 'equipamento')
+        return (EmpresaUsuarioFilter, EquipamentoEmpresaFilter)
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if request.user.is_superuser:
+            return qs
+        return qs.filter(empresa__usuarios=request.user)
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if not request.user.is_superuser:
+            if db_field.name == "empresa":
+                kwargs["queryset"] = Empresa.objects.filter(usuarios=request.user)
+            elif db_field.name == "equipamento":
+                kwargs["queryset"] = Equipamento.objects.filter(empresa__usuarios=request.user)
+
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
+
+@admin.register(VlanPorta)
+class VlanPortaAdmin(admin.ModelAdmin):
+    list_display = ('vlan', 'porta', 'get_equipamento', 'tipo', 'vlan_nativa')
+    list_filter = (EmpresaUsuarioFilter, EquipamentoEmpresaFilter, EquipamentoPortaFilter, 'tipo')
+
+    change_list_template = "admin/vlan_changelist.html"  # Personalizamos o template
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if request.user.is_superuser:
+            return qs
+
+        # Filtra apenas VLANs, Equipamentos e Portas da empresa do usuário
+        return qs.filter(
+            vlan__empresa__usuarios=request.user
+        )
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        """
+        Restringe as escolhas de VLAN, Porta e Equipamento conforme a empresa do usuário.
+        """
+        if not request.user.is_superuser:
+            if db_field.name == "vlan":
+                kwargs["queryset"] = Vlan.objects.filter(empresa__usuarios=request.user)
+            elif db_field.name == "porta":
+                kwargs["queryset"] = Porta.objects.filter(equipamento__empresa__usuarios=request.user)
+            elif db_field.name == "empresa":
+                kwargs["queryset"] = Empresa.objects.filter(usuarios=request.user)
+            elif db_field.name == "equipamento":
+                kwargs["queryset"] = Equipamento.objects.filter(empresa__usuarios=request.user)
+
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
+    def get_equipamento(self, obj):
+        return obj.porta.equipamento.nome  # Obtém o nome do equipamento associado à porta
+
 
 
 @admin.register(MaquinaVirtual)
@@ -248,7 +316,8 @@ class RackEquipamentoAdmin(admin.ModelAdmin):
         if request.user.is_superuser:
             return ('rack', 'lado')  # Superusuário vê tudo
 
-        return (EquipamentoEmpresaFilter, RackEmpresaFilter, 'lado')  # Usuário comum vê apenas racks e equipamentos da empresa
+        return (
+        EquipamentoEmpresaFilter, RackEmpresaFilter, 'lado')  # Usuário comum vê apenas racks e equipamentos da empresa
 
     def get_queryset(self, request):
         """ Lista apenas os equipamentos dentro dos racks das empresas do usuário """
@@ -330,12 +399,6 @@ class EmpresaFilter(SimpleListFilter):
         return queryset
 
 
-from django.contrib import admin
-from django import forms
-from django.utils.html import format_html
-from .models import BlocoIP, EnderecoIP, Equipamento, Empresa
-
-
 class BlocoIPForm(forms.ModelForm):
     class Meta:
         model = BlocoIP
@@ -368,7 +431,8 @@ class BlocoIPForm(forms.ModelForm):
 
 @admin.register(BlocoIP)
 class BlocoIPAdmin(admin.ModelAdmin):
-    list_display = ('empresa', 'equipamento', 'bloco_cidr', 'tipo_ip', 'next_hop', 'descricao', 'gateway', 'parent', 'criado_em')
+    list_display = (
+    'empresa', 'equipamento', 'bloco_cidr', 'tipo_ip', 'next_hop', 'descricao', 'gateway', 'parent', 'criado_em')
     search_fields = ('bloco_cidr', 'empresa__nome', 'equipamento__nome')
     list_filter = ('tipo_ip', 'empresa', 'equipamento', 'parent')
     form = BlocoIPForm
@@ -377,6 +441,7 @@ class BlocoIPAdmin(admin.ModelAdmin):
         """Mostra o IP configurado como Gateway"""
         gw = obj.enderecos.filter(is_gateway=True).first()
         return gw.ip if gw else "Nenhum"
+
     gateway.short_description = "Gateway"
 
     def get_list_filter(self, request):
@@ -463,7 +528,8 @@ class EnderecoIPAdmin(admin.ModelAdmin):
     def get_urls(self):
         urls = super().get_urls()
         custom_urls = [
-            path("adicionar-endereco-ip/", self.admin_site.admin_view(self.adicionar_endereco_ip), name="adicionar_endereco_ip"),
+            path("adicionar-endereco-ip/", self.admin_site.admin_view(self.adicionar_endereco_ip),
+                 name="adicionar_endereco_ip"),
         ]
         return custom_urls + urls
 
@@ -498,14 +564,12 @@ class EnderecoIPAdmin(admin.ModelAdmin):
         return render(request, "admin/adicionar_endereco_ip.html", context)
 
 
-
 @admin.register(Porta)
 class PortaAdmin(admin.ModelAdmin):
     form = PortaForm
     list_display = ('nome', 'equipamento', 'conexao', 'speed', 'tipo')
     search_fields = ('nome', 'equipamento__nome', 'conexao__nome')
     list_filter = (EmpresaUsuarioFilter, EquipamentoEmpresaFilter, 'speed', 'tipo')
-
 
     change_list_template = "admin/porta_changelist.html"  # Personalizamos o template
 
@@ -707,6 +771,7 @@ class CustomAdminSite(AdminSite):
         ]
         return context
 
+
 # Instanciando a classe personalizada do Admin
 admin_site = CustomAdminSite(name='custom_admin')
 
@@ -726,8 +791,8 @@ admin_site.register(EnderecoIP, EnderecoIPAdmin)
 admin_site.register(Rack, RackAdmin)
 admin_site.register(RackEquipamento, RackEquipamentoAdmin)
 admin_site.register(MaquinaVirtual, MaquinaVirtualAdmin)
-
-
+admin_site.register(Vlan, VlanAdmin)
+admin_site.register(VlanPorta, VlanPortaAdmin)
 
 # Em vez de usar admin.site, agora usamos admin_site
 # Para fazer isso funcionar, você precisará alterar as URLs do seu projeto Django para usar o custom_admin

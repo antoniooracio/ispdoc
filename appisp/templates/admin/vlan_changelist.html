@@ -1,0 +1,26 @@
+{% extends "admin/change_list.html" %}
+{% load i18n %}
+
+{% block object-tools %}
+<div class="object-tools">
+    <a href="/alertas_vlans/" class="btn btn-alert">
+        {% trans "Vlan alertas" %}
+    </a>
+</div>
+<div class="object-tools">
+    <a href="/mapa_vlans/" class="btn btn-alert">
+        {% trans "Mapa de vlans" %}
+    </a>
+</div>
+<div class="object-tools">
+    <a href="/relatorio_vlans/" class="btn btn-alert">
+        {% trans "Relatório de Vlans" %}
+    </a>
+</div>
+<div class="object-tools">
+    <a href="/vlan_por_equipamento/" class="btn btn-alert">
+        {% trans "Vlans por equipamento" %}
+    </a>
+</div>
+{{ block.super }}
+{% endblock %}

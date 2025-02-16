@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2> VLANs no equipamento {{ equipamento.nome }} </h2>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>Porta</th>
+            <th>VLAN</th>
+            <th>Tipo</th>
+            <th>VLAN Nativa</th>
+            <th>VLANs Permitidas</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for vlan_porta in vlans %}
+        <tr>
+            <td>{{ vlan_porta.porta.nome }}</td>
+            <td>{{ vlan_porta.vlan.numero }}</td>
+            <td>{{ vlan_porta.tipo }}</td>
+            <td>{% if vlan_porta.vlan_nativa %}✔{% else %}✘{% endif %}</td>
+            <td>
+                {% for vlan in vlan_porta.vlans_permitidas.all %}
+                    {{ vlan.numero }}{% if not forloop.last %}, {% endif %}
+                {% empty %}
+                    -
+                {% endfor %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
