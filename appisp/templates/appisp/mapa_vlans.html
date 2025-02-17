@@ -1,29 +1,29 @@
 {% extends "admin/base_site.html" %}
 {% block content %}
-<div class="col-12 col-lg-12">
-    <div class="card">
         <div class="card-body">
             <div class="form-group field-tipo">
                 <div class="row">
-                        <div class="row">
-                            <div class="col-5 text-left">
-                                <label class="form-label">Empresa:</label>
-                                <select id="empresa-select">
-                                    <option value="">Limpar</option>
-                                </select>
-                            </div>
-                            <div class="col-5 text-left">
-                                <label class="form-label">Empresa:</label>
-                                <select id="vlan-select" disabled>
-                                    <option value="">Todas</option>
-                                </select>
-                            </div>
-                        </div>
+                    <div class="col-2">
+                        <label class="form-label">Empresa:</label>
+                    </div>
+                    <div class="col-4">
+                        <select id="empresa-select">
+                            <option value="">Limpar</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-2">
+                        <label class="form-label">Empresa:</label>
+                    </div>
+                    <div class="col-4">
+                        <select id="vlan-select" disabled>
+                            <option value="">Todas</option>
+                        </select>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
-</div>
 
 <script src="https://d3js.org/d3.v6.min.js"></script>
 <head>
