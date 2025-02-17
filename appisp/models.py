@@ -249,8 +249,8 @@ class VlanPorta(models.Model):
             self.vlans_permitidas.clear()  # Remove qualquer VLAN permitida
 
         if self.tipo == "Trunk":
-            if not self.vlans_permitidas.exists() and not self.vlan_nativa:
-                raise ValidationError("Uma porta Trunk deve ter VLANs permitidas ou uma VLAN nativa.")
+            if not self.vlans_permitidas.exists() and not self.vlans_permitidas:
+                raise ValidationError("Uma porta Trunk deve ter VLANs permitidas.")
 
         # Se for VLAN nativa, ela não pode estar na lista de VLANs permitidas
         if self.vlan_nativa and self.vlan in self.vlans_permitidas.all():
