@@ -269,9 +269,12 @@ def atualizar_posicao(request, equipamento_id):
 # View Mapa
 @login_required(login_url='/admin/login/')
 def mapa(request):
-    user_is_admin = request.user.groups.filter(name="Admin").exists()
+    user = request.user
+    user_is_admin = user.groups.filter(name="Admin").exists()
 
-    empresas = Empresa.objects.all()
+    # Filtra apenas as empresas do usuário autenticado
+    empresas = Empresa.objects.filter(usuarios=user)
+
     empresa_id = request.GET.get('empresa', None)  # Pega o parâmetro da empresa na URL
 
     # Se uma empresa for selecionada, filtramos os equipamentos dela

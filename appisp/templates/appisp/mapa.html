@@ -1,5 +1,5 @@
-<!DOCTYPE html>
-<html lang="pt-br">
+{% extends "admin/base_site.html" %}
+{% block content %}
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -667,7 +667,7 @@ document.getElementById('closeConexaoModal').addEventListener('click', () => {
             });
     }
 
-    renderMapa();
+    //renderMapa();
 
     // Escutando a mudança na seleção da empresa para renderizar novamente o mapa
     document.getElementById('empresa-selector').addEventListener('change', renderMapa);
@@ -676,3 +676,4 @@ document.getElementById('closeConexaoModal').addEventListener('click', () => {
 
 </body>
 </html>
+{% endblock %}
