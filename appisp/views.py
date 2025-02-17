@@ -460,26 +460,33 @@ def mapa_vlans_json(request):
     empresa_id = request.GET.get("empresa_id")
     vlan_id = request.GET.get("vlan_id")  # Obtém a VLAN selecionada
 
+    equipamentos = Equipamento.objects.all()
     if empresa_id:
-        equipamentos = Equipamento.objects.filter(empresa_id=empresa_id)
-    else:
-        equipamentos = Equipamento.objects.all()
+        equipamentos = equipamentos.filter(empresa_id=empresa_id)
 
     equipamentos_data = []
 
     for equip in equipamentos:
         vlan_portas = VlanPorta.objects.filter(equipamento=equip)
 
-        # Se uma VLAN foi selecionada, filtramos as VLANs associadas ao equipamento
         if vlan_id:
             vlan_portas = vlan_portas.filter(vlan_id=vlan_id)
 
-        vlans = [{"vlan": vp.vlan.numero, "porta": vp.porta.nome} for vp in vlan_portas]
+        # Agrupar portas por VLAN
+        vlan_dict = {}
+        for vp in vlan_portas:
+            vlan_nome = vp.vlan.numero  # Ou vp.vlan.nome, dependendo do que você quer exibir
+            if vlan_nome not in vlan_dict:
+                vlan_dict[vlan_nome] = []
+            vlan_dict[vlan_nome].append(vp.porta.nome)
 
-        if vlans:  # Apenas adiciona equipamentos que possuem VLANs associadas
+        vlans = [{"vlan": vlan, "portas": portas} for vlan, portas in vlan_dict.items()]
+
+        if vlans:
             equipamentos_data.append({
                 "equipamento": equip.nome,
                 "vlans": vlans
             })
 
     return JsonResponse({"equipamentos": equipamentos_data})
+
