@@ -142,9 +142,12 @@ class EmpresaForm(forms.ModelForm):
 # View para exibir o mapa de Racks
 @login_required(login_url='/admin/login/')
 def mapa_racks(request):
-    user_is_admin = request.user.groups.filter(name="Admin").exists()
+    user = request.user
+    user_is_admin = user.groups.filter(name="Admin").exists()
 
-    empresas = Empresa.objects.all()
+    # Filtra apenas as empresas do usuário autenticado
+    empresas = Empresa.objects.filter(usuarios=user)
+
     empresa_id = request.GET.get('empresa', None)  # Filtragem por empresa
     pop_id = request.GET.get('pop', None)  # Filtragem por POP
 
