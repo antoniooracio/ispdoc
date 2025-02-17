@@ -185,81 +185,71 @@
 
                 svg.call(zoom);
 
-const equipamentos = data.equipamentos;
-equipamentos.forEach((equip, i) => {
-    let yEquip = i * 100 + 50;
+                const equipamentos = data.equipamentos;
+                equipamentos.forEach((equip, i) => {
+                    let yEquip = i * 50 + 50;
 
-    let group = g.append("g").attr("class", "equipamento-group");
+                    let group = g.append("g").attr("class", "equipamento-group");
 
-    let rect = group.append("rect")
-        .attr("x", 50).attr("y", yEquip - 15).attr("width", 200)
-        .attr("height", 50).attr("fill", "lightgray").attr("stroke", "black")
-        .attr("class", "equipamento")
-        .attr("data-equipamento", equip.equipamento)
-        .style("cursor", "pointer"); // Mostra que pode clicar
+                    let rect = group.append("rect")
+                        .attr("x", 50).attr("y", yEquip - 15).attr("width", 300)
+                        .attr("height", 30).attr("fill", "lightgray").attr("stroke", "black")
+                        .attr("class", "equipamento")
+                        .attr("data-equipamento", equip.equipamento)
+                        .style("cursor", "pointer"); // Mostra que pode clicar
 
-    group.append("text")
-        .attr("x", 60).attr("y", yEquip).text(equip.equipamento)
-        .attr("font-size", "14px").attr("fill", "black")
-        .style("pointer-events", "none"); // Permite clique no rect
+                    group.append("text")
+                        .attr("x", 60).attr("y", yEquip).text(equip.equipamento)
+                        .attr("font-size", "14px").attr("fill", "black")
+                        .style("pointer-events", "none"); // Permite clique no rect
 
-    equip.vlans.forEach((vlan, j) => {
-        let xVlan = 300, yVlan = j * 30 + 50;
+                    equip.vlans.forEach((vlan, j) => {
+                        let xVlan = 500, yVlan = j * 30 + 50;
 
-        g.append("line").attr("x1", 250).attr("y1", yEquip).attr("x2", xVlan)
-            .attr("y2", yVlan).attr("stroke", "blue");
+                        g.append("line").attr("x1", 350).attr("y1", yEquip).attr("x2", xVlan)
+                            .attr("y2", yVlan).attr("stroke", "blue");
 
-        g.append("circle").attr("cx", xVlan).attr("cy", yVlan).attr("r", 10).attr("fill", "red");
+                        g.append("circle").attr("cx", xVlan).attr("cy", yVlan).attr("r", 10).attr("fill", "red");
 
-        g.append("text").attr("x", xVlan + 15).attr("y", yVlan + 5)
-            .text(`VLAN ${vlan.vlan}`).attr("font-size", "12px").attr("fill", "black");
-    });
+                        g.append("text").attr("x", xVlan + 15).attr("y", yVlan + 5)
+                            .text(`VLAN ${vlan.vlan}`).attr("font-size", "12px").attr("fill", "black");
+                    });
 
-    // Evento de clique para abrir o modal
-    rect.on("click", function () {
-        const modalTitulo = document.getElementById("modal-titulo");
-        const modalVlan = document.getElementById("modal-vlan");
-        const modal = document.getElementById("equipamento-modal");
+                    // Evento de clique para abrir o modal
+                    rect.on("click", function () {
+                        const modalTitulo = document.getElementById("modal-titulo");
+                        const modalVlan = document.getElementById("modal-vlan");
+                        const modal = document.getElementById("equipamento-modal");
 
-        if (!modalTitulo || !modalVlan || !modal) {
-            console.error("Erro: Modal não encontrado!");
-            return;
-        }
+                        if (!modalTitulo || !modalVlan || !modal) {
+                            console.error("Erro: Modal não encontrado!");
+                            return;
+                        }
 
-        modalTitulo.innerText = equip.equipamento;
+                        modalTitulo.innerText = equip.equipamento;
 
-        // Limpa conteúdo anterior do modal
-        modalVlan.innerHTML = "";
+                        // Limpa conteúdo anterior do modal
+                        modalVlan.innerHTML = "";
 
-        if (equip.vlans.length === 0) {
-            modalVlan.innerHTML = "<strong>Este equipamento não possui VLANs cadastradas.</strong>";
-        } else {
-            equip.vlans.forEach(vlan => {
-                modalVlan.innerHTML += `<strong>VLAN ${vlan.vlan}</strong><br>`;
-                if (vlan.portas.length > 0) {
-                    modalVlan.innerHTML += `<strong>Portas:</strong> ${vlan.portas.join(", ")}<br><br>`;
-                } else {
-                    modalVlan.innerHTML += "<strong>Sem portas associadas.</strong><br><br>";
-                }
-            });
-        }
+                        if (equip.vlans.length === 0) {
+                            modalVlan.innerHTML = "<strong>Este equipamento não possui VLANs cadastradas.</strong>";
+                        } else {
+                            equip.vlans.forEach(vlan => {
+                                modalVlan.innerHTML += `<strong>VLAN ${vlan.vlan}</strong><br>`;
+                                if (vlan.portas.length > 0) {
+                                    modalVlan.innerHTML += `<strong>Portas:</strong> ${vlan.portas.join(", ")}<br><br>`;
+                                } else {
+                                    modalVlan.innerHTML += "<strong>Sem portas associadas.</strong><br><br>";
+                                }
+                            });
+                        }
 
-        modal.style.display = "block";
-    });
-
-
-
-});
-
-
-
+                        modal.style.display = "block";
+                    });
+                });
             })
             .catch(error => console.error("Erro ao carregar VLANs:", error));
-    }
-
-
-
-
+        }
     document.getElementById("empresa-select").addEventListener("change", (event) => {
         const empresaId = event.target.value;
 
