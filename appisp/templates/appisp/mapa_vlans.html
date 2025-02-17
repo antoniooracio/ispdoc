@@ -156,7 +156,7 @@
                             .attr("y2", yVlan).attr("stroke", "blue");
                         g.append("circle").attr("cx", xVlan).attr("cy", yVlan).attr("r", 10).attr("fill", "red");
                         g.append("text").attr("x", xVlan + 15).attr("y", yVlan + 5)
-                            .text(`VLAN ${vlan.vlan} - ${vlan.porta}`).attr("font-size", "12px").attr("fill", "black");
+                            .text(`VLAN ${vlan.vlan}`).attr("font-size", "12px").attr("fill", "black");
                     });
                 });
             })
