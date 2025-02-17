@@ -25,14 +25,16 @@ from appisp.views import (EquipamentoAutocomplete, PortaAutocomplete, mapa, atua
                           alertas_vlans, lista_empresas_json, lista_vlans_json,
                           )
 from appisp.models import Porta
+from django.contrib.auth.decorators import login_required
 
-
+@login_required
 def get_portas_por_equipamento(request, equipamento_id):
     portas = Porta.objects.filter(equipamento_id=equipamento_id)
     portas_data = [{'id': porta.id, 'nome': porta.nome} for porta in portas]
     return JsonResponse({'portas': portas_data})
 
 
+@login_required
 def mapa_vlans(request):
     return render(request, 'appisp/mapa_vlans.html')
 

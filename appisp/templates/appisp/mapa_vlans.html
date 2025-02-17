@@ -1,15 +1,35 @@
-{% extends "base.html" %}
+{% extends "admin/base_site.html" %}
 {% block content %}
-<h2> Mapa de VLANs </h2>
-<label for="empresa-select">Selecionar Empresa:</label>
-<select id="empresa-select">
-    <option value="">Todas</option>
-</select>
-
-<label for="vlan-select">Selecionar VLAN:</label>
-<select id="vlan-select" disabled>
-    <option value="">Todas</option>
-</select>
+<div class="col-12 col-lg-12">
+    <div class="card">
+        <div class="card-body">
+            <div class="form-group field-tipo">
+                <div class="row">
+                        <div class="row">
+                            <div class="col-sm-2 text-left">
+                                <label for="id_empresa" class="form-label">Empresa:</label>
+                            </div>
+                            <div class="col-sm-3">
+                                <select id="empresa-select">
+                                    <option value="">Limpar</option>
+                                </select>
+                            </div>
+                            <div class="col-sm-2 text-left">
+                                <label for="id_vlan" class="form-label">Empresa:</label>
+                            </div>
+                            <div class="col-sm-3">
+                                <select id="vlan-select" disabled>
+                                    <option value="">Todas</option>
+                                </select>
+                            </div>
+                            <div class="col-sm-1">
+                            </div>
+                        </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
 <script src="https://d3js.org/d3.v6.min.js"></script>
 <head>
@@ -20,6 +40,42 @@
         .vlan { background: #3498db; color: white; padding: 5px 10px; border-radius: 5px; margin: 5px; }
         .svg-container { width: 98vw; height: 90vh; }
         svg { width: 100%; height: 100%; }
+        <style>
+
+    /* Estiliza todos os selects */
+    select {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ced4da;
+        border-radius: 5px;
+        background-color: #000;
+        font-size: 16px;
+        appearance: none; /* Remove o estilo padrão do navegador */
+        -webkit-appearance: none;
+        -moz-appearance: none;
+    }
+
+    /* Adiciona uma seta personalizada no select */
+    .form-group select {
+        background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='24' height='24'><path fill='gray' d='M7 10l5 5 5-5z'/></svg>");
+        background-repeat: no-repeat;
+        background-position: right 10px center;
+        background-size: 18px;
+        padding-right: 30px;
+    }
+
+    /* Estiliza o hover e foco */
+    select:hover, select:focus {
+        border-color: #80bdff;
+        box-shadow: 0 0 5px rgba(0, 123, 255, 0.25);
+        outline: none;
+    }
+
+    /* Ajusta os selects dentro das colunas */
+    .col-sm-7 select {
+        width: 100%;
+    }
+    </style>
     </style>
 </head>
 <div class="svg-container">
@@ -31,6 +87,15 @@
             .then(response => response.json())
             .then(data => {
                 const select = document.getElementById("empresa-select");
+                select.innerHTML = '<option value="">Limpar</option>'; // Garante reset
+
+                if (data.empresas.length === 0) {
+                    document.querySelector(".svg-container").style.display = "none";
+                    return;
+                }
+
+                document.querySelector(".svg-container").style.display = "block";
+
                 data.empresas.forEach(empresa => {
                     let option = document.createElement("option");
                     option.value = empresa.id;
@@ -41,78 +106,100 @@
             .catch(error => console.error("Erro ao carregar empresas:", error));
     }
 
-function carregarVlans(empresaId) {
-    const vlanSelect = document.getElementById("vlan-select");
-    vlanSelect.innerHTML = '<option value="">Todas</option>';
-    vlanSelect.disabled = !empresaId;
 
-    if (!empresaId) return;
+    function carregarVlans(empresaId) {
+        const vlanSelect = document.getElementById("vlan-select");
 
-    fetch("{% url 'lista_vlans_json' %}?empresa_id=" + empresaId)
-        .then(response => response.json())
-        .then(data => {
-            data.vlans.forEach(vlan => {
-                let option = document.createElement("option");
-                option.value = vlan.id; // Mantenha isso para enviar o ID no request
-                option.textContent = vlan.numero + " - " + vlan.nome;  // Exibe o número da VLAN corretamente
-                vlanSelect.appendChild(option);
-            });
+        // Limpa o select antes de adicionar novas VLANs
+        vlanSelect.innerHTML = '<option value="">Todas</option>';
+        vlanSelect.disabled = !empresaId;
 
-            vlanSelect.disabled = data.vlans.length === 0;
-        })
-        .catch(error => console.error("Erro ao carregar VLANs:", error));
-}
+        if (!empresaId) return;
 
-function carregarMapaVlan(empresaId = "", vlanId = "") {
-    fetch("{% url 'mapa_vlans_json' %}?empresa_id=" + empresaId + "&vlan_id=" + vlanId)
-        .then(response => response.json())
-        .then(data => {
-            const svg = d3.select("svg");
-            svg.selectAll("*").remove();
-            const g = svg.append("g");
+        fetch("{% url 'lista_vlans_json' %}?empresa_id=" + empresaId)
+            .then(response => response.json())
+            .then(data => {
+                data.vlans.forEach(vlan => {
+                    let option = document.createElement("option");
+                    option.value = vlan.id;
+                    option.textContent = vlan.numero + " - " + vlan.nome;
+                    vlanSelect.appendChild(option);
+                });
 
-            const zoom = d3.zoom()
-                .scaleExtent([0.5, 3])
-                .on("zoom", (event) => { g.attr("transform", event.transform); });
-            svg.call(zoom);
+                vlanSelect.disabled = data.vlans.length === 0;
+            })
+            .catch(error => console.error("Erro ao carregar VLANs:", error));
+    }
 
-            const equipamentos = data.equipamentos;
-            equipamentos.forEach((equip, i) => {
-                let yEquip = i * 100 + 50;
-                g.append("rect").attr("x", 50).attr("y", yEquip - 15).attr("width", 200)
-                    .attr("height", 50).attr("fill", "lightgray").attr("stroke", "black");
-                g.append("text").attr("x", 60).attr("y", yEquip).text(equip.equipamento)
-                    .attr("font-size", "14px").attr("fill", "black");
 
-                equip.vlans.forEach((vlan, j) => {
-                    if (vlanId === "" || vlan.vlan == vlanId) { // Aqui garantimos que só aparece a VLAN selecionada
-                        let xVlan = 300, yVlan = j * 100 + 50;
+    function carregarMapaVlan(empresaId = "", vlanId = "") {
+        fetch("{% url 'mapa_vlans_json' %}?empresa_id=" + empresaId + "&vlan_id=" + vlanId)
+            .then(response => response.json())
+            .then(data => {
+
+                // Corrigido: Seleciona o container correto e recria o SVG
+                d3.select(".svg-container").html('<svg></svg>');
+
+                // Corrigido: Seleciona o novo SVG dentro do container
+                const svg = d3.select(".svg-container svg")
+                    .attr("width", 800)
+                    .attr("height", 600);
+
+                const g = svg.append("g");
+
+                const zoom = d3.zoom()
+                    .scaleExtent([0.5, 3])
+                    .on("zoom", (event) => { g.attr("transform", event.transform); });
+
+                svg.call(zoom);
+
+                const equipamentos = data.equipamentos;
+                equipamentos.forEach((equip, i) => {
+                    let yEquip = i * 100 + 50;
+                    g.append("rect").attr("x", 50).attr("y", yEquip - 15).attr("width", 200)
+                        .attr("height", 50).attr("fill", "lightgray").attr("stroke", "black");
+                    g.append("text").attr("x", 60).attr("y", yEquip).text(equip.equipamento)
+                        .attr("font-size", "14px").attr("fill", "black");
+
+                    equip.vlans.forEach((vlan, j) => {
+                        let xVlan = 300, yVlan = j * 30 + 50;
                         g.append("line").attr("x1", 250).attr("y1", yEquip).attr("x2", xVlan)
                             .attr("y2", yVlan).attr("stroke", "blue");
                         g.append("circle").attr("cx", xVlan).attr("cy", yVlan).attr("r", 10).attr("fill", "red");
                         g.append("text").attr("x", xVlan + 15).attr("y", yVlan + 5)
                             .text(`VLAN ${vlan.vlan} - ${vlan.porta}`).attr("font-size", "12px").attr("fill", "black");
-                    }
+                    });
                 });
-            });
-        })
-        .catch(error => console.error("Erro ao carregar VLANs:", error));
-}
+            })
+            .catch(error => console.error("Erro ao carregar VLANs:", error));
+    }
 
 
-document.getElementById("empresa-select").addEventListener("change", (event) => {
-    const empresaId = event.target.value;
-    carregarVlans(empresaId);
-    carregarMapaVlan(empresaId); // Ao mudar a empresa, limpa a VLAN selecionada
-});
 
-document.getElementById("vlan-select").addEventListener("change", (event) => {
-    const empresaId = document.getElementById("empresa-select").value;
-    const vlanId = event.target.value;
-    carregarMapaVlan(empresaId, vlanId); // Agora passa corretamente a VLAN selecionada
-});
 
-    carregarEmpresas();
-    carregarMapaVlan();
+    document.getElementById("empresa-select").addEventListener("change", (event) => {
+        const empresaId = event.target.value;
+
+        // Limpa o mapa se "Limpar" for selecionado (valor vazio)
+        if (!empresaId) {
+            d3.select(".svg-container").html('<svg></svg>');
+            document.getElementById("vlan-select").innerHTML = '<option value="">Limpar</option>';
+            document.getElementById("vlan-select").disabled = true;
+            return;
+        }
+
+        carregarVlans(empresaId);
+        carregarMapaVlan(empresaId, ""); // Sempre recarrega o mapa ao trocar empresa
+    });
+
+        document.getElementById("vlan-select").addEventListener("change", (event) => {
+            const empresaId = document.getElementById("empresa-select").value;
+            const vlanId = event.target.value;
+            carregarMapaVlan(empresaId, vlanId); // Renderiza o mapa novamente ao mudar VLAN
+        });
+
+        carregarEmpresas();
+        // carregarMapaVlan(); // Inicia carregando tudo
 </script>
+
 {% endblock %}

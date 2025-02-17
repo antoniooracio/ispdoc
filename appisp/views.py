@@ -421,29 +421,6 @@ def visualizar_vlans_por_equipamento(request, equipamento_id):
     return render(request, 'appisp/vlan_por_equipamento.html', {'equipamento': equipamento, 'vlans': vlans})
 
 
-def mapa_vlans_json(request):
-    empresa_id = request.GET.get("empresa_id")  # Obtém a empresa selecionada
-
-    # Filtra os equipamentos da empresa selecionada
-    if empresa_id:
-        equipamentos = Equipamento.objects.filter(empresa_id=empresa_id)
-    else:
-        equipamentos = Equipamento.objects.all()
-
-    equipamentos_data = []
-
-    for equip in equipamentos:
-        vlan_portas = VlanPorta.objects.filter(equipamento=equip)
-        vlans = [{"vlan": vp.vlan.numero, "porta": vp.porta.nome} for vp in vlan_portas]
-
-        equipamentos_data.append({
-            "equipamento": equip.nome,
-            "vlans": vlans
-        })
-
-    return JsonResponse({"equipamentos": equipamentos_data})
-
-
 def relatorio_vlans(request):
     vlans = Vlan.objects.all().select_related('empresa')
     vlans_por_empresa = {}
@@ -462,9 +439,11 @@ def alertas_vlans(request):
     return render(request, 'appisp/alertas_vlans.html', {'vlans_sem_porta': vlans_sem_porta})
 
 
+@login_required
 def lista_empresas_json(request):
-    empresas = list(Empresa.objects.values("id", "nome"))
-    return JsonResponse({"empresas": empresas})
+    empresas = Empresa.objects.filter(usuarios=request.user)  # Supondo uma relação ManyToMany
+    empresas_json = [{"id": emp.id, "nome": emp.nome} for emp in empresas]
+    return JsonResponse({"empresas": empresas_json})
 
 
 def lista_vlans_json(request):
@@ -475,3 +454,32 @@ def lista_vlans_json(request):
 
     data = {"vlans": list(vlans.values("id", "numero", "nome", "empresa_id"))}
     return JsonResponse(data)
+
+
+def mapa_vlans_json(request):
+    empresa_id = request.GET.get("empresa_id")
+    vlan_id = request.GET.get("vlan_id")  # Obtém a VLAN selecionada
+
+    if empresa_id:
+        equipamentos = Equipamento.objects.filter(empresa_id=empresa_id)
+    else:
+        equipamentos = Equipamento.objects.all()
+
+    equipamentos_data = []
+
+    for equip in equipamentos:
+        vlan_portas = VlanPorta.objects.filter(equipamento=equip)
+
+        # Se uma VLAN foi selecionada, filtramos as VLANs associadas ao equipamento
+        if vlan_id:
+            vlan_portas = vlan_portas.filter(vlan_id=vlan_id)
+
+        vlans = [{"vlan": vp.vlan.numero, "porta": vp.porta.nome} for vp in vlan_portas]
+
+        if vlans:  # Apenas adiciona equipamentos que possuem VLANs associadas
+            equipamentos_data.append({
+                "equipamento": equip.nome,
+                "vlans": vlans
+            })
+
+    return JsonResponse({"equipamentos": equipamentos_data})
