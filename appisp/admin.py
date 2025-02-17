@@ -15,6 +15,22 @@ from .models import Empresa, Pop, Fabricante, Modelo, Equipamento, Porta, BlocoI
     MaquinaVirtual, Disco, Rede, Vlan, VlanPorta
 import ipaddress
 
+class PopEmpresaFilter(SimpleListFilter):
+    title = "Pop"
+    parameter_name = "pop"
+
+    def lookups(self, request, model_admin):
+        """ Lista apenas os Pops das empresas do usuário """
+        if request.user.is_superuser:
+            return [(pop.id, pop.nome) for pop in Pop.objects.all()]
+
+        pops_usuario = Pop.objects.filter(empresa__usuarios=request.user)
+        return [(pop.id, pop.nome) for pop in pops_usuario]
+
+    def queryset(self, request, queryset):
+        if self.value():
+            return queryset.filter(pop_id=self.value())
+        return queryset
 
 class RackEmpresaFilter(SimpleListFilter):
     title = "Rack"
@@ -321,7 +337,7 @@ class RackAdmin(admin.ModelAdmin):
         if request.user.is_superuser:
             return ('pop', 'empresa')  # Superusuário vê tudo
 
-        return (EmpresaUsuarioFilter, 'pop')  # Usuário comum vê apenas as empresas permitidas
+        return (EmpresaUsuarioFilter, PopEmpresaFilter,)  # Usuário comum vê apenas as empresas permitidas
 
 
 @admin.register(RackEquipamento)
