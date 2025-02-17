@@ -83,6 +83,25 @@ class EquipamentoEmpresaFilter(SimpleListFilter):
         return queryset
 
 
+class VlanPortaFilter(SimpleListFilter):
+    """Filtro personalizado para exibir apenas portas das empresas do usuário"""
+    title = "Vlan"
+    parameter_name = "numero"
+
+    def lookups(self, request, model_admin):
+        if request.user.is_superuser:
+            vlans = Vlan.objects.all()
+        else:
+            vlans = Vlan.objects.filter(empresa__usuarios=request.user)
+
+        return [(vlan.id, f"{vlan.numero} - {vlan.nome}") for vlan in vlans]
+
+    def queryset(self, request, queryset):
+        if self.value():
+            return queryset.filter(vlan_id=self.value())  # Usar vlan_id diretamente
+        return queryset
+
+
 class EquipamentoPortaFilter(SimpleListFilter):
     """Filtro personalizado para exibir apenas portas das empresas do usuário"""
     title = "Porta"
@@ -189,7 +208,7 @@ class VlanAdmin(admin.ModelAdmin):
 @admin.register(VlanPorta)
 class VlanPortaAdmin(admin.ModelAdmin):
     list_display = ('vlan', 'porta', 'get_equipamento', 'tipo', 'vlan_nativa')
-    list_filter = (EmpresaUsuarioFilter, EquipamentoEmpresaFilter, EquipamentoPortaFilter, 'tipo')
+    list_filter = (EmpresaUsuarioFilter, EquipamentoEmpresaFilter, EquipamentoPortaFilter, VlanPortaFilter)
 
     change_list_template = "admin/vlan_changelist.html"  # Personalizamos o template
 
@@ -216,6 +235,8 @@ class VlanPortaAdmin(admin.ModelAdmin):
                 kwargs["queryset"] = Empresa.objects.filter(usuarios=request.user)
             elif db_field.name == "equipamento":
                 kwargs["queryset"] = Equipamento.objects.filter(empresa__usuarios=request.user)
+            elif db_field.name == "vlan":
+                kwargs["queryset"] = Vlan.objects.filter(empresa__usuarios=request.user)
 
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
