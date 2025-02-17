@@ -332,6 +332,8 @@ class RackEquipamentoAdmin(admin.ModelAdmin):
     ordering = ('rack', 'us_inicio')
     autocomplete_fields = ('rack', 'equipamento')
 
+    change_list_template = "admin/mapa_rack_changelist.html"  # Personalizamos o template
+
     def get_list_filter(self, request):
         """Aplica filtros personalizados para exibir apenas dados acessíveis ao usuário"""
         if request.user.is_superuser:
@@ -734,6 +736,8 @@ class ModeloAdmin(admin.ModelAdmin):
 class EquipamentoAdmin(admin.ModelAdmin):
     list_display = ('nome', 'ip', 'status', 'pop', 'empresa', 'fabricante', 'tipo')
     search_fields = ('nome', 'ip', 'pop__nome', 'empresa__nome', 'fabricante__nome', 'modelo__modelo', 'tipo')
+
+    change_list_template = "admin/mapa_rede_changelist.html"  # Personalizamos o template
 
     def get_list_filter(self, request):
         """ Aplica os filtros personalizados de empresa e POP. """

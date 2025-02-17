@@ -421,23 +421,48 @@ def visualizar_vlans_por_equipamento(request, equipamento_id):
     return render(request, 'appisp/vlan_por_equipamento.html', {'equipamento': equipamento, 'vlans': vlans})
 
 
+@login_required
 def relatorio_vlans(request):
-    vlans = Vlan.objects.all().select_related('empresa')
-    vlans_por_empresa = {}
+    usuario = request.user  # Usuário logado
+    empresas = Empresa.objects.filter(usuarios=usuario)  # Empresas do usuário
+    empresa_id = request.GET.get("empresa")  # Empresa selecionada no filtro
 
-    for vlan in vlans:
-        if vlan.empresa.nome not in vlans_por_empresa:
-            vlans_por_empresa[vlan.empresa.nome] = []
-        vlans_por_empresa[vlan.empresa.nome].append(vlan)
+    vlans_por_empresa = {}  # Dicionário vazio para VLANs
 
-    return render(request, 'appisp/relatorio_vlans.html', {'vlans_por_empresa': vlans_por_empresa})
+    if empresa_id:
+        empresa_selecionada = empresas.filter(id=empresa_id).first()
+        if empresa_selecionada:
+            vlans_por_empresa[empresa_selecionada.nome] = Vlan.objects.filter(empresa=empresa_selecionada)
+
+    return render(request, 'appisp/relatorio_vlans.html', {
+        'empresas': empresas,
+        'empresa_id': empresa_id,
+        'vlans_por_empresa': vlans_por_empresa,
+    })
 
 
+@login_required
 def alertas_vlans(request):
-    vlans_sem_porta = Vlan.objects.filter(vlan_portas__isnull=True)
+    usuario = request.user  # Usuário logado
 
-    return render(request, 'appisp/alertas_vlans.html', {'vlans_sem_porta': vlans_sem_porta})
+    # Filtra as empresas associadas ao usuário logado
+    empresas = Empresa.objects.filter(usuarios=usuario)
 
+    # Obtém o ID da empresa selecionada no filtro
+    empresa_id = request.GET.get("empresa")
+
+    # Inicia a variável vazia (nenhuma VLAN carregada por padrão)
+    vlans_sem_porta = None
+
+    # Se uma empresa foi selecionada, carregue as VLANs filtradas
+    if empresa_id:
+        vlans_sem_porta = Vlan.objects.filter(vlan_portas__isnull=True, empresa_id=empresa_id)
+
+    return render(request, 'appisp/alertas_vlans.html', {
+        'vlans_sem_porta': vlans_sem_porta,
+        'empresas': empresas,
+        'empresa_id': empresa_id,
+    })
 
 @login_required
 def lista_empresas_json(request):

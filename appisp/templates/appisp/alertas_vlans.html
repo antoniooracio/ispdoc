@@ -42,7 +42,6 @@
     <div class="col-12 col-lg-12">
         <div class="card">
             <div class="card-body">
-                        <!-- Formulário de filtro -->
                 <form id="filtro-form">
                     <div class="row">
                         <div class="col-sm-7">
@@ -68,7 +67,7 @@
                     {% csrf_token %}
                     <h3>VLANs Não Documentadas</h3>
 
-                    {% if vlans_sem_porta %}
+                    {% if empresa_id and vlans_sem_porta %}
                         <div class="alert alert-warning">
                             <p>As seguintes VLANs não estão associadas a nenhuma porta:</p>
                             <ul>
@@ -77,9 +76,10 @@
                                 {% endfor %}
                             </ul>
                         </div>
-                    {% else %}
+                    {% elif empresa_id %}
                         <p>Todas as VLANs estão corretamente documentadas!</p>
                     {% endif %}
+
                 </form>
             </div>
         </div>

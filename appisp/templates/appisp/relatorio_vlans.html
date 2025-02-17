@@ -57,6 +57,7 @@
                                     </option>
                                 {% endfor %}
                             </select>
+                            </select>
                         </div>
                         <div class="col-sm-2">
                             <button type="submit" class="btn btn-primary">Filtrar</button>
@@ -68,28 +69,32 @@
                 </form>
                 </br>
                 <form >
-                    {% csrf_token %}
-                        {% for empresa, vlans in vlans_por_empresa.items %}
-                            <h3>{{ empresa }}</h3>
-                            <table class="table">
-                                <thead>
-                                    <tr>
-                                        <th>ID</th>
-                                        <th>Nome</th>
-                                        <th>Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for vlan in vlans %}
-                                    <tr>
-                                        <td>{{ vlan.numero }}</td>
-                                        <td>{{ vlan.nome }}</td>
-                                        <td>{{ vlan.status }}</td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        {% endfor %}
+                    {% if empresa_id and vlans_por_empresa %}
+    {% for empresa, vlans in vlans_por_empresa.items %}
+        <h3>{{ empresa }}</h3>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Nome</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for vlan in vlans %}
+                    <tr>
+                        <td>{{ vlan.numero }}</td>
+                        <td>{{ vlan.nome }}</td>
+                        <td>{{ vlan.status }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% endfor %}
+{% elif empresa_id %}
+    <p>Nenhuma VLAN encontrada para esta empresa.</p>
+{% endif %}
+
                 </form>
             </div>
         </div>
