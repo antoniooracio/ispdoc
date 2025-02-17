@@ -143,7 +143,7 @@ class Porta(models.Model):
     speed = models.CharField(max_length=10, choices=SPEED_CHOICES, default='1G')
     tipo = models.CharField(max_length=10, choices=TIPO_CHOICES, default='Fibra')
     observacao = models.TextField(
-        help_text="Para formatar o texto, use <br> para quebra de linha, <strong>Negrito</strong> para negrito."
+        help_text="Para Formata o texto, use < /br> quebra de linha, < strong><strong>Negrito</strong>< /strong>, sem espaços"
     )
 
     class Meta:
