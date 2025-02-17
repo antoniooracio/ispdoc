@@ -184,6 +184,12 @@
             const empresaId = document.getElementById("empresa").value;
             const popId = document.getElementById("pop").value;
 
+                // Se nenhuma empresa for selecionada, limpa a tela e não faz a requisição
+            if (!empresaId) {
+                rackContainer.innerHTML = "<p>Selecione uma empresa para visualizar os racks.</p>";
+                return;
+            }
+
             let url = `/mapa-rack/dados/`;
             let params = [];
 
