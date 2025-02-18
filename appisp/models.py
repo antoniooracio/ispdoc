@@ -333,6 +333,8 @@ class BlocoIP(models.Model):
         return None  # Se não houver IP disponível
 
     def save(self, *args, **kwargs):
+        if self.equipamento_id is None:
+            self.equipamento = None  # Garante que não há valor inválido
         self.clean()
         super().save(*args, **kwargs)
 
