@@ -37,10 +37,30 @@
     .col-sm-7 select {
         width: 100%;
     }
+.ip-table {
+    width: 90%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+    margin-left: 30px;
+}
+
+.ip-table th, .ip-table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+}
+
+.ip-table th {
+    background-color: #6c757d;
+    font-weight: bold;
+}
+
+.ip-table tr:nth-child(even) {
+    background-color: ##343a40;
+}
+
 </style>
 
-
-<div class="row"></div>
 <div class="col-12 col-lg-12">
     <div class="card">
         <div class="card-body">
@@ -148,93 +168,76 @@
         </div>
     </div>
 
-        <!-- Mostra a Tabela dos Blocos pertencentes ao bloco selecionado -->
-        <div class="col-12 col-lg-12">
-        <div class="card">
-            <div class="card-body">
-                <table id="tabela-sub-blocos" class="table table-striped" style="display: none;">
 
-                    <thead>
-                    <h4>Sub-blocos do Bloco Selecionado</h4>
-                    <tr>
-                        <th>Subnet</th>
-                        <th>Máscara</th>
-                        <th>Parente</th>
-                        <th>Equipamento</th>
-                        <th>Descrição</th>
-                    </tr>
-                    </thead>
-                    <tbody id="tabela-sub-blocos-body"></tbody>
-                </table>
-            </div>
-        </div>
-    </div>
+    <div id="tabela-sub-blocos" style="display: none; visibility: hidden;"></div>
+
+    <div id="tabela-sub-blocos-body" style="display: none; visibility: hidden;"></div>
+
 
     <div class="col-12 col-lg-12">
         <div class="card">
             <div class="card-body">
                 <!-- Mostra a Tabela dos IPs pertencentes ao bloco selecionado -->
-                <h4>IPs Cadastrados no Bloco</h4>
+                <!-- <h4>IPs Cadastrados no Bloco</h4> -->
                 <table id="tabela-ips" class="table table-striped" style="display: none;">
-                    <thead>
-                    <tr>
-                        <th>IP</th>
-                        <th>Equipamento</th>
-                        <th>Porta</th>
-                        <th>Finalidade</th>
-                        <th>Next Hop</th>
-                        <th>Gateway?</th>
-                    </tr>
-                    </thead>
-                    <tbody id="tabela-ips-body"></tbody>
+                    <!--  <thead>
+                      <tr>
+                          <th>IP</th>
+                          <th>Equipamento</th>
+                          <th>Porta</th>
+                          <th>Finalidade</th>
+                          <th>Next Hop</th>
+                          <th>Gateway?</th>
+                      </tr>
+                      </thead> -->
+                    <tbody id="tabela-ips-body">
+                    <div id="arvore-hierarquica"></div>
+                    </tbody>
                 </table>
             </div>
         </div>
     </div>
-
-</div>
-
 </div>
 
 <!-- Script para filtrar as portas pelo Equipamento selecionado-->
 <script>
-document.addEventListener('DOMContentLoaded', function () {
-    var equipamentoSelect = document.getElementById('id_equipamento');
-    var portaSelect = document.getElementById('id_porta');
+    document.addEventListener('DOMContentLoaded', function () {
+        var equipamentoSelect = document.getElementById('id_equipamento');
+        var portaSelect = document.getElementById('id_porta');
 
-    function carregarPortas() {
-        var equipamentoId = equipamentoSelect.value;
+        function carregarPortas() {
+            var equipamentoId = equipamentoSelect.value;
 
-        if (equipamentoId) {
-            portaSelect.innerHTML = '<option value="" selected>Carregando...</option>';
-            fetch(`/ajax/portas_por_equipamento/${equipamentoId}/`)
-                .then(response => response.json())
-                .then(data => {
-                    portaSelect.innerHTML = '<option value="" selected>Selecione uma porta</option>';
-                    data.portas.forEach(function (porta) {
-                        var option = document.createElement('option');
-                        option.value = porta.id;
-                        option.textContent = porta.nome;
-                        portaSelect.appendChild(option);
+            if (equipamentoId) {
+                portaSelect.innerHTML = '<option value="" selected>Carregando...</option>';
+                fetch(`/ajax/portas_por_equipamento/${equipamentoId}/`)
+                    .then(response => response.json())
+                    .then(data => {
+                        portaSelect.innerHTML = '<option value="" selected>Selecione uma porta</option>';
+                        data.portas.forEach(function (porta) {
+                            var option = document.createElement('option');
+                            option.value = porta.id;
+                            option.textContent = porta.nome;
+                            portaSelect.appendChild(option);
+                        });
+
+                        // Mantém a seleção da porta após erro de validação
+                        var portaSelecionada = "{{ form.porta.value }}";
+                        if (portaSelecionada) {
+                            portaSelect.value = portaSelecionada;
+                        }
                     });
-
-                    // Mantém a seleção da porta após erro de validação
-                    var portaSelecionada = "{{ form.porta.value }}";
-                    if (portaSelecionada) {
-                        portaSelect.value = portaSelecionada;
-                    }
-                });
-        } else {
-            portaSelect.innerHTML = '<option value="" selected>Selecione um equipamento primeiro</option>';
+            } else {
+                portaSelect.innerHTML = '<option value="" selected>Selecione um equipamento primeiro</option>';
+            }
         }
-    }
 
-    // Executa ao carregar a página para manter seleção após erro de validação
-    carregarPortas();
+        // Executa ao carregar a página para manter seleção após erro de validação
+        carregarPortas();
 
-    // Atualiza portas sempre que um equipamento for selecionado
-    equipamentoSelect.addEventListener('change', carregarPortas);
-});
+        // Atualiza portas sempre que um equipamento for selecionado
+        equipamentoSelect.addEventListener('change', carregarPortas);
+    });
 
 </script>
 
@@ -250,21 +253,24 @@ document.addEventListener('DOMContentLoaded', function () {
         var tabelaIps = document.getElementById('tabela-ips');
         var tbodyIps = document.getElementById('tabela-ips-body');
 
+        // Elemento da árvore de blocos
+        var arvoreContainer = document.getElementById('arvore-hierarquica');
+        arvoreContainer.innerHTML = ''; // Limpa a árvore antes de gerar
+
         // Limpa as tabelas antes de carregar novos dados
         tbodySubBlocos.innerHTML = '';
         tbodyIps.innerHTML = '';
 
         if (blocoId) {
-            // Buscar Sub-Blocos
+            // Buscar Sub-Blocos e IPs
             fetch(`/ajax/sub_blocos_por_bloco/${blocoId}/`)
                 .then(response => response.json())
                 .then(data => {
                     data.sub_blocos.forEach(function (sub_bloco) {
                         var bloco_cidr = sub_bloco.bloco_cidr;
-                        var descricao = sub_bloco.descrcao || '';
+                        var descricao = sub_bloco.descricao || '';
                         var [ip, cidr] = bloco_cidr.split('/');
                         var mascara = cidrParaMascara(cidr);
-
                         var parente = sub_bloco.parent__bloco_cidr || 'N/A';
                         var equipamento = sub_bloco.equipamento__nome || 'N/A';
 
@@ -279,11 +285,10 @@ document.addEventListener('DOMContentLoaded', function () {
                         tbodySubBlocos.appendChild(row);
                     });
 
-                    tabelaSubBlocos.style.display = data.sub_blocos.length > 0 ? 'table' : 'none';
+                   // tabelaSubBlocos.style.display = data.sub_blocos.length > 0 ? 'table' : 'none';
                 })
                 .catch(error => console.error('Erro ao buscar sub-blocos:', error));
 
-            // Buscar IPs
             fetch(`/ajax/ips_por_bloco/${blocoId}/`)
                 .then(response => response.json())
                 .then(data => {
@@ -294,7 +299,7 @@ document.addEventListener('DOMContentLoaded', function () {
                             <td>${ip.equipamento__nome || ''}</td>
                             <td>${ip.porta__nome || ''}</td>
                             <td>${ip.finalidade || ''}</td>
-                            <td>${ip.next_hope || ''}</td>
+                            <td>${ip.next_hop || ''}</td>
                             <td>${ip.is_gateway ? 'Sim' : 'Não'}</td>
                             <td>
                                 <button class="btn-alterar" data-ip='${JSON.stringify(ip)}'>Alterar</button>
@@ -303,7 +308,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         tbodyIps.appendChild(row);
                     });
 
-                    tabelaIps.style.display = data.ips.length > 0 ? 'table' : 'none';
+                   // tabelaIps.style.display = data.ips.length > 0 ? 'table' : 'none';
 
                     // Adiciona evento para os botões de alteração
                     document.querySelectorAll('.btn-alterar').forEach(btn => {
@@ -312,14 +317,129 @@ document.addEventListener('DOMContentLoaded', function () {
                             preencherFormulario(ipData);
                         });
                     });
-
                 })
                 .catch(error => console.error('Erro ao buscar IPs:', error));
+
+            // Exibir a árvore de blocos hierárquica
+            fetch(`/ajax/dados_hierarquicos/${blocoId}/`)
+                .then(response => response.json())
+                .then(data => {
+                    exibirArvore(data, arvoreContainer);
+                })
+                .catch(error => console.error('Erro ao carregar árvore hierárquica:', error));
+
         } else {
             tabelaSubBlocos.style.display = 'none';
             tabelaIps.style.display = 'none';
+            arvoreContainer.innerHTML = ''; // Limpa a árvore caso não tenha bloco selecionado
         }
     });
+
+    // Função para exibir a árvore hierárquica com ícones
+    function exibirArvore(dados, container) {
+
+        // Criação do nó principal do bloco
+        var blocoNode = document.createElement('div');
+        blocoNode.classList.add('bloco-node');
+        blocoNode.innerHTML = `<strong>📂 ${dados.bloco}</strong>`;
+        container.appendChild(blocoNode);
+
+        // Exibe os IPs do bloco principal em tabela
+        if (dados.ips && dados.ips.length > 0) {
+            var tabela = document.createElement('table');
+            tabela.classList.add('ip-table');
+            var tabelaHeader = document.createElement('thead');
+            tabelaHeader.innerHTML = `<tr>
+                                        <th>IP</th>
+                                        <th>Equipamento</th>
+                                        <th>Porta</th>
+                                        <th>Finalidade</th>
+                                        <th>Next Hop</th>
+                                        <th>Gateway</th>
+                                      </tr>`;
+            tabela.appendChild(tabelaHeader);
+
+            var tabelaBody = document.createElement('tbody');
+            dados.ips.forEach(function(ip) {
+                var ipRow = document.createElement('tr');
+                ipRow.innerHTML = `
+                    <td>${ip.ip}</td>
+                    <td>${ip.equipamento__nome || ''}</td>
+                    <td>${ip.porta__nome || ''}</td>
+                    <td>${ip.finalidade || ''}</td>
+                    <td>${ip.next_hop || ''}</td>
+                    <td>${ip.is_gateway ? '✅' : '❌'}</td>
+                `;
+                tabelaBody.appendChild(ipRow);
+            });
+            tabela.appendChild(tabelaBody);
+            blocoNode.appendChild(tabela);
+        } else {
+            blocoNode.innerHTML += ' (Sem IPs)';
+        }
+
+        // Função recursiva para exibir sub-blocos
+        function exibirSubBlocos(subBlocos, containerNode) {
+
+            if (subBlocos && subBlocos.length > 0) {
+                var subBlocosContainer = document.createElement('div');
+                subBlocosContainer.classList.add('sub-blocos-container');
+
+                subBlocos.forEach(function(subBloco) {
+
+                    var subBlocoNode = document.createElement('div');
+                    subBlocoNode.classList.add('sub-bloco-node');
+                    subBlocoNode.innerHTML = `<strong>📂 ${subBloco.bloco}</strong>`;
+
+                    // Exibe os IPs do sub-bloco em tabela
+                    if (subBloco.ips && subBloco.ips.length > 0) {
+                        var tabela = document.createElement('table');
+                        tabela.classList.add('ip-table');
+                        var tabelaHeader = document.createElement('thead');
+                        tabelaHeader.innerHTML = `<tr>
+                                                    <th>IP</th>
+                                                    <th>Equipamento</th>
+                                                    <th>Porta</th>
+                                                    <th>Finalidade</th>
+                                                    <th>Next Hop</th>
+                                                    <th>Gateway</th>
+                                                  </tr>`;
+                        tabela.appendChild(tabelaHeader);
+
+                        var tabelaBody = document.createElement('tbody');
+                        subBloco.ips.forEach(function(ip) {
+                            var ipRow = document.createElement('tr');
+                            ipRow.innerHTML = `
+                                <td>${ip.ip}</td>
+                                <td>${ip.equipamento__nome || ''}</td>
+                                <td>${ip.porta__nome || ''}</td>
+                                <td>${ip.finalidade || ''}</td>
+                                <td>${ip.next_hop || ''}</td>
+                                <td>${ip.is_gateway ? '✅' : '❌'}</td>
+                            `;
+                            tabelaBody.appendChild(ipRow);
+                        });
+                        tabela.appendChild(tabelaBody);
+                        subBlocoNode.appendChild(tabela);
+                    } else {
+                        subBlocoNode.innerHTML += ' (Sem IPs)';
+                    }
+
+                    subBlocosContainer.appendChild(subBlocoNode);
+
+                    // Chama recursivamente para exibir sub-blocos mais profundos
+                    exibirSubBlocos(subBloco.sub_blocos, subBlocoNode);
+                });
+
+                containerNode.appendChild(subBlocosContainer);
+            } else {
+                console.log('Nenhum sub-bloco encontrado');  // Log para verificar se não há sub-blocos
+            }
+        }
+
+        // Chama a função recursiva para exibir sub-blocos
+        exibirSubBlocos(dados.sub_blocos, blocoNode);
+    }
 
     // Função para converter sufixo CIDR para máscara de sub-rede
     function cidrParaMascara(cidr) {
@@ -351,7 +471,6 @@ document.addEventListener('DOMContentLoaded', function () {
         carregarPortas(() => {
             document.getElementById('id_porta').value = ipData.porta;
         });
-        // console.log("Equipamento selecionado:", ipData.equipamento__nome);
     }
 
     function carregarPortas(callback = null) {
@@ -380,27 +499,22 @@ document.addEventListener('DOMContentLoaded', function () {
             portaSelect.innerHTML = '<option value="" selected>Selecione um equipamento primeiro</option>';
         }
     }
-
 </script>
 
 <!-- Script para selecionar automaticamente o equipamento -->
 <script>
-document.addEventListener("DOMContentLoaded", function() {
-    const equipamentoNome = "{{ ip.equipamento__nome }}".trim().toLowerCase();
-    const equipamentoSelect = document.getElementById('id_equipamento');
+    document.addEventListener("DOMContentLoaded", function() {
+        const equipamentoNome = "{{ ip.equipamento__nome }}".trim().toLowerCase();
+        const equipamentoSelect = document.getElementById('id_equipamento');
 
-    //console.log("Nome vindo do backend:", equipamentoNome);
+        for (let option of equipamentoSelect.options) {
 
-    for (let option of equipamentoSelect.options) {
-       // console.log("Opção disponível:", option.text.trim().toLowerCase());
-
-        if (option.text.trim().toLowerCase() === equipamentoNome) {
-            equipamentoSelect.value = option.value;
-            //console.log("Equipamento selecionado:", option.text);
-            break;
+            if (option.text.trim().toLowerCase() === equipamentoNome) {
+                equipamentoSelect.value = option.value;
+                break;
+            }
         }
-    }
-});
+    });
 </script>
 
 {% endblock %}

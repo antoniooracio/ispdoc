@@ -22,7 +22,7 @@ from django.shortcuts import render
 from appisp.views import (EquipamentoAutocomplete, PortaAutocomplete, mapa, atualizar_posicao, mapa_racks,
                           mapa_racks_dados, get_equipamentos_por_empresa, adicionar_endereco_ip, listar_ips_por_bloco,
                           get_sub_blocos, visualizar_vlans_por_equipamento, mapa_vlans_json, relatorio_vlans,
-                          alertas_vlans, lista_empresas_json, lista_vlans_json,
+                          alertas_vlans, lista_empresas_json, lista_vlans_json, estrutura_bloco, estrutura_bloco,
                           )
 from appisp.models import Porta
 from django.contrib.auth.decorators import login_required
@@ -60,4 +60,6 @@ urlpatterns = [
     path('ajax/sub_blocos_por_bloco/<int:bloco_id>/', get_sub_blocos, name='ajax_sub_blocos_por_bloco'),
     path("lista_empresas_json/", lista_empresas_json, name="lista_empresas_json"),
     path('lista_vlans_json', lista_vlans_json, name='lista_vlans_json'),
+    path('ajax/dados_hierarquicos/<int:bloco_id>/', estrutura_bloco, name='dados_hierarquicos'),
+    path('ajax/estrutura_bloco/<int:bloco_id>/', estrutura_bloco, name='estrutura_bloco'),
 ]

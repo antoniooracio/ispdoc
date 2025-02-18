@@ -10,35 +10,6 @@ from .models import Equipamento, Porta, Empresa, Pop, Rack, Equipamento, BlocoIP
 from .forms import PortaForm, EnderecoIPForm
 
 
-def detalhes_bloco(request, bloco_id):
-    bloco = BlocoIP.objects.get(id=bloco_id)
-
-    # Buscar sub-blocos diretamente ligados a esse bloco
-    sub_blocos = BlocoIP.objects.filter(parent=bloco)
-
-    # Criar um dicionário para armazenar IPs dentro de cada sub-bloco
-    blocos_com_ips = {sub_bloco: EnderecoIP.objects.filter(bloco=sub_bloco) for sub_bloco in sub_blocos}
-
-    return render(request, 'seu_template.html', {
-        'bloco': bloco,
-        'blocos_com_ips': blocos_com_ips
-    })
-
-
-def get_sub_blocos(request, bloco_id):
-    sub_blocos = BlocoIP.objects.filter(parent_id=bloco_id).select_related("parent", "equipamento").values(
-        'id', 'bloco_cidr', 'tipo_ip', 'parent__bloco_cidr', 'equipamento__nome', 'descricao'
-    )
-    return JsonResponse({'sub_blocos': list(sub_blocos)})
-
-
-def listar_ips_por_bloco(request, bloco_id):
-    """Retorna os IPs cadastrados dentro de um bloco específico."""
-    ips = EnderecoIP.objects.filter(bloco_id=bloco_id).values("id", "ip", "equipamento__nome", "porta__nome",
-                                                              "next_hop", "is_gateway", 'finalidade')
-    return JsonResponse({"ips": list(ips)})
-
-
 def adicionar_endereco_ip(request):
     user = request.user
 
@@ -520,4 +491,110 @@ def mapa_vlans_json(request):
             })
 
     return JsonResponse({"equipamentos": equipamentos_data})
+
+
+def detalhes_bloco(request, bloco_id):
+    bloco = BlocoIP.objects.get(id=bloco_id)
+
+    # Buscar sub-blocos diretamente ligados a esse bloco
+    sub_blocos = BlocoIP.objects.filter(parent=bloco)
+
+    # Criar uma lista para armazenar dados dos sub-blocos e seus respectivos IPs
+    blocos_com_ips = []
+    for sub_bloco in sub_blocos:
+        ips = EnderecoIP.objects.filter(bloco=sub_bloco).values(
+            'id', 'ip', 'equipamento__nome', 'porta__nome', 'next_hop', 'is_gateway', 'finalidade'
+        )
+        blocos_com_ips.append({
+            'sub_bloco': sub_bloco.bloco_cidr,
+            'descricao': sub_bloco.descricao or 'N/A',
+            'equipamento': sub_bloco.equipamento.nome if sub_bloco.equipamento else 'N/A',
+            'ips': list(ips)  # Lista de IPs associados ao sub-bloco
+        })
+
+    return render(request, 'seu_template.html', {
+        'bloco': bloco,
+        'blocos_com_ips': blocos_com_ips  # Passa a lista para o template
+    })
+
+
+def get_sub_blocos(request, bloco_id):
+    sub_blocos = BlocoIP.objects.filter(parent_id=bloco_id).select_related("parent", "equipamento").values(
+        'id', 'bloco_cidr', 'tipo_ip', 'parent__bloco_cidr', 'equipamento__nome', 'descricao'
+    )
+    return JsonResponse({'sub_blocos': list(sub_blocos)})
+
+
+def listar_ips_por_bloco(request, bloco_id):
+    """Retorna os IPs cadastrados dentro de um bloco específico."""
+    ips = EnderecoIP.objects.filter(bloco_id=bloco_id).values("id", "ip", "equipamento__nome", "porta__nome",
+                                                              "next_hop", "is_gateway", 'finalidade')
+    return JsonResponse({"ips": list(ips)})
+
+def dados_hierarquicos(request, bloco_id):
+    try:
+        # Encontre o bloco com o id fornecido
+        bloco = BlocoIP.objects.get(id=bloco_id)
+
+        # Buscar sub-blocos diretamente ligados a esse bloco
+
+        sub_blocos = BlocoIP.objects.filter(parent=bloco)
+
+        # Monta a estrutura de dados
+        dados = {
+            'bloco': bloco.bloco_cidr,
+            'sub_blocos': []
+        }
+
+        for sub_bloco in sub_blocos:
+            # Coleta os IPs do sub-bloco
+            ips = EnderecoIP.objects.filter(bloco_id=bloco_id).values("id", "ip", "equipamento__nome", "porta__nome", "next_hop", "is_gateway", 'finalidade')
+
+
+            sub_dados = {
+                'sub_bloco': sub_bloco.bloco_cidr,
+                'descricao': sub_bloco.descricao or 'N/A',
+                'equipamento': sub_bloco.equipamento.nome if sub_bloco.equipamento else 'N/A',
+                'ips': list(ips)
+            }
+
+            dados['sub_blocos'].append(sub_dados)
+
+        return JsonResponse(dados)
+
+    except BlocoIP.DoesNotExist:
+        return JsonResponse({'error': 'Bloco não encontrado'}, status=404)
+
+
+def estrutura_bloco(request, bloco_id):
+    # Função recursiva para montar a hierarquia
+    def montar_hierarquia(bloco):
+        # Buscar os sub-blocos do bloco atual
+        sub_blocos = BlocoIP.objects.filter(parent=bloco)
+
+        # Buscar os IPs associados a esse bloco
+        ips = EnderecoIP.objects.filter(bloco=bloco).values("id", "ip", "equipamento__nome", "porta__nome", "next_hop", "is_gateway", 'finalidade')
+
+
+        # Montar o dicionário com os dados
+        return {
+            "bloco": bloco.bloco_cidr,  # CIDR do bloco
+            "sub_blocos": [montar_hierarquia(sb) for sb in sub_blocos],  # Recursivamente monta os sub-blocos
+            "ips": list(ips) if ips else []  # Lista de IPs ou uma lista vazia se não houver IPs
+        }
+
+    try:
+        # Recupera o BlocoIP com base no id
+        bloco = BlocoIP.objects.get(id=bloco_id)
+
+        # Monta a hierarquia do bloco
+        estrutura = montar_hierarquia(bloco)
+
+        # Retorna a estrutura em formato JSON
+        return JsonResponse(estrutura)
+
+    except BlocoIP.DoesNotExist:
+        # Caso o bloco com o id fornecido não seja encontrado
+        return JsonResponse({'error': 'Bloco não encontrado'}, status=404)
+
 
