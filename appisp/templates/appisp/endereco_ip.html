@@ -353,7 +353,7 @@
         blocoNode.classList.add('bloco-node');
         // blocoNode.innerHTML = `<strong>📂 ${dados.bloco} | Netmask: </strong>${mascara}`;
         blocoNode.innerHTML = `<strong class="bloco-nome">📂 ${dados.bloco}</strong> |
-                       <span class="netmask">Netmask:</span> ${mascara} |
+                       <span class="netmask">Netmask:</span> ${formatarMascara(dados.bloco, mascara)} |
                        <strong class="ip-primeiro">Primeiro IP:</strong> ${calcularPrimeiroUltimoIP(dados.bloco).primeiro} |
                        <strong class="ip-ultimo">Último IP:</strong> ${calcularPrimeiroUltimoIP(dados.bloco).ultimo}`;
         // blocoNode.innerHTML = `<strong>📂 ${dados.bloco} | Netmask: </strong>${mascara} | <strong>Primeiro IP:</strong> ${calcularPrimeiroUltimoIP(dados.bloco).primeiro} | <strong>Último IP:</strong> ${calcularPrimeiroUltimoIP(dados.bloco).ultimo}`;
@@ -562,6 +562,13 @@ function calcularIPv4(ip, cidr) {
     };
 }
 
+function formatarMascara(bloco, mascara) {
+    // Se for IPv6, garantir que a máscara seja apenas um prefixo
+    if (bloco.includes(":")) {
+        return ``;
+    }
+    return mascara;
+}
 
     // Função para preencher o formulário com os dados do IP selecionado
     function preencherFormulario(ipData) {
