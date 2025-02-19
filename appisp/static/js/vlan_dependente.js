@@ -64,6 +64,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+
     if ($.fn.select2) {
         configurarEventoEmpresa();
     } else {
