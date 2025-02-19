@@ -228,6 +228,7 @@ class VlanAdmin(admin.ModelAdmin):
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
 
+
 @admin.register(VlanPorta)
 class VlanPortaAdmin(admin.ModelAdmin):
     list_display = ('vlan', 'porta', 'get_equipamento', 'tipo', 'vlan_nativa')
