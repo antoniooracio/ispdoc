@@ -274,6 +274,7 @@
                         var parente = sub_bloco.parent__bloco_cidr || 'N/A';
                         var equipamento = sub_bloco.equipamento__nome || 'N/A';
 
+                        var { primeiro, ultimo } = calcularPrimeiroUltimoIP(bloco_cidr);
                         var row = document.createElement('tr');
                         row.innerHTML = `
                             <td>${bloco_cidr}</td>
@@ -281,6 +282,8 @@
                             <td>${parente}</td>
                             <td>${equipamento}</td>
                             <td>${descricao}</td>
+                            <td>${primeiro}</td>
+                            <td>${ultimo}</td>
                         `;
                         tbodySubBlocos.appendChild(row);
                     });
@@ -340,8 +343,10 @@
 
         // Criação do nó principal do bloco
         var blocoNode = document.createElement('div');
+        var [ip, cidr] = dados.bloco.split('/');
+        var mascara = cidrParaMascara(cidr);
         blocoNode.classList.add('bloco-node');
-        blocoNode.innerHTML = `<strong>📂 ${dados.bloco}</strong>`;
+        blocoNode.innerHTML = `<strong>📂 ${dados.bloco} | Netmask: </strong>${mascara} | <strong>Primeiro IP:</strong> ${calcularPrimeiroUltimoIP(dados.bloco).primeiro} | <strong>Último IP:</strong> ${calcularPrimeiroUltimoIP(dados.bloco).ultimo}`;
         container.appendChild(blocoNode);
 
         // Exibe os IPs do bloco principal em tabela
@@ -388,8 +393,10 @@
                 subBlocos.forEach(function(subBloco) {
 
                     var subBlocoNode = document.createElement('div');
+                    var [ip, cidr] = subBloco.bloco.split('/');
+                    var mascara = cidrParaMascara(cidr);
                     subBlocoNode.classList.add('sub-bloco-node');
-                    subBlocoNode.innerHTML = `<strong>📂 ${subBloco.bloco}</strong>`;
+                    subBlocoNode.innerHTML = `<strong>📂 ${subBloco.bloco} | Netmask: </strong>${mascara} | <strong>Primeiro IP:</strong> ${calcularPrimeiroUltimoIP(subBloco.bloco).primeiro} | <strong>Último IP:</strong> ${calcularPrimeiroUltimoIP(subBloco.bloco).ultimo}`;
 
                     // Exibe os IPs do sub-bloco em tabela
                     if (subBloco.ips && subBloco.ips.length > 0) {
@@ -422,7 +429,7 @@
                         tabela.appendChild(tabelaBody);
                         subBlocoNode.appendChild(tabela);
                     } else {
-                        subBlocoNode.innerHTML += ' (Sem IPs)';
+                        subBlocoNode.innerHTML += ' (Sem IPs nesse bloco)';
                     }
 
                     subBlocosContainer.appendChild(subBlocoNode);
@@ -455,6 +462,32 @@
             "32": "255.255.255.255"
         };
         return cidrMap[cidr] || "N/A";
+    }
+    // Função para calcular o primeiro e o último IP de um bloco CIDR
+    function calcularPrimeiroUltimoIP(blocoCIDR) {
+        let [ip, cidr] = blocoCIDR.split('/');
+        let mascara = parseInt(cidr);
+
+        // Converte o IP para um número inteiro
+        function ipParaInt(ip) {
+            return ip.split('.').reduce((acc, octet) => (acc << 8) + parseInt(octet), 0);
+        }
+
+        // Converte um número inteiro de volta para IP
+        function intParaIp(int) {
+            return [(int >>> 24) & 255, (int >>> 16) & 255, (int >>> 8) & 255, int & 255].join('.');
+        }
+
+        let ipInt = ipParaInt(ip);
+        let mascaraBits = (0xFFFFFFFF >>> (32 - mascara)) << (32 - mascara);
+
+        let primeiroIp = ipInt & mascaraBits; // Primeiro IP do bloco
+        let ultimoIp = primeiroIp | ~mascaraBits; // Último IP do bloco
+
+        return {
+            primeiro: intParaIp(primeiroIp),
+            ultimo: intParaIp(ultimoIp)
+        };
     }
 
     // Função para preencher o formulário com os dados do IP selecionado
