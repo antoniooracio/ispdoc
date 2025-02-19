@@ -200,6 +200,9 @@ class VlanAdmin(admin.ModelAdmin):
     list_filter = ('empresa', 'tipo', 'status')
     search_fields = ('numero', 'nome', 'empresa__nome')
 
+    class Media:
+        js = ('js/vlan_dependente.js',)
+
     def get_list_filter(self, request):
         if request.user.is_superuser:
             return ('empresa', 'equipamento')
@@ -212,6 +215,10 @@ class VlanAdmin(admin.ModelAdmin):
         return qs.filter(empresa__usuarios=request.user)
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == 'equipamento' and request.GET.get('empresa'):
+            empresa_id = request.GET.get('empresa')
+            kwargs["queryset"] = Equipamento.objects.filter(empresa_id=empresa_id)
+
         if not request.user.is_superuser:
             if db_field.name == "empresa":
                 kwargs["queryset"] = Empresa.objects.filter(usuarios=request.user)
@@ -227,6 +234,8 @@ class VlanPortaAdmin(admin.ModelAdmin):
     list_filter = (EmpresaUsuarioFilter, EquipamentoEmpresaFilter, EquipamentoPortaFilter, VlanPortaFilter)
 
     change_list_template = "admin/vlan_changelist.html"  # Personalizamos o template
+    class Media:
+        js = ('js/vlan_dependente.js',)
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
