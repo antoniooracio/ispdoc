@@ -22,7 +22,7 @@ from django.shortcuts import render
 from appisp.views import (EquipamentoAutocomplete, PortaAutocomplete, mapa, atualizar_posicao, mapa_racks,
                           mapa_racks_dados, get_equipamentos_por_empresa, adicionar_endereco_ip, listar_ips_por_bloco,
                           get_sub_blocos, visualizar_vlans_por_equipamento, mapa_vlans_json, relatorio_vlans,
-                          alertas_vlans, lista_empresas_json, lista_vlans_json, estrutura_bloco, estrutura_bloco,
+                          alertas_vlans, lista_empresas_json, lista_vlans_json, estrutura_bloco, estrutura_bloco, get_portas
                           )
 from appisp.models import Porta
 from django.contrib.auth.decorators import login_required
@@ -48,6 +48,7 @@ urlpatterns = [
     path('mapa-rack/', mapa_racks, name='mapa_rack'),
     path('mapa-rack/dados/', mapa_racks_dados, name='mapa_rack_dados'),
     path('get-equipamentos/', get_equipamentos_por_empresa, name='get-equipamentos'),
+    path("get-portas/", get_portas, name="get-portas"),
     path('endereco_ip/', adicionar_endereco_ip, name='endereco_ip'),
     path('equipamento/<int:equipamento_id>/vlans/', visualizar_vlans_por_equipamento, name='vlans_por_equipamento'),
     path('mapa_vlans/', mapa_vlans, name='mapa_vlans'),
