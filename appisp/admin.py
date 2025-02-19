@@ -234,9 +234,10 @@ class VlanPortaAdmin(admin.ModelAdmin):
     list_display = ('vlan', 'porta', 'get_equipamento', 'tipo', 'vlan_nativa')
     list_filter = (EmpresaUsuarioFilter, EquipamentoEmpresaFilter, EquipamentoPortaFilter, VlanPortaFilter)
 
-    change_list_template = "admin/vlan_changelist.html"  # Personalizamos o template
     class Media:
         js = ('js/vlan_dependente.js',)
+
+    change_list_template = "admin/vlan_changelist.html"  # Personalizamos o template
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
@@ -252,6 +253,14 @@ class VlanPortaAdmin(admin.ModelAdmin):
         """
         Restringe as escolhas de VLAN, Porta e Equipamento conforme a empresa do usuário.
         """
+        if db_field.name == 'equipamento' and request.GET.get('empresa'):
+            empresa_id = request.GET.get('empresa')
+            kwargs["queryset"] = Equipamento.objects.filter(empresa_id=empresa_id)
+
+        if db_field.name == 'porta' and request.GET.get('equipamento'):
+            equipamento_id = request.GET.get('equipamento')
+            kwargs["queryset"] = Equipamento.objects.filter(equipamento_id=equipamento_id)
+
         if not request.user.is_superuser:
             if db_field.name == "vlan":
                 kwargs["queryset"] = Vlan.objects.filter(empresa__usuarios=request.user)
