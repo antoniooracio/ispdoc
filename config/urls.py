@@ -17,6 +17,7 @@ Including another URLconf
 from django.contrib import admin
 from appisp.admin import admin_site
 from django.http import JsonResponse
+from django.views.generic.base import TemplateView
 from django.urls import path, include
 from django.shortcuts import render
 from appisp.views import (EquipamentoAutocomplete, PortaAutocomplete, mapa, atualizar_posicao, mapa_racks,
@@ -63,4 +64,5 @@ urlpatterns = [
     path('lista_vlans_json', lista_vlans_json, name='lista_vlans_json'),
     path('ajax/dados_hierarquicos/<int:bloco_id>/', estrutura_bloco, name='dados_hierarquicos'),
     path('ajax/estrutura_bloco/<int:bloco_id>/', estrutura_bloco, name='estrutura_bloco'),
+    path('', TemplateView.as_view(template_name='index.html'), name='index'),
 ]
