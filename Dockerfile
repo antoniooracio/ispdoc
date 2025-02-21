@@ -7,7 +7,7 @@ WORKDIR /app
 COPY requirements.txt .
 # Instalar netcat (openbsd version)
 RUN apt-get update && apt-get install -y netcat-openbsd
-
+RUN apt-get update && apt-get install -y iputils-ping
 
 # Instala as dependências do Python
 RUN pip install --no-cache-dir -r requirements.txt

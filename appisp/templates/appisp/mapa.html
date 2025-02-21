@@ -29,102 +29,12 @@
         background-color: #0056b3;
         border-color: #004085;
     }
-
-        /* Estilo geral do modal */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background-color: #454d55;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            width: 550px;
-            z-index: 1000;
-        }
-        .modal.show {
-            display: block;
-        }
-
-        /* Título do modal */
-        .modal-header {
-            font-size: 18px;
-            font-weight: bold;
-            margin-bottom: 10px;
-            text-align: center;
-        }
-
-        /* Corpo do modal */
-        .modal-body {
-            margin-bottom: 20px;
-        }
-
-        .modal-body .form-group {
-            margin-bottom: 15px;
-        }
-
-        /* Estilo para os inputs */
-        .form-group label {
-            display: block;
-            font-weight: 600;
-            margin-bottom: 5px;
-            color: #555;
-        }
-
-        .form-group input {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            font-size: 14px;
-            box-sizing: border-box;
-        }
-
-        .form-group input:focus {
-            border-color: #007bff;
-            outline: none;
-        }
-
-        /* Estilo do botão de fechar */
-        .modal-footer {
-            text-align: right;
-        }
-
-        .close-modal {
-            background-color: #007bff;
-            color: white;
-            border: none;
-            padding: 10px 15px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 14px;
-        }
-
-        .close-modal:hover {
-            background-color: #0056b3;
-        }
-
-        /* Estilo de fundo para o efeito de overlay */
-        .modal-overlay {
-            position: fixed;
-            background-color: #454d55;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            z-index: 999;
-            display: none;
-        }
         #mapa {
             width: 100%;
             height: 1024px;
             border: 1px solid #ccc;
             background-color: #ecf0f0;
         }
-
-
         .equipamento {
             cursor: pointer;
             transition: transform 0.2s;
@@ -146,13 +56,15 @@
         .modal {
             display: none;
             position: fixed;
-            top: 50%;
+            top: 40%;
             left: 50%;
-            transform: translate(-50%, -50%);
-            background-color: white;
+            transform: translate(-30%, -40%);
+            background-color: #454d55;
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            width: 550px;
+            height: auto;
             z-index: 1000;
         }
         .modal.show {
@@ -223,7 +135,9 @@
         .modal-conexao-body {
             margin-bottom: 20px;
         }
-
+        .modal-body .form-group {
+            margin-bottom: 15px;
+        }
         /* Rodapé do modal */
         .modal-conexao-footer {
             text-align: right;
@@ -299,7 +213,7 @@
     <select id="empresa-selector">
         <option value="">Selecione a Empresa</option>
         {% for empresa in empresas %}
-            <option value="{{ empresa.id }}">{{ empresa.nome }}</option>
+        <option value="{{ empresa.id }}">{{ empresa.nome }}</option>
         {% endfor %}
     </select>
 
@@ -315,53 +229,55 @@
 <!-- Modal de Detalhes do Equipamento -->
 <div class="modal-overlay" id="modalOverlay"></div>
 <div class="modal" id="modalEquipamento">
-  <div class="modal-header">
-    Equipamento {nome}
-  </div>
-  <div class="modal-body">
-    <form>
-      <div class="form-group">
-        <label for="input-ip">IP</label>
-        <input type="text" class="form-control" id="input-ip" readonly>
-      </div>
-      <div class="form-group">
-        <label for="input-usuario">Usuário</label>
-        <input type="text" class="form-control" id="input-usuario" readonly>
-      </div>
-      <div class="form-group">
-        <label for="input-senha">Senha</label>
-        <input type="text" class="form-control" id="input-senha" readonly>
-      </div>
-      <div class="form-group">
-        <label for="input-porta">Porta</label>
-        <input type="text" class="form-control" id="input-porta" readonly>
-      </div>
-      <div class="form-group">
-        <label for="input-protocolo">Protocolo</label>
-        <input type="text" class="form-control" id="input-protocolo" readonly>
-      </div>
-    </form>
-  </div>
-  <div class="modal-footer">
-    <button type="button" class="close-modal" id="closeModal">Fechar</button>
-  </div>
+    <div class="modal-header">
+        Equipamento {nome}
+    </div>
+    <div class="modal-body">
+        <form>
+            <div class="form-group">
+                <label for="input-ip">IP</label>
+                <input type="text" class="form-control" id="input-ip" readonly>
+            </div>
+            <div class="form-group">
+                <label for="input-usuario">Usuário</label>
+                <input type="text" class="form-control" id="input-usuario" readonly>
+            </div>
+            <div class="form-group">
+                <label for="input-senha">Senha</label>
+                <input type="text" class="form-control" id="input-senha" readonly>
+            </div>
+            <div class="form-group">
+                <label for="input-porta">Porta</label>
+                <input type="text" class="form-control" id="input-porta" readonly>
+            </div>
+            <div class="form-group">
+                <label for="input-protocolo">Protocolo</label>
+                <input type="text" class="form-control" id="input-protocolo" readonly>
+            </div>
+        </form>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="close-modal" id="closeModal">Fechar</button>
+    </div>
 </div>
 
 <!-- Modal de Detalhes de Conexão -->
 <div class="modal-overlay" id="modalOverlayConexao"></div>
 <div class="modal-conexao" id="modalConexao">
-  <div class="modal-conexao-header">
-    Conexão {tipo}
-  </div>
-  <div class="modal-conexao-body">
-    <p><strong>Tipo:</strong> {tipo}</p>
-    <p><strong>Velocidade:</strong> {velocidade}</p>
-    <p><strong>Fonte:</strong> {fonte}</p>
-    <p><strong>Destino:</strong> {destino}</p>
-  </div>
-  <div class="modal-conexao-footer">
-    <button type="button" class="close-conexao-modal" id="closeConexaoModal">Fechar</button>
-  </div>
+    <div class="modal-conexao-header">
+        Conexão {tipo}
+    </div>
+
+    <div class="modal-conexao-body">
+        <p><strong>Tipo: </strong> {tipo} </p>
+        <p><strong>Velocidade: </strong > {velocidade}</p>
+        <p><strong>Fonte: </strong> {fonte}</p>
+        <p><strong>Destino: </strong> {destino}</p>
+    </div>
+
+    <div class="modal-conexao-footer">
+        <button type="button" class="close-conexao-modal" id="closeConexaoModal">Fechar</button>
+    </div>
 </div>
 
 <script src="https://d3js.org/d3.v7.min.js"></script>
@@ -465,67 +381,6 @@ const linhasConexao = g.selectAll('.linha-conexao')
         };
         return widthMap[d.speed] || 2; // Retorna 2 como valor padrão se a velocidade não estiver no mapa
     })
-
-    // Evento para mudar a cor da linha ao passar o mouse
-//  Renderizar conexões
-//  const linhasConexao = g.selectAll('.linha-conexao')
-//    .data(filteredConexoes)
-//    .enter()
-//    .append('line')
-//    .attr('class', 'linha-conexao')
-//    .attr('x1', d => nodes.find(node => node.id === d.source).x)
-//    .attr('y1', d => nodes.find(node => node.id === d.source).y)
-//    .attr('x2', d => nodes.find(node => node.id === d.target).x)
-//    .attr('y2', d => nodes.find(node => node.id === d.target).y)
-//    .attr('stroke', d => {
-//        switch(d.tipo) {
-//            case 'Fibra': return 'blue';
-//            case 'Eletrico': return 'green';
-//            case 'Radio': return 'orange';
-//            default: return 'gray';
-//        }
-//    })
-//    //.attr('stroke-width', d => d.speed === '10G' ? 4 : 2)
-//    .attr('stroke-width', d => {
-//        const widthMap = {
-//            '10G': 3,
-//            '20G': 4,
-//            '40G': 5,
-//            '100G': 6
-//        };
-//        return widthMap[d.speed] || 2; // Retorna 2 como valor padrão se a velocidade não estiver no mapa
-//    })
-//
-//    // Evento para mudar a cor da linha ao passar o mouse
-//    .on('mouseover', function(event, d) {
-//        d3.select(this)
-//            .attr('stroke', '#ff5733')
-//            .attr('stroke-width', 3);
-//        mostrarInformacoesConexao(d);
-//    })
-//
-//    // Evento para restaurar a cor da linha ao sair o mouse
-//    .on('mouseout', function(event, d) {
-//        d3.select(this)
-//            .attr('stroke', d => {
-//                switch(d.tipo) {
-//                    case 'Fibra': return 'blue';
-//                    case 'Eletrico': return 'green';
-//                    case 'Radio': return 'orange';
-//                    default: return 'gray';
-//                }
-//            })
-//            //.attr('stroke-width', d => d.speed === '10G' ? 4 : 2);
-//            .attr('stroke-width', d => {
-//                const widthMap = {
-//                    '10G': 3,
-//                    '20G': 4,
-//                    '40G': 5,
-//                    '100G': 6
-//                };
-//                return widthMap[d.speed] || 2; // Retorna 2 como valor padrão se a velocidade não estiver no mapa
-//            })
-//    })
 
     // Evento de clique para mostrar detalhes da conexão
     .on('click', function(event, d) {
@@ -672,6 +527,32 @@ document.getElementById('closeConexaoModal').addEventListener('click', () => {
 
     // Escutando a mudança na seleção da empresa para renderizar novamente o mapa
     document.getElementById('empresa-selector').addEventListener('change', renderMapa);
+
+
+    // Chama a função renderMapa e ativa a URL /verificar_status/ a cada 30 segundos
+    setInterval(() => {
+        // Simula a mudança no seletor (se necessário)
+        document.getElementById('empresa-selector').dispatchEvent(new Event('change'));
+
+        // Chama a URL /verificar_status/ usando fetch
+        fetch('/verificar_status/')
+            .then(response => {
+                if (response.ok) {
+                    return response.json(); // ou o formato que sua API retornar
+                }
+                throw new Error('Erro ao verificar o status');
+            })
+            .then(data => {
+                // Aqui você pode lidar com a resposta da URL
+                console.log('Status verificado:', data);
+            })
+            .catch(error => {
+                console.error('Erro na requisição:', error);
+            });
+
+    }, 30000); // 30000 milissegundos = 30 segundos
+
+
 </script>
 
 

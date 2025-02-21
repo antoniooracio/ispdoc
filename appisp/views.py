@@ -1,13 +1,60 @@
 from django import forms
 from django.contrib.auth.models import User
 from dal import autocomplete
+import platform
 from django.http import JsonResponse
 from django.db.models import Prefetch
+from concurrent.futures import ThreadPoolExecutor
+import subprocess
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404
 from .models import Equipamento, Porta, Empresa, Pop, Rack, Equipamento, BlocoIP, EnderecoIP, VlanPorta, Vlan
 from .forms import PortaForm, EnderecoIPForm
+
+def ping(ip):
+    try:
+        # Verifica o sistema operacional
+        if platform.system().lower() == "windows":
+            response = subprocess.run(
+                ["ping", "-n", "1", ip],  # Windows
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                timeout=2
+            )
+        else:
+            response = subprocess.run(
+                ["ping", "-c", "1", ip],  # Linux
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                timeout=2
+            )
+
+        return {"ip": ip, "status": "online" if response.returncode == 0 else "offline"}
+    except Exception as e:
+        print(f"Error pinging {ip}: {e}")
+        return {"ip": ip, "status": "offline"}
+
+
+def verificar_status_equipamentos(request):
+    # Obtemos todos os equipamentos
+    equipamentos = Equipamento.objects.all()
+
+    with ThreadPoolExecutor(max_workers=10) as executor:
+        # Realizamos o ping para cada equipamento
+        resultados = list(executor.map(ping, [equipamento.ip for equipamento in equipamentos]))
+
+    # Atualizamos o status dos equipamentos com base no ping
+    for equipamento, resultado in zip(equipamentos, resultados):
+        if resultado["status"] == "online":
+            equipamento.status = "Ativo"
+        else:
+            equipamento.status = "Inativo"
+        equipamento.save()  # Salva a alteração no banco de dados
+
+    return JsonResponse(resultados, safe=False)
 
 
 def adicionar_endereco_ip(request):
