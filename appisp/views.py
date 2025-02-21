@@ -3,14 +3,33 @@ from django.contrib.auth.models import User
 from dal import autocomplete
 import platform
 from django.http import JsonResponse
+from rest_framework.response import Response
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_exempt
+from rest_framework import status
 from django.db.models import Prefetch
 from concurrent.futures import ThreadPoolExecutor
 import subprocess
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404
-from .models import Equipamento, Porta, Empresa, Pop, Rack, Equipamento, BlocoIP, EnderecoIP, VlanPorta, Vlan
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.decorators import api_view, authentication_classes, permission_classes
+from .models import Porta, Empresa, Pop, Rack, Equipamento, BlocoIP, EnderecoIP, VlanPorta, Vlan, EmpresaToken
 from .forms import PortaForm, EnderecoIPForm
+from .authentication import EmpresaTokenAuthentication
+
+@api_view(['POST'])
+def gerar_token_empresa(request):
+    empresa_id = request.data.get("empresa_id")
+
+    try:
+        empresa = Empresa.objects.get(id=empresa_id)
+        token, created = EmpresaToken.objects.get_or_create(empresa=empresa)
+        return Response({"empresa": empresa.nome, "token": str(token.token)}, status=status.HTTP_200_OK)
+    except Empresa.DoesNotExist:
+        return Response({"error": "Empresa não encontrada"}, status=status.HTTP_404_NOT_FOUND)
+
 
 def ping(ip):
     try:
@@ -70,6 +89,26 @@ def adicionar_endereco_ip(request):
         form = EnderecoIPForm(user=user)  # Passa o usuário para o formulário
 
     return render(request, "appisp/endereco_ip.html", {"form": form})
+
+@api_view(['GET'])
+@authentication_classes([EmpresaTokenAuthentication])
+@permission_classes([IsAuthenticated])
+def listar_equipamentos(request):
+    auth_header = request.headers.get("Authorization")
+    token = request.headers.get("Authorization")
+
+    if not auth_header:
+        return JsonResponse({"error": "Token não fornecido"}, status=401)
+
+    if not token:
+        return JsonResponse({"error": "Token não fornecido"}, status=401)
+
+    try:
+        empresa_token = EmpresaToken.objects.get(token=token)
+        equipamentos = Equipamento.objects.filter(empresa=empresa_token.empresa).values("id", "nome")
+        return JsonResponse(list(equipamentos), safe=False)
+    except EmpresaToken.DoesNotExist:
+        return JsonResponse({"error": "Token inválido"}, status=403)
 
 
 def get_equipamentos(request):

@@ -3,6 +3,7 @@ from ipaddress import ip_network
 from django.core.exceptions import ValidationError
 from django.contrib.auth.models import User  # Importe o modelo de usuário
 import ipaddress
+import uuid
 
 
 # Modelo de Empresa
@@ -29,6 +30,14 @@ class Empresa(models.Model):
 
     def __str__(self):
         return self.nome
+
+
+class EmpresaToken(models.Model):
+    empresa = models.OneToOneField(Empresa, on_delete=models.CASCADE, related_name="token")
+    token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+
+    def __str__(self):
+        return f"{self.empresa.nome} - {self.token}"
 
 
 # Modelo de POP

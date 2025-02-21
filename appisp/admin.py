@@ -12,7 +12,7 @@ from .forms import PortaForm, RackForm, RackEquipamentoForm, EnderecoIPForm
 from .views import mapa, mapa_racks
 from django.contrib.admin import SimpleListFilter
 from .models import Empresa, Pop, Fabricante, Modelo, Equipamento, Porta, BlocoIP, EnderecoIP, Rack, RackEquipamento, \
-    MaquinaVirtual, Disco, Rede, Vlan, VlanPorta
+    MaquinaVirtual, Disco, Rede, Vlan, VlanPorta, EmpresaToken
 import ipaddress
 
 class PopEmpresaFilter(SimpleListFilter):
@@ -799,6 +799,12 @@ class EquipamentoAdmin(admin.ModelAdmin):
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
 
+@admin.register(EmpresaToken)
+class EmpresaTokenAdmin(admin.ModelAdmin):
+    list_display = ("empresa", "token")
+    readonly_fields = ("token",)  # Deixa o token apenas para leitura
+
+
 # Classe personalizada de Admin
 class CustomAdminSite(AdminSite):
     site_header = "Documentação de Rede"
@@ -853,6 +859,7 @@ admin_site.register(RackEquipamento, RackEquipamentoAdmin)
 admin_site.register(MaquinaVirtual, MaquinaVirtualAdmin)
 admin_site.register(Vlan, VlanAdmin)
 admin_site.register(VlanPorta, VlanPortaAdmin)
+admin_site.register(EmpresaToken, EmpresaTokenAdmin)
 
 # Em vez de usar admin.site, agora usamos admin_site
 # Para fazer isso funcionar, você precisará alterar as URLs do seu projeto Django para usar o custom_admin
