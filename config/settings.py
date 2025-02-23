@@ -48,14 +48,6 @@ INSTALLED_APPS = [
     'rest_framework.authtoken',
 ]
 
-REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': (
-        'appisp.authentication.EmpresaTokenAuthentication',
-    ),
-    'DEFAULT_PERMISSION_CLASSES': (
-        'rest_framework.permissions.IsAuthenticated',
-    )
-}
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -156,3 +148,12 @@ JAZZMIN_UI_TWEAKS = {
 CSRF_TRUSTED_ORIGINS = [
     'https://ispdoc.idxdatacenters.com.br',
 ]
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'appisp.authentication.EmpresaTokenAuthentication',  # Autenticação personalizada
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.AllowAny',  # Permite acesso sem exigir login de usuário
+    ),
+}

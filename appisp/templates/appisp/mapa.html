@@ -529,26 +529,26 @@ document.getElementById('closeConexaoModal').addEventListener('click', () => {
     document.getElementById('empresa-selector').addEventListener('change', renderMapa);
 
 
-    // Chama a função renderMapa e ativa a URL /verificar_status/ a cada 30 segundos
+//    // Chama a função renderMapa e ativa a URL /verificar_status/ a cada 30 segundos
     setInterval(() => {
-        // Simula a mudança no seletor (se necessário)
-        document.getElementById('empresa-selector').dispatchEvent(new Event('change'));
-
-        // Chama a URL /verificar_status/ usando fetch
-        fetch('/verificar_status/')
-            .then(response => {
-                if (response.ok) {
-                    return response.json(); // ou o formato que sua API retornar
-                }
-                throw new Error('Erro ao verificar o status');
-            })
-            .then(data => {
-                // Aqui você pode lidar com a resposta da URL
-                console.log('Status verificado:', data);
-            })
-            .catch(error => {
-                console.error('Erro na requisição:', error);
-            });
+//        // Simula a mudança no seletor (se necessário)
+       document.getElementById('empresa-selector').dispatchEvent(new Event('change'));
+//
+//        // Chama a URL /verificar_status/ usando fetch
+//        fetch('/verificar_status/')
+//            .then(response => {
+//                if (response.ok) {
+//                    return response.json(); // ou o formato que sua API retornar
+//                }
+//                throw new Error('Erro ao verificar o status');
+//            })
+//            .then(data => {
+//                // Aqui você pode lidar com a resposta da URL
+//                console.log('Status verificado:', data);
+//            })
+//            .catch(error => {
+//                console.error('Erro na requisição:', error);
+//            });
 
     }, 30000); // 30000 milissegundos = 30 segundos
 

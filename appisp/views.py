@@ -3,32 +3,19 @@ from django.contrib.auth.models import User
 from dal import autocomplete
 import platform
 from django.http import JsonResponse
-from rest_framework.response import Response
-from django.utils.decorators import method_decorator
-from django.views.decorators.csrf import csrf_exempt
-from rest_framework import status
+from rest_framework.authentication import TokenAuthentication
 from django.db.models import Prefetch
 from concurrent.futures import ThreadPoolExecutor
 import subprocess
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.decorators import api_view, authentication_classes, permission_classes
+from rest_framework.decorators import api_view, authentication_classes
+
+from .authentication import EmpresaTokenAuthentication
 from .models import Porta, Empresa, Pop, Rack, Equipamento, BlocoIP, EnderecoIP, VlanPorta, Vlan, EmpresaToken
 from .forms import PortaForm, EnderecoIPForm
-from .authentication import EmpresaTokenAuthentication
-
-@api_view(['POST'])
-def gerar_token_empresa(request):
-    empresa_id = request.data.get("empresa_id")
-
-    try:
-        empresa = Empresa.objects.get(id=empresa_id)
-        token, created = EmpresaToken.objects.get_or_create(empresa=empresa)
-        return Response({"empresa": empresa.nome, "token": str(token.token)}, status=status.HTTP_200_OK)
-    except Empresa.DoesNotExist:
-        return Response({"error": "Empresa não encontrada"}, status=status.HTTP_404_NOT_FOUND)
+from rest_framework.permissions import BasePermission
 
 
 def ping(ip):
@@ -90,25 +77,90 @@ def adicionar_endereco_ip(request):
 
     return render(request, "appisp/endereco_ip.html", {"form": form})
 
-@api_view(['GET'])
-@authentication_classes([EmpresaTokenAuthentication])
-@permission_classes([IsAuthenticated])
-def listar_equipamentos(request):
-    auth_header = request.headers.get("Authorization")
-    token = request.headers.get("Authorization")
 
-    if not auth_header:
-        return JsonResponse({"error": "Token não fornecido"}, status=401)
+class TokenRequiredPermission(BasePermission):
+    def has_permission(self, request, view):
+        # Verifica se o cabeçalho Authorization contém um token válido
+        token = request.headers.get("Authorization")
+        if not token:
+            return False
+
+        # Remove a palavra "Token " do início, caso exista
+        if token.startswith("Token "):
+            token = token.split("Token ")[1]
+
+        try:
+            # Valida o token
+            empresa_token = EmpresaToken.objects.get(token=token)
+            return True
+        except EmpresaToken.DoesNotExist:
+            return False
+
+
+
+class DisableSessionAuthenticationMiddleware:
+    """
+    Middleware para desabilitar a autenticação de sessão em algumas rotas
+    """
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        # Desabilitar a autenticação de sessão apenas para rotas específicas de API
+        if request.path.startswith('/api/'):
+            request.session = None  # Remover a sessão
+        response = self.get_response(request)
+        return response
+
+
+@api_view(['PATCH'])  # Usamos PATCH para alterar apenas um campo
+@authentication_classes([EmpresaTokenAuthentication])
+def atualizar_status_equipamento(request, equipamento_id):
+    token = request.headers.get("Authorization")
 
     if not token:
         return JsonResponse({"error": "Token não fornecido"}, status=401)
 
     try:
         empresa_token = EmpresaToken.objects.get(token=token)
-        equipamentos = Equipamento.objects.filter(empresa=empresa_token.empresa).values("id", "nome")
+        equipamento = Equipamento.objects.get(id=equipamento_id, empresa=empresa_token.empresa)
+
+        novo_status = request.data.get("status")
+        if novo_status is None:
+            return JsonResponse({"error": "O campo 'status' é obrigatório."}, status=400)
+
+        equipamento.status = novo_status
+        equipamento.save()
+
+        return JsonResponse(
+            {"message": "Status atualizado com sucesso!", "id": equipamento.id, "novo_status": equipamento.status})
+
+    except EmpresaToken.DoesNotExist:
+        return JsonResponse({"error": "Token inválido"}, status=403)
+    except Equipamento.DoesNotExist:
+        return JsonResponse({"error": "Equipamento não encontrado"}, status=404)
+
+
+@api_view(['GET'])
+@authentication_classes([TokenAuthentication])  # Garantir que somente o TokenAuthentication será usado
+def listar_equipamentosApi(request):
+    token = request.headers.get("Authorization")
+
+    if not token:
+        return JsonResponse({"error": "Token não fornecido"}, status=401)
+
+    if token.startswith("Token "):
+        token = token.split("Token ")[1]
+
+    try:
+        empresa_token = EmpresaToken.objects.get(token=token)
+
+        equipamentos = Equipamento.objects.filter(empresa=empresa_token.empresa).values("id", "nome", "status")
+
         return JsonResponse(list(equipamentos), safe=False)
     except EmpresaToken.DoesNotExist:
         return JsonResponse({"error": "Token inválido"}, status=403)
+
 
 
 def get_equipamentos(request):

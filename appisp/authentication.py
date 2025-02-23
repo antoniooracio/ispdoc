@@ -9,6 +9,8 @@ class EmpresaTokenAuthentication(BaseAuthentication):
         if not token:
             return None
 
+        token = token.replace("Token ", "")  # Remove o prefixo "Token "
+
         try:
             empresa_token = EmpresaToken.objects.get(token=token)
             return (empresa_token.empresa, None)
