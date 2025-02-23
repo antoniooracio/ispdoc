@@ -155,7 +155,7 @@ def listar_equipamentosApi(request):
     try:
         empresa_token = EmpresaToken.objects.get(token=token)
 
-        equipamentos = Equipamento.objects.filter(empresa=empresa_token.empresa).values("id", "nome", "status")
+        equipamentos = Equipamento.objects.filter(empresa=empresa_token.empresa).values("id", "nome", "ip", "status")
 
         return JsonResponse(list(equipamentos), safe=False)
     except EmpresaToken.DoesNotExist:
