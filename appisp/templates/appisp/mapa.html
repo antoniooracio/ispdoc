@@ -532,7 +532,7 @@ document.getElementById('closeConexaoModal').addEventListener('click', () => {
 //    // Chama a função renderMapa e ativa a URL /verificar_status/ a cada 30 segundos
     setInterval(() => {
 //        // Simula a mudança no seletor (se necessário)
-       document.getElementById('empresa-selector').dispatchEvent(new Event('change'));
+       document.getElementById('empresa-selector').dispatchEvent(new Event('change', renderMapa));
 //
 //        // Chama a URL /verificar_status/ usando fetch
 //        fetch('/verificar_status/')
