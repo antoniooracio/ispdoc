@@ -270,7 +270,7 @@
 
     <div class="modal-conexao-body">
         <p><strong>Tipo: </strong> {tipo} </p>
-        <p><strong>Velocidade: </strong > {velocidade}</p>
+        <p><strong>Velocidade: </strong> {velocidade}</p>
         <p><strong>Fonte: </strong> {fonte}</p>
         <p><strong>Destino: </strong> {destino}</p>
     </div>
@@ -353,16 +353,33 @@
             equipamentosFiltrados.some(eq => eq.id === conexao.target)
         );
 
-// Renderizar conexões
+        // Renderizar conexões
+// Renderizar conexões com curvas
 const linhasConexao = g.selectAll('.linha-conexao')
     .data(filteredConexoes)
     .enter()
-    .append('line')
+    .append('path') // Trocar de 'line' para 'path' para criar uma linha curva
     .attr('class', 'linha-conexao')
-    .attr('x1', d => nodes.find(node => node.id === d.source).x)
-    .attr('y1', d => nodes.find(node => node.id === d.source).y)
-    .attr('x2', d => nodes.find(node => node.id === d.target).x)
-    .attr('y2', d => nodes.find(node => node.id === d.target).y)
+    .attr('d', d => {
+        const source = nodes.find(node => node.id === d.source);
+        const target = nodes.find(node => node.id === d.target);
+
+        // Função para criar a curva de Bézier
+        const curva = d3.line()
+            .curve(d3.curveBasis) // Aqui usamos a curva para criar um caminho suave
+            .x(d => d.x)
+            .y(d => d.y);
+
+        // Ajuste para criar a curva, incluindo um ponto de controle no meio
+        const controlPointX = (source.x + target.x) / 2;
+        const controlPointY = (source.y + target.y) / 2 - 100; // Ajuste de deslocamento para "curvar" a linha
+
+        return curva([
+            { x: source.x, y: source.y },
+            { x: controlPointX, y: controlPointY },
+            { x: target.x, y: target.y }
+        ]);
+    })
     .attr('stroke', d => {
         switch(d.tipo) {
             case 'Fibra': return 'blue';
@@ -371,7 +388,6 @@ const linhasConexao = g.selectAll('.linha-conexao')
             default: return 'gray';
         }
     })
-    //.attr('stroke-width', d => d.speed === '10G' ? 4 : 2)
     .attr('stroke-width', d => {
         const widthMap = {
             '10G': 3,
@@ -379,53 +395,49 @@ const linhasConexao = g.selectAll('.linha-conexao')
             '40G': 5,
             '100G': 6
         };
-        return widthMap[d.speed] || 2; // Retorna 2 como valor padrão se a velocidade não estiver no mapa
+        return widthMap[d.speed] || 2;
     })
-
-    // Evento de clique para mostrar detalhes da conexão
+    .attr('fill', 'none')  // Garantir que o caminho não tenha preenchimento
     .on('click', function(event, d) {
-        // if (userIsAdmin) {
-            mostrarInformacoesConexao(d);
-        // } else {
-        //    alert("Você não tem permissão para visualizar essas informações.");
-        // }
+        mostrarInformacoesConexao(d);
     });
 
-// Função para mostrar informações da conexão no modal
-function mostrarInformacoesConexao(d) {
-    // Encontrar os equipamentos de origem e destino
-    const equipamentoFonte = nodes.find(node => node.id === d.source);
-    const equipamentoDestino = nodes.find(node => node.id === d.target);
 
-    // Nome das portas (vindo diretamente de d.nome e d.conexao.nome)
-    const portaFonte = d.porta_origem || 'N/A';  // Nome da porta de origem
-    const portaDestino = d.porta_destino || 'N/A';  // Nome da porta de destino
-    // Encontra Observação
-    const portaObs = d.Obs || 'N/A';  // Nome da porta de destino
+        // Função para mostrar informações da conexão no modal
+        function mostrarInformacoesConexao(d) {
+            // Encontrar os equipamentos de origem e destino
+            const equipamentoFonte = nodes.find(node => node.id === d.source);
+            const equipamentoDestino = nodes.find(node => node.id === d.target);
 
-    // Encontrar as portas associadas aos equipamentos (supondo que "d.source" e "d.target" contenham IDs das portas)
-    // const portaFonte = d.source;  // Aqui você pode ajustar para obter a porta correta associada
-    // const portaDestino = d.target;  // Ajuste conforme necessário
+            // Nome das portas (vindo diretamente de d.nome e d.conexao.nome)
+            const portaFonte = d.porta_origem || 'N/A';  // Nome da porta de origem
+            const portaDestino = d.porta_destino || 'N/A';  // Nome da porta de destino
+            // Encontra Observação
+            const portaObs = d.Obs || 'N/A';  // Nome da porta de destino
 
-    // Definindo o título e o conteúdo do modal
-    document.querySelector('.modal-conexao-header').textContent = `Conexão ${d.tipo}`;
-    document.querySelector('.modal-conexao-body').innerHTML = `
-        <p><strong>Velocidade:</strong> ${d.speed}</p>
-        <p><strong>Fonte:</strong> ${equipamentoFonte.nome} (${portaFonte})</p>
-        <p><strong>Destino:</strong> ${equipamentoDestino.nome} (${portaDestino})</p>
-        <p><strong>Obs.:</strong> ${d.Obs} </p>
-    `;
+            // Encontrar as portas associadas aos equipamentos (supondo que "d.source" e "d.target" contenham IDs das portas)
+            // const portaFonte = d.source;  // Aqui você pode ajustar para obter a porta correta associada
+            // const portaDestino = d.target;  // Ajuste conforme necessário
 
-    // Exibe o modal e a sobreposição de fundo
-    document.getElementById('modalConexao').classList.add('show');
-    document.getElementById('modalOverlayConexao').style.display = 'block';
-}
+            // Definindo o título e o conteúdo do modal
+            document.querySelector('.modal-conexao-header').textContent = `Conexão ${d.tipo}`;
+            document.querySelector('.modal-conexao-body').innerHTML = `
+                <p><strong>Velocidade:</strong> ${d.speed}</p>
+                <p><strong>Fonte:</strong> ${equipamentoFonte.nome} (${portaFonte})</p>
+                <p><strong>Destino:</strong> ${equipamentoDestino.nome} (${portaDestino})</p>
+                <p><strong>Obs.:</strong> ${d.Obs} </p>
+            `;
 
-// Fechar o modal de conexão
-document.getElementById('closeConexaoModal').addEventListener('click', () => {
-    document.getElementById('modalConexao').classList.remove('show');
-    document.getElementById('modalOverlayConexao').style.display = 'none';
-});
+            // Exibe o modal e a sobreposição de fundo
+            document.getElementById('modalConexao').classList.add('show');
+            document.getElementById('modalOverlayConexao').style.display = 'block';
+        }
+
+        // Fechar o modal de conexão
+        document.getElementById('closeConexaoModal').addEventListener('click', () => {
+            document.getElementById('modalConexao').classList.remove('show');
+            document.getElementById('modalOverlayConexao').style.display = 'none';
+        });
 
 
         // Renderizar equipamentos
@@ -529,26 +541,9 @@ document.getElementById('closeConexaoModal').addEventListener('click', () => {
     document.getElementById('empresa-selector').addEventListener('change', renderMapa);
 
 
-//    // Chama a função renderMapa e ativa a URL /verificar_status/ a cada 30 segundos
+    // Chama a função renderMapa  a cada 30 segundos
     setInterval(() => {
-//        // Simula a mudança no seletor (se necessário)
        document.getElementById('empresa-selector').dispatchEvent(new Event('change', renderMapa));
-//
-//        // Chama a URL /verificar_status/ usando fetch
-//        fetch('/verificar_status/')
-//            .then(response => {
-//                if (response.ok) {
-//                    return response.json(); // ou o formato que sua API retornar
-//                }
-//                throw new Error('Erro ao verificar o status');
-//            })
-//            .then(data => {
-//                // Aqui você pode lidar com a resposta da URL
-//                console.log('Status verificado:', data);
-//            })
-//            .catch(error => {
-//                console.error('Erro na requisição:', error);
-//            });
 
     }, 30000); // 30000 milissegundos = 30 segundos
 
