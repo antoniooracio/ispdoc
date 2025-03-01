@@ -457,6 +457,42 @@
                     mostrarInformacoesConexao(d);
                 });
 
+                // Função para mostrar informações da conexão no modal
+                function mostrarInformacoesConexao(d) {
+                    // Encontrar os equipamentos de origem e destino
+                    const equipamentoFonte = nodes.find(node => node.id === d.source);
+                    const equipamentoDestino = nodes.find(node => node.id === d.target);
+
+                    // Nome das portas (vindo diretamente de d.nome e d.conexao.nome)
+                    const portaFonte = d.porta_origem || 'N/A';  // Nome da porta de origem
+                    const portaDestino = d.porta_destino || 'N/A';  // Nome da porta de destino
+                    // Encontra Observação
+                    const portaObs = d.Obs || 'N/A';  // Nome da porta de destino
+
+                    // Encontrar as portas associadas aos equipamentos (supondo que "d.source" e "d.target" contenham IDs das portas)
+                    // const portaFonte = d.source;  // Aqui você pode ajustar para obter a porta correta associada
+                    // const portaDestino = d.target;  // Ajuste conforme necessário
+
+                    // Definindo o título e o conteúdo do modal
+                    document.querySelector('.modal-conexao-header').textContent = `Conexão ${d.tipo}`;
+                    document.querySelector('.modal-conexao-body').innerHTML = `
+                    <p><strong>Velocidade:</strong> ${d.speed}</p>
+                    <p><strong>Fonte:</strong> ${equipamentoFonte.nome} (${portaFonte})</p>
+                    <p><strong>Destino:</strong> ${equipamentoDestino.nome} (${portaDestino})</p>
+                    <p><strong>Obs.:</strong> ${d.Obs} </p>
+                `;
+
+                    // Exibe o modal e a sobreposição de fundo
+                    document.getElementById('modalConexao').classList.add('show');
+                    document.getElementById('modalOverlayConexao').style.display = 'block';
+                }
+
+                // Fechar o modal de conexão
+                document.getElementById('closeConexaoModal').addEventListener('click', () => {
+                    document.getElementById('modalConexao').classList.remove('show');
+                    document.getElementById('modalOverlayConexao').style.display = 'none';
+                });
+
             // Renderizar os equipamentos
             const equipamentosG = g.selectAll('.equipamento')
                 .data(equipamentosFiltrados)
