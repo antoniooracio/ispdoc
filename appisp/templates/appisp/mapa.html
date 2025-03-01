@@ -9,48 +9,53 @@
 
 
         .btn {
-        display: inline-block;
-        padding: 8px 16px;
-        font-size: 16px;
-        font-weight: bold;
-        text-align: center;
-        text-decoration: none;
-        border-radius: 4px;
-        cursor: pointer;
-    }
+            display: inline-block;
+            padding: 8px 16px;
+            font-size: 16px;
+            font-weight: bold;
+            text-align: center;
+            text-decoration: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
 
-    .btn-primary {
-        background-color: #007bff;
-        color: #fff;
-        border: 1px solid #007bff;
-    }
+        .btn-primary {
+            background-color: #007bff;
+            color: #fff;
+            border: 1px solid #007bff;
+        }
 
-    .btn-primary:hover {
-        background-color: #0056b3;
-        border-color: #004085;
-    }
+            .btn-primary:hover {
+                background-color: #0056b3;
+                border-color: #004085;
+            }
+
         #mapa {
             width: 100%;
             height: 1024px;
             border: 1px solid #ccc;
             background-color: #ecf0f0;
         }
+
         .equipamento {
             cursor: pointer;
             transition: transform 0.2s;
         }
-        .equipamento:hover {
-            cursor: pointer;
-            stroke: #007bff;
-            stroke-width: 4px;
-        }
+
+            .equipamento:hover {
+                cursor: pointer;
+                stroke: #007bff;
+                stroke-width: 4px;
+            }
+
         .porta {
             fill: #007bff;
             cursor: pointer;
         }
-        .porta:hover {
-            fill: #0056b3;
-        }
+
+            .porta:hover {
+                fill: #0056b3;
+            }
 
         /* Estilo para o modal */
         .modal {
@@ -67,20 +72,25 @@
             height: auto;
             z-index: 1000;
         }
-        .modal.show {
-            display: block;
-        }
+
+            .modal.show {
+                display: block;
+            }
+
         .modal-header {
             font-size: 18px;
             font-weight: bold;
             margin-bottom: 10px;
         }
+
         .modal-body {
             margin-bottom: 20px;
         }
+
         .modal-footer {
             text-align: right;
         }
+
         .close-modal {
             background-color: #ff4d4d;
             color: white;
@@ -89,9 +99,10 @@
             border-radius: 5px;
             cursor: pointer;
         }
-        .close-modal:hover {
-            background-color: #cc0000;
-        }
+
+            .close-modal:hover {
+                background-color: #cc0000;
+            }
 
         /* Estilo de fundo para o efeito de overlay */
         .modal-overlay {
@@ -105,6 +116,7 @@
             z-index: 999;
             display: none; /* Inicialmente oculto */
         }
+
         /* Estilo do modal de conexão */
         .modal-conexao {
             display: none;
@@ -119,10 +131,10 @@
             z-index: 1000;
         }
 
-        /* Tornar o modal visível */
-        .modal-conexao.show {
-            display: block;
-        }
+            /* Tornar o modal visível */
+            .modal-conexao.show {
+                display: block;
+            }
 
         /* Cabeçalho do modal */
         .modal-conexao-header {
@@ -135,6 +147,7 @@
         .modal-conexao-body {
             margin-bottom: 20px;
         }
+
         .modal-body .form-group {
             margin-bottom: 15px;
         }
@@ -153,9 +166,9 @@
             cursor: pointer;
         }
 
-        .close-conexao-modal:hover {
-            background-color: #cc0000;
-        }
+            .close-conexao-modal:hover {
+                background-color: #cc0000;
+            }
 
         /* Estilo de fundo para o efeito de overlay */
         .modal-overlay {
@@ -173,6 +186,7 @@
             .modal {
                 width: 650px;
             }
+
             .modal-conexao {
                 width: 650px;
             }
@@ -182,6 +196,7 @@
             .modal {
                 width: 550px;
             }
+
             .modal-conexao {
                 width: 550px;
             }
@@ -191,6 +206,7 @@
             .modal {
                 width: calc(50% - 20px);
             }
+
             .modal-conexao {
                 width: calc(50% - 20px);
             }
@@ -200,345 +216,354 @@
             .modal {
                 width: 80%;
             }
+
             .modal-conexao {
                 width: 80%;
             }
         }
-
     </style>
 </head>
 <body>
+    <!-- Exibe select da Empresa e Botão de Fechar o mapa-->
+    <div style="display: flex; align-items: center; gap: 10px;">
+        <select id="empresa-selector">
+            <option value="">Selecione a Empresa</option>
+            {% for empresa in empresas %}
+            <option value="{{ empresa.id }}">{{ empresa.nome }}</option>
+            {% endfor %}
+        </select>
 
-<div style="display: flex; align-items: center; gap: 10px;">
-    <select id="empresa-selector">
-        <option value="">Selecione a Empresa</option>
-        {% for empresa in empresas %}
-        <option value="{{ empresa.id }}">{{ empresa.nome }}</option>
-        {% endfor %}
-    </select>
-
-    <!-- Botão de voltar para a página inicial -->
-    <a href="/admin/" class="btn btn-primary">Fechar Mapa</a>
-</div>
-
-
-<div id="mapa">
-    <!-- <img src="/IDX.png" alt="Fundo do Mapa" style="width: 100%; height: 100%; object-fit: cover;"> -->
-</div>
-
-<!-- Modal de Detalhes do Equipamento -->
-<div class="modal-overlay" id="modalOverlay"></div>
-<div class="modal" id="modalEquipamento">
-    <div class="modal-header">
-        Equipamento {nome}
-    </div>
-    <div class="modal-body">
-        <form>
-            <div class="form-group">
-                <label for="input-ip">IP</label>
-                <input type="text" class="form-control" id="input-ip" readonly>
-            </div>
-            <div class="form-group">
-                <label for="input-usuario">Usuário</label>
-                <input type="text" class="form-control" id="input-usuario" readonly>
-            </div>
-            <div class="form-group">
-                <label for="input-senha">Senha</label>
-                <input type="text" class="form-control" id="input-senha" readonly>
-            </div>
-            <div class="form-group">
-                <label for="input-porta">Porta</label>
-                <input type="text" class="form-control" id="input-porta" readonly>
-            </div>
-            <div class="form-group">
-                <label for="input-protocolo">Protocolo</label>
-                <input type="text" class="form-control" id="input-protocolo" readonly>
-            </div>
-        </form>
-    </div>
-    <div class="modal-footer">
-        <button type="button" class="close-modal" id="closeModal">Fechar</button>
-    </div>
-</div>
-
-<!-- Modal de Detalhes de Conexão -->
-<div class="modal-overlay" id="modalOverlayConexao"></div>
-<div class="modal-conexao" id="modalConexao">
-    <div class="modal-conexao-header">
-        Conexão {tipo}
+        <!-- Botão de voltar para a página inicial -->
+        <a href="/admin/" class="btn btn-primary">Fechar Mapa</a>
     </div>
 
-    <div class="modal-conexao-body">
-        <p><strong>Tipo: </strong> {tipo} </p>
-        <p><strong>Velocidade: </strong > {velocidade}</p>
-        <p><strong>Fonte: </strong> {fonte}</p>
-        <p><strong>Destino: </strong> {destino}</p>
+    <!-- Renderiza o mapa na tela-->
+    <div id="mapa">
+        <!-- <img src="/IDX.png" alt="Fundo do Mapa" style="width: 100%; height: 100%; object-fit: cover;"> -->
     </div>
 
-    <div class="modal-conexao-footer">
-        <button type="button" class="close-conexao-modal" id="closeConexaoModal">Fechar</button>
+    <!-- Modal de Detalhes do Equipamento -->
+    <div class="modal-overlay" id="modalOverlay"></div>
+    <div class="modal" id="modalEquipamento">
+        <div class="modal-header">
+            Equipamento {nome}
+        </div>
+        <div class="modal-body">
+            <form>
+                <div class="form-group">
+                    <label for="input-ip">IP</label>
+                    <input type="text" class="form-control" id="input-ip" readonly>
+                </div>
+                <div class="form-group">
+                    <label for="input-usuario">Usuário</label>
+                    <input type="text" class="form-control" id="input-usuario" readonly>
+                </div>
+                <div class="form-group">
+                    <label for="input-senha">Senha</label>
+                    <input type="text" class="form-control" id="input-senha" readonly>
+                </div>
+                <div class="form-group">
+                    <label for="input-porta">Porta</label>
+                    <input type="text" class="form-control" id="input-porta" readonly>
+                </div>
+                <div class="form-group">
+                    <label for="input-protocolo">Protocolo</label>
+                    <input type="text" class="form-control" id="input-protocolo" readonly>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="close-modal" id="closeModal">Fechar</button>
+        </div>
     </div>
-</div>
 
-<script src="https://d3js.org/d3.v7.min.js"></script>
+    <!-- Modal de Detalhes de Conexão -->
+    <div class="modal-overlay" id="modalOverlayConexao"></div>
+    <div class="modal-conexao" id="modalConexao">
+        <div class="modal-conexao-header">
+            Conexão {tipo}
+        </div>
 
-<script>
-    const userIsAdmin = {{ userIsAdmin|yesno:"true,false" }};
-    console.log(userIsAdmin);  // Verifique se está correto
+        <div class="modal-conexao-body">
+            <p><strong>Tipo: </strong> {tipo} </p>
+            <p><strong>Velocidade: </strong> {velocidade}</p>
+            <p><strong>Fonte: </strong> {fonte}</p>
+            <p><strong>Destino: </strong> {destino}</p>
+        </div>
 
-    const nodes = {{ nodes|safe }};
-    const links = {{ links|safe }};
-    const mapa = d3.select('#mapa');
+        <div class="modal-conexao-footer">
+            <button type="button" class="close-conexao-modal" id="closeConexaoModal">Fechar</button>
+        </div>
+    </div>
 
-    function carregarPosicoes() {
-        const posicoesSalvas = localStorage.getItem('posicoesEquipamentos');
-        if (posicoesSalvas) {
-            const posicoes = JSON.parse(posicoesSalvas);
-            nodes.forEach((node) => {
-                const posicaoSalva = posicoes.find(p => p.id === node.id);
-                if (posicaoSalva) {
-                    node.x = posicaoSalva.x;
-                    node.y = posicaoSalva.y;
-                }
-            });
+
+
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+
+    <script>
+        const userIsAdmin = {{ userIsAdmin|yesno:"true,false" }};
+        console.log(userIsAdmin);  // Verifique se está correto
+
+        const nodes = {{ nodes|safe }};
+        const links = {{ links|safe }};
+        const mapa = d3.select('#mapa');
+
+        // Função para carregar as posições salvas
+        function carregarPosicoes() {
+            const posicoesSalvas = localStorage.getItem('posicoesEquipamentos');
+            if (posicoesSalvas) {
+                const posicoes = JSON.parse(posicoesSalvas);
+                nodes.forEach((node) => {
+                    const posicaoSalva = posicoes.find(p => p.id === node.id);
+                    if (posicaoSalva) {
+                        node.x = posicaoSalva.x;
+                        node.y = posicaoSalva.y;
+                    }
+                });
+            }
         }
-    }
 
-    function salvarPosicoes() {
-        const posicoes = nodes.map(node => ({
-            id: node.id,
-            x: node.x,
-            y: node.y
-        }));
-        localStorage.setItem('posicoesEquipamentos', JSON.stringify(posicoes));
-    }
+        // Função para salvar as posições
+        function salvarPosicoes() {
+            const posicoes = nodes.map(node => ({
+                id: node.id,
+                x: node.x,
+                y: node.y
+            }));
+            localStorage.setItem('posicoesEquipamentos', JSON.stringify(posicoes));
+        }
 
-    function renderMapa() {
-        carregarPosicoes();
 
-        const empresaId = document.getElementById('empresa-selector').value;
 
-        // Filtrar os equipamentos pela empresa selecionada
-        const equipamentosFiltrados = empresaId
-            ? nodes.filter(equipamento => equipamento.empresa === parseInt(empresaId))
-            : nodes;
 
-        mapa.selectAll('*').remove();
 
-        const width = mapa.node().offsetWidth || 800;
-        const height = mapa.node().offsetHeight || 600;
 
-        const svg = mapa.append('svg')
-            .attr('width', width)
-            .attr('height', height);
 
-        const g = svg.append('g');
 
-        const zoom = d3.zoom()
-            .scaleExtent([0.5, 3])
-            .on('zoom', (event) => {
-                g.attr('transform', event.transform);
-            });
 
-        svg.call(zoom);
 
-        const drag = d3.drag()
-            .on('start', dragStarted)
-            .on('drag', dragged)
-            .on('end', dragEnded);
 
-        // Renderizar conexões
-        const filteredConexoes = links.filter(conexao =>
-            equipamentosFiltrados.some(eq => eq.id === conexao.source) &&
-            equipamentosFiltrados.some(eq => eq.id === conexao.target)
-        );
 
-        // Renderizar conexões
-        const linhasConexao = g.selectAll('.linha-conexao')
-            .data(filteredConexoes)
-            .enter()
-            .append('line')
-            .attr('class', 'linha-conexao')
-            .attr('x1', d => nodes.find(node => node.id === d.source).x)
-            .attr('y1', d => nodes.find(node => node.id === d.source).y)
-            .attr('x2', d => nodes.find(node => node.id === d.target).x)
-            .attr('y2', d => nodes.find(node => node.id === d.target).y)
-            .attr('stroke', d => {
-                switch(d.tipo) {
-                    case 'Fibra': return 'blue';
-                    case 'Eletrico': return 'green';
-                    case 'Radio': return 'orange';
-                    default: return 'gray';
-                }
-            })
-            //.attr('stroke-width', d => d.speed === '10G' ? 4 : 2)
-            .attr('stroke-width', d => {
-                const widthMap = {
-                    '10G': 3,
-                    '20G': 4,
-                    '40G': 5,
-                    '100G': 6
-                };
-                return widthMap[d.speed] || 2; // Retorna 2 como valor padrão se a velocidade não estiver no mapa
-            })
 
-            // Evento de clique para mostrar detalhes da conexão
-            .on('click', function(event, d) {
-                // if (userIsAdmin) {
+        function renderMapa() {
+            carregarPosicoes();
+
+            const empresaId = document.getElementById('empresa-selector').value;
+
+            // Filtrar os equipamentos pela empresa selecionada
+            const equipamentosFiltrados = empresaId
+                ? nodes.filter(equipamento => equipamento.empresa === parseInt(empresaId))
+                : nodes;
+
+            mapa.selectAll('*').remove();  // Limpar mapa antes de renderizar
+
+            const width = mapa.node().offsetWidth || 800;
+            const height = mapa.node().offsetHeight || 600;
+
+            const svg = mapa.append('svg')
+                .attr('width', width)
+                .attr('height', height);
+
+            const g = svg.append('g');
+
+            const zoom = d3.zoom()
+                .scaleExtent([0.5, 3])
+                .on('zoom', (event) => {
+                    g.attr('transform', event.transform);
+                });
+
+            svg.call(zoom);
+
+            const drag = d3.drag()
+                .on('start', dragStarted)
+                .on('drag', dragged)
+                .on('end', dragEnded);
+
+            // Armazenar as conexões já criadas
+            let conexoesCriadas = [];
+
+            // Função para calcular uma curva entre os pontos de conexão (sem mexer nas pontas)
+            function calcularCurva(x1, y1, x2, y2, index) {
+                const offset = index * 5;  // Cada conexão terá um deslocamento diferente para a curvatura
+                const controlX = (x1 + x2) / 2;
+                const controlY = (y1 + y2) / 2 - offset;
+                return [[x1, y1], [controlX, controlY], [x2, y2]];
+            }
+
+            // Renderizar as linhas de conexão com curvaturas
+            const linhasConexao = g.selectAll('.linha-conexao')
+                .data(links)
+                .enter()
+                .filter(d => {
+                    const sourceId = d.source;
+                    const targetId = d.target;
+                    const portaOrigem = d.porta_origem;
+                    const portaDestino = d.porta_destino;
+
+                    // Verifica se essa conexão já foi criada (evita adicionar linha duplicada)
+                    const conexaoExistente = conexoesCriadas.some(conexao =>
+                        (conexao.source === sourceId && conexao.target === targetId && conexao.portaOrigem === portaOrigem && conexao.portaDestino === portaDestino) ||
+                        (conexao.source === targetId && conexao.target === sourceId && conexao.portaOrigem === portaDestino && conexao.portaDestino === portaOrigem)
+                    );
+
+                    if (!conexaoExistente) {
+                        // Adiciona a conexão ao array de conexões já criadas
+                        conexoesCriadas.push({ source: sourceId, target: targetId, portaOrigem, portaDestino });
+                    }
+
+                    return !conexaoExistente;  // Retorna true para desenhar a linha apenas se a conexão ainda não foi criada
+                })
+                .append('path')
+                .attr('class', 'linha-conexao')
+                .attr('d', function (d, i) {
+                    const x1 = nodes.find(node => node.id === d.source).x;
+                    const y1 = nodes.find(node => node.id === d.source).y;
+                    const x2 = nodes.find(node => node.id === d.target).x;
+                    const y2 = nodes.find(node => node.id === d.target).y;
+
+                    // Calcular a curva com um deslocamento único para cada linha
+                    const curva = calcularCurva(x1, y1, x2, y2, i);
+
+                    return d3.line()(curva);  // Gerar a linha curvada
+                })
+                .attr('stroke', d => {
+                    switch (d.tipo) {
+                        case 'Fibra': return 'blue';
+                        case 'Eletrico': return 'green';
+                        case 'Radio': return 'orange';
+                        default: return 'gray';
+                    }
+                })
+                .attr('stroke-width', d => {
+                    const widthMap = {
+                        '10G': 3,
+                        '20G': 4,
+                        '40G': 5,
+                        '100G': 6
+                    };
+                    return widthMap[d.speed] || 2;
+                })
+                .attr('fill', 'none')
+                .on('click', function (event, d) {
                     mostrarInformacoesConexao(d);
-                // } else {
-                //    alert("Você não tem permissão para visualizar essas informações.");
-                // }
-        });
+                });
 
-        // Função para mostrar informações da conexão no modal
-        function mostrarInformacoesConexao(d) {
-            // Encontrar os equipamentos de origem e destino
-            const equipamentoFonte = nodes.find(node => node.id === d.source);
-            const equipamentoDestino = nodes.find(node => node.id === d.target);
+            // Função para mostrar informações da conexão
+            function mostrarInformacoesConexao(d) {
+                const equipamentoFonte = nodes.find(node => node.id === d.source);
+                const equipamentoDestino = nodes.find(node => node.id === d.target);
 
-            // Nome das portas (vindo diretamente de d.nome e d.conexao.nome)
-            const portaFonte = d.porta_origem || 'N/A';  // Nome da porta de origem
-            const portaDestino = d.porta_destino || 'N/A';  // Nome da porta de destino
-            // Encontra Observação
-            const portaObs = d.Obs || 'N/A';  // Nome da porta de destino
+                const portaFonte = d.porta_origem || 'N/A';
+                const portaDestino = d.porta_destino || 'N/A';
+                const portaObs = d.Obs || 'N/A';
 
-            // Encontrar as portas associadas aos equipamentos (supondo que "d.source" e "d.target" contenham IDs das portas)
-            // const portaFonte = d.source;  // Aqui você pode ajustar para obter a porta correta associada
-            // const portaDestino = d.target;  // Ajuste conforme necessário
+                document.querySelector('.modal-conexao-header').textContent = `Conexão ${d.tipo}`;
+                document.querySelector('.modal-conexao-body').innerHTML = `
+            <p><strong>Velocidade:</strong> ${d.speed}</p>
+            <p><strong>Fonte:</strong> ${equipamentoFonte.nome} (${portaFonte})</p>
+            <p><strong>Destino:</strong> ${equipamentoDestino.nome} (${portaDestino})</p>
+            <p><strong>Obs.:</strong> ${d.Obs}</p>
+        `;
 
-            // Definindo o título e o conteúdo do modal
-            document.querySelector('.modal-conexao-header').textContent = `Conexão ${d.tipo}`;
-            document.querySelector('.modal-conexao-body').innerHTML = `
-                <p><strong>Velocidade:</strong> ${d.speed}</p>
-                <p><strong>Fonte:</strong> ${equipamentoFonte.nome} (${portaFonte})</p>
-                <p><strong>Destino:</strong> ${equipamentoDestino.nome} (${portaDestino})</p>
-                <p><strong>Obs.:</strong> ${d.Obs} </p>
-            `;
+                document.getElementById('modalConexao').classList.add('show');
+                document.getElementById('modalOverlayConexao').style.display = 'block';
+            }
 
-            // Exibe o modal e a sobreposição de fundo
-            document.getElementById('modalConexao').classList.add('show');
-            document.getElementById('modalOverlayConexao').style.display = 'block';
-        }
-
-        // Fechar o modal de conexão
-        document.getElementById('closeConexaoModal').addEventListener('click', () => {
-            document.getElementById('modalConexao').classList.remove('show');
-            document.getElementById('modalOverlayConexao').style.display = 'none';
-        });
-
-
-        // Renderizar equipamentos
-        const equipamentosG = g.selectAll('.equipamento')
-            .data(equipamentosFiltrados)
-            .enter().append('g')
-            .attr('class', 'equipamento')
-            .attr('transform', d => `translate(${d.x},${d.y})`)
-            .call(drag)
-            .on('click', function(event, d) {
-                if (userIsAdmin) {
-                    showModal(event, d); // Mostra o modal apenas para usuários admin
-                } else {
-                    alert("Você não tem permissão para visualizar essas informações.");
-                }
+            // Fechar o modal de conexão
+            document.getElementById('closeConexaoModal').addEventListener('click', () => {
+                document.getElementById('modalConexao').classList.remove('show');
+                document.getElementById('modalOverlayConexao').style.display = 'none';
             });
 
-        equipamentosG.append('circle')
-            .attr('r', 20)
-            .attr('fill', d => d.status === 'Ativo' ? 'green' : 'red');
+            // Renderizar os equipamentos
+            const equipamentosG = g.selectAll('.equipamento')
+                .data(equipamentosFiltrados)
+                .enter().append('g')
+                .attr('class', 'equipamento')
+                .attr('transform', d => `translate(${d.x},${d.y})`)
+                .call(drag)
+                .on('click', function (event, d) {
+                    if (userIsAdmin) {
+                        showModal(event, d);
+                    } else {
+                        alert("Você não tem permissão para visualizar essas informações.");
+                    }
+                });
 
-        equipamentosG.append('text')
-            .text(d => d.nome)
-            .attr('x', 25)
-            .attr('y', 0)
-            .style('font-size', '12px')
-            .style('pointer-events', 'none');
+            equipamentosG.append('circle')
+                .attr('r', 20)
+                .attr('fill', d => d.status === 'Ativo' ? 'green' : 'red');
 
-        // Adicionar texto para o IP abaixo do nome
-        equipamentosG.append('text')
-            .attr('x', 25)
-            .attr('y', 13) // Distância do IP
-            .style('font-size', '12px')
-            .text(d => d.ip);
+            equipamentosG.append('text')
+                .text(d => d.nome)
+                .attr('x', 25)
+                .attr('y', 0)
+                .style('font-size', '12px')
+                .style('pointer-events', 'none');
 
-        // Função de arrasto
-        function dragStarted(event, d) {
-            d3.select(this).raise().classed('active', true);
-        }
+            // Função de arrasto
+            function dragStarted(event, d) {
+                d3.select(this).raise().classed('active', true);
+            }
 
-        function dragged(event, d) {
-            d.x = event.x;
-            d.y = event.y;
-            d3.select(this).attr('transform', `translate(${d.x},${d.y})`);
-            g.selectAll('.linha-conexao')
-                .filter(l => l.source === d.id || l.target === d.id)
-                .attr('x1', l => nodes.find(node => node.id === l.source).x)
-                .attr('y1', l => nodes.find(node => node.id === l.source).y)
-                .attr('x2', l => nodes.find(node => node.id === l.target).x)
-                .attr('y2', l => nodes.find(node => node.id === l.target).y);
-        }
+            function dragged(event, d) {
+                d.x = event.x;
+                d.y = event.y;
+                d3.select(this).attr('transform', `translate(${d.x},${d.y})`);
+                g.selectAll('.linha-conexao')
+                    .filter(l => l.source === d.id || l.target === d.id)
+                    .attr('d', function (d) {
+                        const x1 = nodes.find(node => node.id === d.source).x;
+                        const y1 = nodes.find(node => node.id === d.source).y;
+                        const x2 = nodes.find(node => node.id === d.target).x;
+                        const y2 = nodes.find(node => node.id === d.target).y;
 
-        function dragEnded(event, d) {
-            d3.select(this).classed('active', false);
-            salvarPosicoes();
-        }
+                        const curva = calcularCurva(x1, y1, x2, y2, 0);  // Atualiza a curva ao arrastar
 
-        function showModal(event, d) {
-            document.querySelector('.modal-header').textContent = `Equipamento ${d.nome}`;
-            document.getElementById('input-ip').value = d.ip || '';
-            document.getElementById('input-usuario').value = d.usuario || '';
-            document.getElementById('input-senha').value = d.senha || '';
-            document.getElementById('input-porta').value = d.porta || '';
-            document.getElementById('input-protocolo').value = d.protocolo || '';
+                        return d3.line()(curva);
+                    });
+            }
 
-            document.getElementById('modalEquipamento').classList.add('show');
-            document.getElementById('modalOverlay').style.display = 'block';
-        }
+            function dragEnded(event, d) {
+                d3.select(this).classed('active', false);
+                salvarPosicoes();
+            }
 
-        // Fechar modal
-        document.getElementById('closeModal').addEventListener('click', () => {
-            document.getElementById('modalEquipamento').classList.remove('show');
-            document.getElementById('modalOverlay').style.display = 'none';
-        });
+            // Função de modal
+            function showModal(event, d) {
+                document.querySelector('.modal-header').textContent = `Equipamento ${d.nome}`;
+                document.getElementById('input-ip').value = d.ip || '';
+                document.getElementById('input-usuario').value = d.usuario || '';
+                document.getElementById('input-senha').value = d.senha || '';
+                document.getElementById('input-porta').value = d.porta || '';
+                document.getElementById('input-protocolo').value = d.protocolo || '';
 
-        // Renderiza as conexões
-        svg.selectAll('.linha-conexao')
-            .data(filteredConexoes)
-            .enter()
-            .append('line')
-            .attr('x1', d => nodes.find(node => node.id === d.source).x)
-            .attr('y1', d => nodes.find(node => node.id === d.source).y)
-            .attr('x2', d => nodes.find(node => node.id === d.target).x)
-            .attr('y2', d => nodes.find(node => node.id === d.target).y)
-            .attr('stroke', d => getCorConexao(d.tipo))
-            //.attr('stroke-width', d => d.speed === '10G' ? 4 : 2);
-            .attr('stroke-width', d => {
-                const widthMap = {
-                    '10G': 3,
-                    '20G': 4,
-                    '40G': 5,
-                    '100G': 6
-                };
-                return widthMap[d.speed] || 2; // Retorna 2 como valor padrão se a velocidade não estiver no mapa
+                document.getElementById('modalEquipamento').classList.add('show');
+                document.getElementById('modalOverlay').style.display = 'block';
+            }
+
+            // Fechar modal
+            document.getElementById('closeModal').addEventListener('click', () => {
+                document.getElementById('modalEquipamento').classList.remove('show');
+                document.getElementById('modalOverlay').style.display = 'none';
             });
-    }
-
-    //renderMapa();
-
-    // Escutando a mudança na seleção da empresa para renderizar novamente o mapa
-    document.getElementById('empresa-selector').addEventListener('change', renderMapa);
+        }
 
 
-    // Chama a função renderMapa  a cada 30 segundos
-    setInterval(() => {
-       document.getElementById('empresa-selector').dispatchEvent(new Event('change', renderMapa));
+        // Executa a função quando a empresa é alterada
+        document.getElementById('empresa-selector').addEventListener('change', renderMapa);
 
-    }, 30000); // 30000 milissegundos = 30 segundos
+        setInterval(() => {
+            document.getElementById('empresa-selector').dispatchEvent(new Event('change', renderMapa));
+        }, 30000); // 30000 milissegundos = 30 segundos
 
 
-</script>
+
+
+    </script>
+
 
 
 </body>
-</html>
+
 {% endblock %}

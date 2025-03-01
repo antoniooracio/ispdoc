@@ -175,6 +175,13 @@ class Porta(models.Model):
                 self.conexao.conexao = self
                 self.conexao.save(update_fields=['conexao'])  # Evita chamar save() completamente e recursivamente
 
+            # Atualiza o tipo e speed da porta conectada
+            if self.speed != self.conexao.speed or self.tipo != self.conexao.tipo:
+                self.conexao.speed = self.speed
+                self.conexao.tipo = self.tipo
+                self.conexao.save(update_fields=['speed', 'tipo'])
+
+
         # Se a conexão foi removida, limpa a conexão inversa
         if conexao_anterior and conexao_anterior != self.conexao:
             conexao_anterior.conexao = None
