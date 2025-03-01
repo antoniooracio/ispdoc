@@ -355,6 +355,15 @@
                 ? nodes.filter(equipamento => equipamento.empresa === parseInt(empresaId))
                 : nodes;
 
+            // Filtrar as conexões pela empresa selecionada
+            const conexoesFiltradas = empresaId
+                ? links.filter(link => {
+                    const sourceEquipamento = nodes.find(node => node.id === link.source);
+                    const targetEquipamento = nodes.find(node => node.id === link.target);
+                    return (sourceEquipamento.empresa === parseInt(empresaId) && targetEquipamento.empresa === parseInt(empresaId));
+                })
+                : links;
+
             mapa.selectAll('*').remove();  // Limpar mapa antes de renderizar
 
             const width = mapa.node().offsetWidth || 800;
@@ -382,7 +391,7 @@
             // Armazenar as conexões já criadas
             let conexoesCriadas = [];
 
-            // Função para calcular uma curva entre os pontos de conexão (sem mexer nas pontas)
+            // Função para calcular uma curva entre os pontos de conexão
             function calcularCurva(x1, y1, x2, y2, index) {
                 const offset = index * 5;  // Cada conexão terá um deslocamento diferente para a curvatura
                 const controlX = (x1 + x2) / 2;
@@ -390,9 +399,9 @@
                 return [[x1, y1], [controlX, controlY], [x2, y2]];
             }
 
-            // Renderizar as linhas de conexão com curvaturas
+            // Renderizar as linhas de conexão com curvaturas, agora filtradas pela empresa
             const linhasConexao = g.selectAll('.linha-conexao')
-                .data(links)
+                .data(conexoesFiltradas)
                 .enter()
                 .filter(d => {
                     const sourceId = d.source;
@@ -447,33 +456,6 @@
                 .on('click', function (event, d) {
                     mostrarInformacoesConexao(d);
                 });
-
-            // Função para mostrar informações da conexão
-            function mostrarInformacoesConexao(d) {
-                const equipamentoFonte = nodes.find(node => node.id === d.source);
-                const equipamentoDestino = nodes.find(node => node.id === d.target);
-
-                const portaFonte = d.porta_origem || 'N/A';
-                const portaDestino = d.porta_destino || 'N/A';
-                const portaObs = d.Obs || 'N/A';
-
-                document.querySelector('.modal-conexao-header').textContent = `Conexão ${d.tipo}`;
-                document.querySelector('.modal-conexao-body').innerHTML = `
-            <p><strong>Velocidade:</strong> ${d.speed}</p>
-            <p><strong>Fonte:</strong> ${equipamentoFonte.nome} (${portaFonte})</p>
-            <p><strong>Destino:</strong> ${equipamentoDestino.nome} (${portaDestino})</p>
-            <p><strong>Obs.:</strong> ${d.Obs}</p>
-        `;
-
-                document.getElementById('modalConexao').classList.add('show');
-                document.getElementById('modalOverlayConexao').style.display = 'block';
-            }
-
-            // Fechar o modal de conexão
-            document.getElementById('closeConexaoModal').addEventListener('click', () => {
-                document.getElementById('modalConexao').classList.remove('show');
-                document.getElementById('modalOverlayConexao').style.display = 'none';
-            });
 
             // Renderizar os equipamentos
             const equipamentosG = g.selectAll('.equipamento')
@@ -549,13 +531,13 @@
             });
         }
 
-
         // Executa a função quando a empresa é alterada
         document.getElementById('empresa-selector').addEventListener('change', renderMapa);
 
         setInterval(() => {
             document.getElementById('empresa-selector').dispatchEvent(new Event('change', renderMapa));
         }, 30000); // 30000 milissegundos = 30 segundos
+
 
 
 
