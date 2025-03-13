@@ -627,7 +627,7 @@ class PortaAdmin(admin.ModelAdmin):
     form = PortaForm
     list_display = ('nome', 'equipamento', 'conexao', 'speed', 'tipo')
     search_fields = ('nome', 'equipamento__nome', 'conexao__nome')
-    list_filter = (EmpresaUsuarioFilter, EquipamentoEmpresaFilter, 'speed', 'tipo')
+    list_filter = (EmpresaUsuarioFilter, EquipamentoEmpresaFilter, 'speed', 'tipo', )
 
     change_list_template = "admin/porta_changelist.html"  # Personalizamos o template
 
@@ -702,6 +702,13 @@ class PortaAdmin(admin.ModelAdmin):
     def get_fields(self, request, obj=None):
         """Reordena os campos para exibir 'empresa' primeiro."""
         fields = super().get_fields(request, obj)
+
+        if 'equipamento_conexao' in fields and 'conexao' in fields:
+            # Move 'equipamento_conexao' para antes de 'conexao'
+            fields.remove('equipamento_conexao')
+            conexao_index = fields.index('conexao')
+            fields.insert(conexao_index, 'equipamento_conexao')  # Inserir 'equipamento_conexao' antes de 'conexao'
+
         if 'empresa' in fields:
             fields.remove('empresa')
             fields.insert(0, 'empresa')  # Coloca 'empresa' como o primeiro campo
@@ -719,6 +726,16 @@ class PortaAdmin(admin.ModelAdmin):
 
         return CustomPortaForm
 
+    def get_search_results(self, request, queryset, search_term):
+        """Sobrescreve para incluir o campo de 'equipamento_conexao' na busca."""
+        if search_term:
+            queryset = queryset.filter(
+                Q(nome__icontains=search_term) |
+                Q(equipamento__nome__icontains=search_term) |
+                Q(conexao__nome__icontains=search_term) |
+                Q(equipamento_conexao__nome__icontains=search_term)  # Filtro pelo novo campo
+            )
+        return queryset, False
 
 @admin.register(Empresa)
 class EmpresaAdmin(admin.ModelAdmin):

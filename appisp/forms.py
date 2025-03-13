@@ -96,6 +96,13 @@ class PortaForm(forms.ModelForm):
         label="Empresa",
     )
 
+    # Novo campo para "Equipamento de Conexão"
+    equipamento_conexao = forms.ModelChoiceField(
+        queryset=Equipamento.objects.none(),  # Ajuste conforme seu modelo de Equipamento
+        required=False,  # Não é necessário para salvar
+        label="Equipamento de Conexão",
+    )
+
     class Meta:
         model = Porta
         fields = '__all__'
@@ -106,7 +113,7 @@ class PortaForm(forms.ModelForm):
             ),
             'conexao': autocomplete.ModelSelect2(
                 url='porta-autocomplete',
-                forward=['empresa'],
+                forward=['equipamento_conexao'],  # Filtro agora será baseado no "Equipamento de Conexão"
             ),
         }
 
@@ -121,6 +128,15 @@ class PortaForm(forms.ModelForm):
         if empresa_selecionada:
             self.fields['empresa'].queryset = Empresa.objects.filter(id=empresa_selecionada).order_by('nome')
             self.fields['empresa'].initial = empresa_selecionada
+
+            # Filtra os equipamentos de conexão com base na empresa selecionada
+            self.fields['equipamento_conexao'].queryset = Equipamento.objects.filter(empresa=empresa_selecionada)
+
+        # Corrigindo o filtro do campo 'conexao' para garantir que ele está pegando as portas do 'equipamento_conexao'
+        equipamento_conexao = self.initial.get('equipamento') or self.data.get('equipamento')
+        if equipamento_conexao:
+            self.fields['conexao'].queryset = Porta.objects.filter(equipamento=equipamento_conexao)
+
 
     def clean(self):
         cleaned_data = super().clean()

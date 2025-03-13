@@ -519,6 +519,11 @@ class PortaAutocomplete(autocomplete.Select2QuerySetView):
         if empresa:
             qs = qs.filter(equipamento__empresa=empresa)
 
+        # Filtrar também pelo "Equipamento de Conexão"
+        equipamento_conexao = self.forwarded.get('equipamento_conexao', None)
+        if equipamento_conexao:
+            qs = qs.filter(equipamento=equipamento_conexao)
+
         return qs
 
 
