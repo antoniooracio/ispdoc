@@ -133,19 +133,22 @@ class PortaForm(forms.ModelForm):
             self.fields['equipamento_conexao'].queryset = Equipamento.objects.filter(empresa=empresa_selecionada)
 
         # Corrigindo o filtro do campo 'conexao' para garantir que ele está pegando as portas do 'equipamento_conexao'
-        equipamento_conexao = self.initial.get('equipamento') or self.data.get('equipamento')
-        if equipamento_conexao:
-            self.fields['conexao'].queryset = Porta.objects.filter(equipamento=equipamento_conexao)
-
+        #equipamento_conexao = self.initial.get('equipamento') or self.data.get('equipamento')
+        #if equipamento_conexao:
+        #    self.fields['conexao'].queryset = Porta.objects.filter(equipamento=equipamento_conexao)
 
     def clean(self):
         cleaned_data = super().clean()
         conexao = cleaned_data.get('conexao')
+        equipamento = cleaned_data.get('equipamento')
+
+        if conexao and equipamento and conexao.equipamento == equipamento:
+            raise forms.ValidationError("A porta de conexão não pode pertencer ao mesmo equipamento.")
 
         if conexao and conexao.pk is None:
             raise forms.ValidationError("A porta de conexão precisa estar salva antes de ser usada.")
-        return cleaned_data
 
+        return cleaned_data
 
 class RackForm(forms.ModelForm):
     class Meta:
