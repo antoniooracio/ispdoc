@@ -404,8 +404,8 @@ class EnderecoIP(models.Model):
             raise ValidationError(f"O IP {self.ip} já está cadastrado neste bloco.")
 
         # 3️⃣ Validação: Equipamento já tem um IP deste bloco
-        if EnderecoIP.objects.filter(bloco=self.bloco, equipamento=self.equipamento).exclude(id=self.id).exists():
-            raise ValidationError(f"O equipamento '{self.equipamento}' já possui um IP deste bloco.")
+        #if EnderecoIP.objects.filter(bloco=self.bloco, equipamento=self.equipamento).exclude(id=self.id).exists():
+        #    raise ValidationError(f"O equipamento '{self.equipamento}' já possui um IP deste bloco.")
 
         # 4️⃣ Validação: IP de rede e broadcast
         if rede.version == 4 and rede.prefixlen <= 30:  # IPv4
