@@ -440,7 +440,13 @@
                         tabela.appendChild(tabelaHeader);
 
                         var tabelaBody = document.createElement('tbody');
-                        subBloco.ips.forEach(function(ip) {
+
+                        // Ordena os IPs em ordem crescente
+                        dados.ips.sort((a, b) => {
+                            return ipParaNumero(a.ip) - ipParaNumero(b.ip);
+                        });
+
+                        dados.ips.forEach(function(ip) {
                             var ipRow = document.createElement('tr');
                             ipRow.innerHTML = `
                                 <td>${ip.ip}</td>
@@ -452,6 +458,12 @@
                             `;
                             tabelaBody.appendChild(ipRow);
                         });
+
+                        // Função para converter IP para número para facilitar a ordenação
+                        function ipParaNumero(ip) {
+                            return ip.split('.').reduce((acc, octeto) => (acc << 8) + parseInt(octeto, 10), 0);
+                        }
+
                         tabela.appendChild(tabelaBody);
                         subBlocoNode.appendChild(tabela);
                     } else {
