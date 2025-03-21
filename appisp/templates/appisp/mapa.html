@@ -333,18 +333,6 @@
             localStorage.setItem('posicoesEquipamentos', JSON.stringify(posicoes));
         }
 
-
-
-
-
-
-
-
-
-
-
-
-
         function renderMapa() {
             carregarPosicoes();
 
@@ -508,9 +496,40 @@
                     }
                 });
 
-            equipamentosG.append('circle')
-                .attr('r', 20)
-                .attr('fill', d => d.status === 'Ativo' ? 'green' : 'red');
+                // rendereiza os icones no mapa
+                equipamentosG.each(function(d) {
+                    const grupo = d3.select(this);
+
+                    if (d.tipo === "Transporte") {
+                        // Ícone de nuvem
+                        grupo.append('path')
+                            .attr('d', 'M20 10 A10 10 0 0 1 40 10 A10 10 0 0 1 60 10 A10 10 0 0 1 50 30 A10 10 0 0 1 30 30 A10 10 0 0 1 20 10 Z')
+                            .attr('fill', d.status === 'Ativo' ? 'green' : 'red')
+                            .attr('transform', 'scale(0.9) translate(-30, -20)');
+
+                    } else if (d.tipo === "Switch") {
+                        // Quadrado
+                        grupo.append('rect')
+                            .attr('width', 30)
+                            .attr('height', 30)
+                            .attr('x', -15)
+                            .attr('y', -15)
+                            .attr('fill', d.status === 'Ativo' ? 'blue' : 'gray');
+
+                    } else if (d.tipo === "Passivo") {
+                        // Triângulo
+                        grupo.append('path')
+                            .attr('d', 'M -15,15 L 15,15 L 0,-15 Z') // Desenha um triângulo
+                            .attr('fill', d.status === 'Ativo' ? 'orange' : 'brown');
+
+                    } else {
+                        // Círculo para os demais tipos
+                        grupo.append('circle')
+                            .attr('r', 20)
+                            .attr('fill', d.status === 'Ativo' ? 'green' : 'red');
+                    }
+                });
+
 
             equipamentosG.append('text')
                 .text(d => d.nome)
