@@ -561,6 +561,39 @@ def relatorio_vlans(request):
     })
 
 
+def get_map_data(request):
+    equipamentos = Equipamento.objects.all()
+    portas = Porta.objects.all()
+
+    nodes = [
+        {
+            "id": e.id,
+            "nome": e.nome,
+            "empresa": e.empresa.id,
+            "x": e.x,
+            "y": e.y,
+            "tipo": e.tipo,
+            "status": e.status,
+        }
+        for e in equipamentos
+    ]
+
+    links = [
+        {
+            "source": porta.equipamento.id,
+            "target": porta.conexao.equipamento.id,
+            "porta_origem": porta.nome,
+            "porta_destino": porta.conexao.nome,
+            "tipo": porta.tipo,
+            "speed": porta.speed,
+            "Obs": porta.observacao,
+        }
+        for porta in portas if porta.conexao and porta.equipamento and porta.conexao.equipamento
+    ]
+
+    return JsonResponse({"nodes": nodes, "links": links})
+
+
 @login_required
 def alertas_vlans(request):
     usuario = request.user  # Usuário logado
