@@ -244,33 +244,60 @@
         <div style="display: flex; align-items: center; gap: 20px; margin-bottom: 10px;">
             <div><strong>Legenda:</strong></div>
 
-            <div style="display: flex; align-items: center; gap: 5px;">
+            <!-- Switch -->
+            <div style="display: flex; flex-direction: column; align-items: center;">
                 <svg width="30" height="30">
                     <rect width="30" height="30" fill="blue"></rect>
                 </svg>
                 <span>Switch</span>
             </div>
 
-            <div style="display: flex; align-items: center; gap: 5px;">
+            <!-- Servidor -->
+            <div style="display: flex; flex-direction: column; align-items: center;">
+                <svg width="40" height="30">
+                    <rect width="40" height="20" x="0" y="5" fill="gray"></rect>
+                    <line x1="5" y1="10" x2="35" y2="10" stroke="black" />
+                    <line x1="5" y1="20" x2="35" y2="20" stroke="black" />
+                </svg>
+                <span>Servidor</span>
+            </div>
+
+            <!-- OLT -->
+            <div style="display: flex; flex-direction: column; align-items: center;">
+                <svg width="40" height="20">
+                    <rect width="35" height="15" x="2.5" y="2.5" fill="purple"></rect>
+                    <circle cx="10" cy="15" r="2" fill="yellow"></circle>
+                    <circle cx="20" cy="15" r="2" fill="yellow"></circle>
+                    <circle cx="30" cy="15" r="2" fill="yellow"></circle>
+                </svg>
+                <span>OLT</span>
+            </div>
+
+            <!-- Roteador / AP -->
+            <div style="display: flex; flex-direction: column; align-items: center;">
                 <svg width="30" height="30">
                     <circle cx="15" cy="15" r="15" fill="green"></circle>
                 </svg>
-                <span>Roteador/Servidor/Olt/AP</span>
+                <span>Roteador/AP</span>
             </div>
 
-            <div style="display: flex; align-items: center; gap: 5px;">
+            <!-- Passivo -->
+            <div style="display: flex; flex-direction: column; align-items: center;">
                 <svg width="30" height="30">
                     <path d="M 0,30 L 30,30 L 15,0 Z" fill="orange"></path>
                 </svg>
                 <span>Passivo</span>
             </div>
 
-            <div style="display: flex; align-items: center; gap: 5px;">
+            <!-- Transporte -->
+            <div style="display: flex; flex-direction: column; align-items: center;">
                 <svg width="40" height="30">
                     <path d="M5 15 A10 10 0 0 1 20 15 A10 10 0 0 1 35 15 A10 10 0 0 1 30 25 A10 10 0 0 1 10 25 A10 10 0 0 1 5 15 Z" fill="#00F5FF"></path>
                 </svg>
                 <span>Transporte</span>
             </div>
+        </div>
+
         </div>
     </div>
 
@@ -564,7 +591,7 @@
                 }
             });
 
-        // Rendereza os icones no mapa
+        // Renderiza os ícones no mapa
         equipamentosG.each(function(d) {
             const grupo = d3.select(this);
 
@@ -572,7 +599,7 @@
                 // Ícone de nuvem
                 grupo.append('path')
                     .attr('d', 'M20 10 A10 10 0 0 1 40 10 A10 10 0 0 1 60 10 A10 10 0 0 1 50 30 A10 10 0 0 1 30 30 A10 10 0 0 1 20 10 Z')
-                    .attr('fill', d.status === 'Ativo' ? '#00F5FF' : 'red')
+                    .attr('fill', d.status === 'Ativo' ? '#4B0082' : 'red') // Roxo escuro
                     .attr('transform', 'scale(0.9) translate(-30, -20)');
 
             } else if (d.tipo === "Switch") {
@@ -588,16 +615,47 @@
                 // Triângulo
                 grupo.append('path')
                     .attr('d', 'M -15,15 L 15,15 L 0,-15 Z') // Desenha um triângulo
-                    .attr('fill', d.status === 'Ativo' ? 'orange' : 'orange');
+                    .attr('fill', 'orange');
 
+            } else if (d.tipo === "Servidor") {
+                // Retângulo horizontal com linhas (simulando um rack de servidor)
+                grupo.append('rect')
+                    .attr('width', 40)
+                    .attr('height', 20)
+                    .attr('x', -20)
+                    .attr('y', -10)
+                    .attr('fill', d.status === 'Ativo' ? 'gray' : 'red');
+
+                // Linhas no servidor para simular baias
+                grupo.append('line').attr('x1', -15).attr('y1', -5).attr('x2', 15).attr('y2', -5).attr('stroke', 'black');
+                grupo.append('line').attr('x1', -15).attr('y1', 5).attr('x2', 15).attr('y2', 5).attr('stroke', 'black');
+
+            } else if (d.tipo === "Olt") {
+                // Retângulo pequeno representando uma OLT
+                grupo.append('rect')
+                    .attr('width', 35)
+                    .attr('height', 15)
+                    .attr('x', -17.5)
+                    .attr('y', -7.5)
+                    .attr('fill', d.status === 'Ativo' ? 'purple' : 'red');
+
+                // Círculos representando portas ópticas
+                for (let i = -10; i <= 10; i += 10) {
+                    grupo.append('circle')
+                        .attr('cx', i)
+                        .attr('cy', 5)
+                        .attr('r', 2)
+                        .attr('fill', 'yellow');
+                }
 
             } else {
                 // Círculo para os demais tipos
                 grupo.append('circle')
                     .attr('r', 20)
-                    .attr('fill', d.status === 'Ativo' ? 'green' : 'red');
+                    .attr('fill', d.status === 'Ativo' ? 'green' : 'red'); // Roxo escuro
             }
         });
+
 
 		equipamentosG.append('text')
             .text(d => d.nome)
