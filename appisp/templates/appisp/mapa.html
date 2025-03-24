@@ -279,7 +279,14 @@
     <!-- Roteador / AP -->
     <div style="display: flex; flex-direction: column; align-items: center;">
         <svg width="30" height="30">
+            <!-- Círculo -->
             <circle cx="15" cy="15" r="15" fill="green"></circle>
+
+            <!-- Linha diagonal 1 (parte do "X") -->
+            <line x1="8" y1="8" x2="22" y2="22" stroke="white" stroke-width="2"></line>
+
+            <!-- Linha diagonal 2 (parte do "X") -->
+            <line x1="8" y1="22" x2="22" y2="8" stroke="white" stroke-width="2"></line>
         </svg>
         <span>Roteador/AP</span>
     </div>
@@ -663,12 +670,30 @@ function renderMapa() {
                     .attr('fill', 'yellow');
             }
 
-        } else {
-            // Círculo para os demais tipos
-            grupo.append('circle')
-                .attr('r', 20)
-                .attr('fill', d.status === 'Ativo' ? 'green' : 'red'); // Roxo escuro
-        }
+            } else {
+                // Círculo para os demais tipos
+                grupo.append('circle')
+                    .attr('r', 20)
+                    .attr('fill', d.status === 'Ativo' ? 'green' : 'red'); // Roxo escuro para ativo
+
+                // Adiciona o "X" dentro do círculo
+                grupo.append('line')
+                    .attr('x1', -10)
+                    .attr('y1', -10)
+                    .attr('x2', 10)
+                    .attr('y2', 10)
+                    .attr('stroke', 'white')
+                    .attr('stroke-width', 3);
+
+                grupo.append('line')
+                    .attr('x1', -10)
+                    .attr('y1', 10)
+                    .attr('x2', 10)
+                    .attr('y2', -10)
+                    .attr('stroke', 'white')
+                    .attr('stroke-width', 3);
+            }
+
     });
 
 
