@@ -523,11 +523,21 @@ function renderMapa() {
             const x2 = nodes.find(node => node.id === d.target).x;
             const y2 = nodes.find(node => node.id === d.target).y;
 
-            // Calcular a curva com um deslocamento único para cada linha
-            const curva = calcularCurva(x1, y1, x2, y2, i);
+            if (i === 0) {
+                // Primeira conexão é reta
+                return `M ${x1},${y1} L ${x2},${y2}`;
+            }
 
-            return d3.line()(curva);  // Gerar a linha curvada
+            const direction = i % 2 === 0 ? 1 : -1; // Alternar entre cima e baixo
+            const intensity = (Math.floor(i / 2) * 30) + 30; // Aumenta a curvatura progressivamente
+
+            const cx = (x1 + x2) / 2;
+            const cy = (y1 + y2) / 2 + (direction * intensity); // Ajuste do ponto de controle
+
+            return `M ${x1},${y1} Q ${cx},${cy} ${x2},${y2}`; // Curva Bézier Quadrática
         })
+
+
         .attr('stroke', d => {
             switch (d.tipo) {
                 case 'Fibra': return 'blue';
