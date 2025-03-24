@@ -630,6 +630,19 @@
                 grupo.append('line').attr('x1', -15).attr('y1', -5).attr('x2', 15).attr('y2', -5).attr('stroke', 'black');
                 grupo.append('line').attr('x1', -15).attr('y1', 5).attr('x2', 15).attr('y2', 5).attr('stroke', 'black');
 
+            } else if (d.tipo === "VMWARE") {
+                // Retângulo horizontal com linhas (simulando um rack de servidor)
+                grupo.append('rect')
+                    .attr('width', 40)
+                    .attr('height', 20)
+                    .attr('x', -20)
+                    .attr('y', -10)
+                    .attr('fill', d.status === 'Ativo' ? 'gray' : 'red');
+
+                // Linhas no servidor para simular baias
+                grupo.append('line').attr('x1', -15).attr('y1', -5).attr('x2', 15).attr('y2', -5).attr('stroke', 'black');
+                grupo.append('line').attr('x1', -15).attr('y1', 5).attr('x2', 15).attr('y2', 5).attr('stroke', 'black');
+
             } else if (d.tipo === "Olt") {
                 // Retângulo pequeno representando uma OLT
                 grupo.append('rect')
