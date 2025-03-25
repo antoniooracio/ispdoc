@@ -549,7 +549,7 @@ const linhasConexao = g.selectAll('.linha-conexao')
         }
 
         const direction = i % 2 === 0 ? 1 : -1; // Alternar entre cima e baixo
-        const intensity = (Math.floor(i / 2) * 15) + 10; // Aumenta a curvatura progressivamente
+        const intensity = (Math.floor(i / 2) * 10) + 5; // Aumenta a curvatura progressivamente
 
         const cx = (x1 + x2) / 2;
         const cy = (y1 + y2) / 2 + (direction * intensity); // Ajuste do ponto de controle
