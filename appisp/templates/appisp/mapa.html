@@ -492,73 +492,92 @@ function renderMapa() {
         return [[x1, y1], [controlX, controlY], [x2, y2]];
     }
 
-    // Renderizar as linhas de conexão com curvaturas, agora filtradas pela empresa
-    const linhasConexao = g.selectAll('.linha-conexao')
-        .data(conexoesFiltradas)
-        .enter()
-        .filter(d => {
-            const sourceId = d.source;
-            const targetId = d.target;
-            const portaOrigem = d.porta_origem;
-            const portaDestino = d.porta_destino;
-
-            // Verifica se essa conexão já foi criada (evita adicionar linha duplicada)
-            const conexaoExistente = conexoesCriadas.some(conexao =>
-                (conexao.source === sourceId && conexao.target === targetId && conexao.portaOrigem === portaOrigem && conexao.portaDestino === portaDestino) ||
-                (conexao.source === targetId && conexao.target === sourceId && conexao.portaOrigem === portaDestino && conexao.portaDestino === portaOrigem)
-            );
-
-            if (!conexaoExistente) {
-                // Adiciona a conexão ao array de conexões já criadas
-                conexoesCriadas.push({ source: sourceId, target: targetId, portaOrigem, portaDestino });
-            }
-
-            return !conexaoExistente;  // Retorna true para desenhar a linha apenas se a conexão ainda não foi criada
-        })
-        .append('path')
-        .attr('class', 'linha-conexao')
-        .attr('d', function (d, i) {
-            const x1 = nodes.find(node => node.id === d.source).x;
-            const y1 = nodes.find(node => node.id === d.source).y;
-            const x2 = nodes.find(node => node.id === d.target).x;
-            const y2 = nodes.find(node => node.id === d.target).y;
-
-            if (i === 0) {
-                // Primeira conexão é reta
-                return `M ${x1},${y1} L ${x2},${y2}`;
-            }
-
-            const direction = i % 2 === 0 ? 1 : -1; // Alternar entre cima e baixo
-            const intensity = (Math.floor(i / 2) * 30) + 30; // Aumenta a curvatura progressivamente
-
-            const cx = (x1 + x2) / 2;
-            const cy = (y1 + y2) / 2 + (direction * intensity); // Ajuste do ponto de controle
-
-            return `M ${x1},${y1} Q ${cx},${cy} ${x2},${y2}`; // Curva Bézier Quadrática
-        })
 
 
-        .attr('stroke', d => {
-            switch (d.tipo) {
-                case 'Fibra': return 'blue';
-                case 'Eletrico': return 'green';
-                case 'Radio': return 'orange';
-                default: return 'gray';
-            }
-        })
-        .attr('stroke-width', d => {
-            const widthMap = {
-                '10G': 3,
-                '20G': 4,
-                '40G': 5,
-                '100G': 6
-            };
-            return widthMap[d.speed] || 2;
-        })
-        .attr('fill', 'none')
-        .on('click', function (event, d) {
-            mostrarInformacoesConexao(d);
-        });
+// Criação de um mapa para contar as conexões entre os pares de equipamentos
+const conexaoContagem = {};
+
+// Função para contar conexões entre os pares de equipamentos
+function contarConexoes(link) {
+    const key = `${Math.min(link.source, link.target)}-${Math.max(link.source, link.target)}`;
+    if (conexaoContagem[key]) {
+        conexaoContagem[key]++;
+    } else {
+        conexaoContagem[key] = 1;
+    }
+}
+
+// Renderizar as linhas de conexão com curvaturas, agora filtradas pela empresa
+const linhasConexao = g.selectAll('.linha-conexao')
+    .data(conexoesFiltradas)
+    .enter()
+    .filter(d => {
+        const sourceId = d.source;
+        const targetId = d.target;
+        const portaOrigem = d.porta_origem;
+        const portaDestino = d.porta_destino;
+
+        // Verifica se essa conexão já foi criada (evita adicionar linha duplicada)
+        const conexaoExistente = conexoesCriadas.some(conexao =>
+            (conexao.source === sourceId && conexao.target === targetId && conexao.portaOrigem === portaOrigem && conexao.portaDestino === portaDestino) ||
+            (conexao.source === targetId && conexao.target === sourceId && conexao.portaOrigem === portaDestino && conexao.portaDestino === portaOrigem)
+        );
+
+        if (!conexaoExistente) {
+            // Adiciona a conexão ao array de conexões já criadas
+            conexoesCriadas.push({ source: sourceId, target: targetId, portaOrigem, portaDestino });
+            // Conta a conexão entre os dois equipamentos
+            contarConexoes(d);
+        }
+
+        return !conexaoExistente;  // Retorna true para desenhar a linha apenas se a conexão ainda não foi criada
+    })
+    .append('path')
+    .attr('class', 'linha-conexao')
+    .attr('d', function (d, i) {
+        const x1 = nodes.find(node => node.id === d.source).x;
+        const y1 = nodes.find(node => node.id === d.source).y;
+        const x2 = nodes.find(node => node.id === d.target).x;
+        const y2 = nodes.find(node => node.id === d.target).y;
+
+        const key = `${Math.min(d.source, d.target)}-${Math.max(d.source, d.target)}`;
+        const conexaoCount = conexaoContagem[key];
+
+        if (conexaoCount === 1) {
+            // Se houver apenas uma conexão entre os equipamentos, a linha será reta
+            return `M ${x1},${y1} L ${x2},${y2}`;
+        }
+
+        const direction = i % 2 === 0 ? 1 : -1; // Alternar entre cima e baixo
+        const intensity = (Math.floor(i / 2) * 30) + 30; // Aumenta a curvatura progressivamente
+
+        const cx = (x1 + x2) / 2;
+        const cy = (y1 + y2) / 2 + (direction * intensity); // Ajuste do ponto de controle
+
+        return `M ${x1},${y1} Q ${cx},${cy} ${x2},${y2}`; // Curva Bézier Quadrática
+    })
+    .attr('stroke', d => {
+        switch (d.tipo) {
+            case 'Fibra': return 'blue';
+            case 'Eletrico': return 'green';
+            case 'Radio': return 'orange';
+            default: return 'gray';
+        }
+    })
+    .attr('stroke-width', d => {
+        const widthMap = {
+            '10G': 3,
+            '20G': 4,
+            '40G': 5,
+            '100G': 6
+        };
+        return widthMap[d.speed] || 2;
+    })
+    .attr('fill', 'none')
+    .on('click', function (event, d) {
+        mostrarInformacoesConexao(d);
+    });
+
 
         // Função para mostrar informações da conexão no modal
         function mostrarInformacoesConexao(d) {
