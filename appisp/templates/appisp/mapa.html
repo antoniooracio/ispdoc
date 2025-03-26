@@ -234,7 +234,7 @@
 <!-- Exibe select da Empresa e Botão de Fechar o mapa-->
 <div style="display: flex; align-items: center; gap: 10px; margin: 10px;">
     <select id="empresa-selector">
-        <option value="">Todas as Empresa</option>
+        <option value="">Selecione uma Empresa</option>
         {% for empresa in empresas %}
         <option value="{{ empresa.id }}">{{ empresa.nome }}</option>
         {% endfor %}
@@ -421,6 +421,10 @@ function salvarPosicoes() {
     localStorage.setItem('posicoesEquipamentos', JSON.stringify(posicoes));
 }
 
+function limparMapa() {
+    d3.select("#mapa").selectAll("*").remove();
+}
+
 function renderMapa() {
     carregarPosicoes();
 
@@ -429,7 +433,7 @@ function renderMapa() {
     // Filtrar os equipamentos pela empresa selecionada
     const equipamentosFiltrados = empresaId
         ? nodes.filter(equipamento => equipamento.empresa === parseInt(empresaId))
-        : nodes;
+        : [];  // Quando não há empresa selecionada, não mostra nenhum equipamento
 
     // Filtrar as conexões pela empresa selecionada
     const conexoesFiltradas = empresaId
@@ -438,7 +442,7 @@ function renderMapa() {
             const targetEquipamento = nodes.find(node => node.id === link.target);
             return (sourceEquipamento.empresa === parseInt(empresaId) && targetEquipamento.empresa === parseInt(empresaId));
         })
-        : links;
+        : [];  // Quando não há empresa selecionada, não mostra nenhuma conexão
 
     // Salvar o estado do zoom antes de limpar o mapa
     const svgElement = d3.select('#mapa svg');
@@ -613,6 +617,7 @@ function renderMapa() {
             document.getElementById('modalConexao').classList.remove('show');
             document.getElementById('modalOverlayConexao').style.display = 'none';
         });
+
     // Renderizar os equipamentos
     const equipamentosG = g.selectAll('.equipamento')
         .data(equipamentosFiltrados)
@@ -783,31 +788,51 @@ function renderMapa() {
         document.getElementById('modalConexao').classList.remove('show');
         document.getElementById('modalOverlayConexao').style.display = 'none';
     });
-    // Função de modal
-    function showModal(event, d) {
-        document.querySelector('.modal-header').textContent = `Equipamento ${d.nome}`;
-        document.getElementById('input-ip').value = d.ip || '';
-        document.getElementById('input-usuario').value = d.usuario || '';
-        document.getElementById('input-senha').value = d.senha || '';
-        document.getElementById('input-porta').value = d.porta || '';
-        document.getElementById('input-protocolo').value = d.protocolo || '';
 
-        document.getElementById('modalEquipamento').classList.add('show');
-        document.getElementById('modalOverlay').style.display = 'block';
-    }
+// Função para abrir o modal e buscar as informações do equipamento no backend
+function showModal(event, d) {
+    // Requisição AJAX para buscar as informações do equipamento pelo ID
+    fetch(`/api/equipamento/${d.id}/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                alert(data.error);  // Caso o equipamento não seja encontrado
+            } else {
+                // Atualiza o modal com os dados recebidos
+                document.querySelector('.modal-header').textContent = `Equipamento ${data.nome}`;
+                document.getElementById('input-ip').value = data.ip || '';
+                document.getElementById('input-usuario').value = data.usuario || '';
+                document.getElementById('input-senha').value = data.senha || '';
+                document.getElementById('input-porta').value = data.porta || '';
+                document.getElementById('input-protocolo').value = data.protocolo || '';
 
+                // Exibe o modal
+                document.getElementById('modalEquipamento').classList.add('show');
+                document.getElementById('modalOverlay').style.display = 'block';
+            }
+        })
+        .catch(error => console.error('Erro ao buscar informações do equipamento:', error));
+}
     // Fechar modal
     document.getElementById('closeModal').addEventListener('click', () => {
         document.getElementById('modalEquipamento').classList.remove('show');
         document.getElementById('modalOverlay').style.display = 'none';
     });
+
 }
+
 
     // Executa a função quando a empresa é alterada
     document.getElementById('empresa-selector').addEventListener('change', renderMapa);
 
     // Atualizar o mapa a cada 30 segundos
     setInterval(() => {
+        // Fechar o modal, se estiver aberto
+        if (document.getElementById('modalEquipamento').classList.contains('show')) {
+            document.getElementById('modalEquipamento').classList.remove('show');
+            document.getElementById('modalOverlay').style.display = 'none';
+        }
+
         atualizarMapa();
         renderMapa();
 

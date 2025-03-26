@@ -17,6 +17,23 @@ from .models import Porta, Empresa, Pop, Rack, Equipamento, BlocoIP, EnderecoIP,
 from .forms import PortaForm, EnderecoIPForm
 from rest_framework.permissions import BasePermission
 
+def get_equipamento(request, equipamento_id):
+    try:
+        equipamento = Equipamento.objects.get(id=equipamento_id)
+        data = {
+            'id': equipamento.id,
+            'nome': equipamento.nome,
+            'ip': equipamento.ip,
+            'usuario': equipamento.usuario,
+            'senha': equipamento.senha,
+            'porta': equipamento.porta,
+            'protocolo': equipamento.protocolo,
+            'status': equipamento.status,
+        }
+        return JsonResponse(data)
+    except Equipamento.DoesNotExist:
+        return JsonResponse({'error': 'Equipamento não encontrado'}, status=404)
+
 
 def ping(ip):
     try:

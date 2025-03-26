@@ -25,6 +25,7 @@ from appisp.views import (EquipamentoAutocomplete, PortaAutocomplete, mapa, atua
                           get_sub_blocos, visualizar_vlans_por_equipamento, mapa_vlans_json, relatorio_vlans,
                           alertas_vlans, lista_empresas_json, lista_vlans_json, estrutura_bloco, estrutura_bloco, get_portas,
                           verificar_status_equipamentos, listar_equipamentosApi, atualizar_status_equipamento, get_map_data,
+                          get_equipamento,
                           )
 from appisp.models import Porta
 from django.contrib.auth.decorators import login_required
@@ -70,4 +71,5 @@ urlpatterns = [
     path("api/listar_equipamentosapi/", listar_equipamentosApi, name="listar_equipamentosapi"),
     path('api/atualizar_status/<int:equipamento_id>/', atualizar_status_equipamento, name="atualizar_status_equipamento"),
     path('api/get_map_data/', get_map_data, name="atualizar_mapa"),
+    path('api/equipamento/<int:equipamento_id>/', get_equipamento, name='get_equipamento'),
 ]
