@@ -104,6 +104,28 @@
     font-weight: bold;
     cursor: pointer;
 }
+
+            /* Estilos do modal */
+    #equipamento-modal {
+        display: none; /* Inicialmente o modal está oculto */
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 80%; /* Defina uma largura apropriada */
+        max-height: 80%; /* Limita a altura do modal */
+        background-color: white;
+        border: 1px solid #ccc;
+        padding: 20px;
+        z-index: 9999;
+        overflow: hidden; /* Isso vai esconder a rolagem no container principal */
+    }
+
+    /* Estilos do conteúdo do modal (onde o conteúdo rolará) */
+    #equipamento-modal .modal-conteudo {
+        max-height: 70vh; /* Limita a altura do conteúdo dentro do modal */
+        overflow-y: auto; /* Habilita a rolagem vertical quando o conteúdo ultrapassar a altura */
+    }
     </style>
 </head>
 
