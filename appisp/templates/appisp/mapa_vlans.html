@@ -127,12 +127,6 @@
         overflow-y: auto; /* Habilita a rolagem vertical quando o conteúdo ultrapassar a altura */
     }
 
-            /* Estilos do conteúdo do modal (onde o conteúdo rolará) */
-    #equipamento-modal .modal-vlan {
-        max-height: 70vh; /* Limita a altura do conteúdo dentro do modal */
-        overflow-y: auto; /* Habilita a rolagem vertical quando o conteúdo ultrapassar a altura */
-    }
-
     </style>
 </head>
 
@@ -304,13 +298,13 @@
         // carregarMapaVlan(); // Inicia carregando tudo
 </script>
 <!-- Modal de Equipamento -->
-<div id="equipamento-modal" class="modal">
-    <div class="modal-content">
-        <span class="close" onclick="fecharModal()">&times;</span>
+<div id="equipamento-modal">
+    <div class="modal-conteudo">
         <h2 id="modal-titulo"></h2>
-        <p id="modal-vlan"></p>
-        <div id="modal-portas"></div> <!-- Adicionamos essa div -->
+        <div id="modal-vlan"></div>
+        <div id="modal-portas"></div>
     </div>
+    <button onclick="fecharModal()">Fechar</button>
 </div>
 <script>
     function abrirModal(equipamento) {
