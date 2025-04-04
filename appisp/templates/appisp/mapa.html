@@ -6,6 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mapa de Rede</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <script src="https://cdn.ckeditor.com/ckeditor5/39.0.1/classic/ckeditor.js"></script>
+
     <style>
 
         element.style {
@@ -250,6 +252,37 @@
                 width: 80%;
             }
         }
+
+        .ck.ck-toolbar {
+            background-color: #212529 !important; /* Fundo escuro para combinar com Bootstrap Dark */
+            color: #ffffff !important; /* Texto branco */
+            border-bottom: 1px solid #6c757d !important;
+        }
+
+        .ck.ck-toolbar .ck-button {
+            color: #ffffff !important; /* Ícones e textos brancos */
+        }
+
+        .ck.ck-toolbar .ck-button:hover {
+            background-color: #495057 !important; /* Fundo ao passar o mouse */
+        }
+        .ck-editor__editable {
+            min-height: 150px !important; /* Altura mínima */
+            max-height: 300px !important; /* Evita que cresça demais */
+            overflow-y: auto !important; /* Adiciona rolagem se necessário */
+            background-color: #fff !important; /* Fundo escuro para combinar com Bootstrap Dark */
+            color: #000 !important; /* Texto branco */
+            border: 1px solid #6c757d !important; /* Borda para separar do fundo */
+        }
+
+        .ck.ck-toolbar {
+            background-color: #212529 !important; /* Fundo da barra de ferramentas */
+            border-bottom: 1px solid #6c757d !important;
+        }
+
+        .ck.ck-editor__editable:focus {
+            outline: none !important; /* Remove o contorno azul ao clicar */
+        }
     </style>
 </head>
 <body>
@@ -466,7 +499,7 @@
                                     <label for="observacao" class="form-label">Porta de Destino</label>
                                 </div>
                                 <div class="col-sm-8">
-                                    <textarea id="observacao" rows="5" style="width: 100%;"
+                                    <textarea id="observacao" class="form-control" rows="5" style="width: 100%;"
                                               placeholder="Digite uma observação ..."></textarea>
                                 </div>
                             </div>
@@ -485,6 +518,30 @@
         </div>
     </div>
 </div>
+
+<script>
+    let editorObservacao;  // Variável global
+
+    ClassicEditor
+        .create(document.querySelector('#observacao'), {
+            toolbar: ['bold', 'italic', 'link', 'bulletedList', 'numberedList', 'undo', 'redo']
+        })
+        .then(editor => {
+            editorObservacao = editor;
+
+            const editable = editor.ui.view.editable.element;
+            editable.style.minHeight = '150px';
+            editable.style.maxHeight = '300px';
+            editable.style.overflowY = 'auto';
+            editable.style.backgroundColor = '#ffffff'; // fundo branco
+            editable.style.color = '#000000'; // texto preto
+            editable.style.border = '1px solid #6c757d';
+        })
+        .catch(error => {
+            console.error('Erro ao inicializar o editor:', error);
+        });
+</script>
+
 
 <script src="https://d3js.org/d3.v7.min.js"></script>
 
@@ -931,7 +988,9 @@ function handleRightClick(event, equipamentoId) {
 
                     const portaOrigemId = localStorage.getItem('portaOrigemSelecionada');
                     const portaDestinoId = localStorage.getItem('portaDestinoSelecionada');
-                    const observacao = document.getElementById('observacao').value;
+                    // Capturar o valor correto do CKEditor antes de enviar
+                    // const editor = ClassicEditor.instances['observacao'];
+                    const observacao = editorObservacao ? editorObservacao.getData() : '';  // Obtém o conteúdo do CKEditor
 
                     // Verifique se a porta de origem e destino estão selecionadas e a observação foi preenchida
                     if (portaOrigemId && portaDestinoId && observacao) {
@@ -1160,6 +1219,7 @@ document.querySelector('.modal-conexao-header').innerHTML = `
         <h3 class="modal-title fw-bold text-warning mb-0">Conexão ${d.tipo}</h3>
     </div>
 `;
+
 document.querySelector('.modal-conexao-body').innerHTML = `
     <div class="px-3 py-2">
         <div class="mb-2 row">
@@ -1182,8 +1242,8 @@ document.querySelector('.modal-conexao-body').innerHTML = `
         </div>
         <div class="mb-2 row">
             <label class="col-sm-2 col-form-label"><strong>Obs.:</strong></label>
-            <div class="col-sm-9">
-                <input type="text" class="form-control" value="${portaObs}" readonly>
+            <div class="col-sm-9 border rounded bg-light p-2" style="min-height: 80px;">
+                ${portaObs}
             </div>
         </div>
     </div>`;
