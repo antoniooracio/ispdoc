@@ -1,5 +1,6 @@
 {% extends "admin/base_site.html" %}
 {% block content %}
+{% csrf_token %}
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,6 +8,9 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <style>
 
+        element.style {
+            width: 90%;
+        }
 
         .btn {
             display: inline-block;
@@ -146,6 +150,8 @@
         select {
             padding: 5px;
             font-size: 14px;
+            background-color: #343a40;
+            color: #fff;
         }
 
         /* Corpo do modal */
@@ -186,6 +192,24 @@
             z-index: 999;
             display: none; /* Inicialmente oculto */
         }
+        .dark-mode .modal-content{
+            padding: 30px;
+        }
+        .dark-mode select{
+            background-color: #fff;
+            color: #000;
+            border-color: #fff;
+        }
+
+        @media (max-width: 2800px) {
+            .modal {
+                width: 650px;
+            }
+
+            .modal-conexao {
+                width: 650px;
+            }
+        }
 
         @media (max-width: 1400px) {
             .modal {
@@ -209,11 +233,11 @@
 
         @media (max-width: 900px) {
             .modal {
-                width: calc(50% - 20px);
+                width: calc(60% - 30px);
             }
 
             .modal-conexao {
-                width: calc(50% - 20px);
+                width: calc(60% - 30px);
             }
         }
 
@@ -346,7 +370,7 @@
         </form>
     </div>
     <div class="modal-footer">
-        <button type="button" class="close-modal" id="closeModal">Fechar</button>
+        <button type="button" class="btn btn-danger" id="closeModal">Fechar</button>
     </div>
 </div>
 
@@ -365,7 +389,86 @@
     </div>
 
     <div class="modal-conexao-footer">
-        <button type="button" class="close-conexao-modal" id="closeConexaoModal">Fechar</button>
+
+        <button type="button" class="btn btn-outline-warning" id="excluirConexaoBtn" >Excluir Conexão</button>
+
+        <button type="button" class="btn btn-danger" id="fecharConexaoBtn">Fechar</button>
+    </div>
+</div>
+
+<!-- Modal de DropDown List para portas-->
+<div class="col-12 col-lg-12">
+    <div class="card">
+        <div class="card-body">
+            <form method="post" class="form-horizontal" style="pading:20px;">
+                <div id="portaModal" class="modal" style="display:none;">
+                    <div class="modal-content">
+
+                        <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+
+                        <h3>Conexão de portas</h3></br>
+
+
+                        <div class="form-group field-tipo">
+                            <div class="row">
+                                <div class="col-sm-4 text-left">
+                                    <label for="porta-dropdown">Porta de Origem</label>
+                                </div>
+                                <div class="col-sm-8">
+                                    <select id="porta-dropdown">
+                                        <option value="">Selecione uma porta</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group field-tipo">
+                            <div class="row">
+                                <div class="col-sm-4 text-left">
+                                    <label for="equipamento-dropdown">Equipamento Destino</label>
+                                </div>
+                                <div class="col-sm-8">
+                                    <select id="equipamento-dropdown">
+                                        <option value="">Selecione um equipamento</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group field-tipo">
+                            <div class="row">
+                                <div class="col-sm-4 text-left">
+                                    <label for="porta-destino-dropdown" class="form-label">Observação</label>
+                                </div>
+                                <div class="col-sm-8">
+                                    <select id="porta-destino-dropdown">
+                                        <option value="">Selecione uma porta</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group field-tipo">
+                            <div class="row">
+                                <div class="col-sm-4 text-left">
+                                    <label for="observacao" class="form-label">Porta de Destino</label>
+                                </div>
+                                <div class="col-sm-8">
+                                    <textarea id="observacao" rows="5" style="width: 100%;"
+                                              placeholder="Digite uma observação ..."></textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form">
+                            <button id="conectar" type="button" class="btn btn-primary">Conectar Portas</button>
+                            <!-- Botão para fechar o modal -->
+                            <button id="closeModalConexao" type="button" class="btn btn-danger close-modal-button">Fechar</button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 
@@ -496,8 +599,6 @@ function renderMapa() {
         return [[x1, y1], [controlX, controlY], [x2, y2]];
     }
 
-
-
     // Criação de um mapa para contar as conexões entre os pares de equipamentos
     const conexaoContagem = {};
 
@@ -582,41 +683,39 @@ function renderMapa() {
             mostrarInformacoesConexao(d);
         });
 
-        // Função para mostrar informações da conexão no modal
-        function mostrarInformacoesConexao(d) {
-            // Encontrar os equipamentos de origem e destino
-            const equipamentoFonte = nodes.find(node => node.id === d.source);
-            const equipamentoDestino = nodes.find(node => node.id === d.target);
 
-            // Nome das portas (vindo diretamente de d.nome e d.conexao.nome)
-            const portaFonte = d.porta_origem || 'N/A';  // Nome da porta de origem
-            const portaDestino = d.porta_destino || 'N/A';  // Nome da porta de destino
-            // Encontra Observação
-            const portaObs = d.Obs || 'N/A';  // Nome da porta de destino
+function excluirConexao(portaId) {
+    const empresaId = document.getElementById('empresa-selector').value;
+    localStorage.setItem('empresaSelecionada', empresaId);
 
-            // Encontrar as portas associadas aos equipamentos (supondo que "d.source" e "d.target" contenham IDs das portas)
-            // const portaFonte = d.source;  // Aqui você pode ajustar para obter a porta correta associada
-            // const portaDestino = d.target;  // Ajuste conforme necessário
-
-            // Definindo o título e o conteúdo do modal
-            document.querySelector('.modal-conexao-header').textContent = `Conexão ${d.tipo}`;
-            document.querySelector('.modal-conexao-body').innerHTML = `
-            <p><strong>Velocidade:</strong> ${d.speed}</p>
-            <p><strong>Fonte:</strong> ${equipamentoFonte.nome} (${portaFonte})</p>
-            <p><strong>Destino:</strong> ${equipamentoDestino.nome} (${portaDestino})</p>
-            <p><strong>Obs.:</strong> ${d.Obs} </p>
-        `;
-
-            // Exibe o modal e a sobreposição de fundo
-            document.getElementById('modalConexao').classList.add('show');
-            document.getElementById('modalOverlayConexao').style.display = 'block';
-        }
-
-        // Fechar o modal de conexão
-        document.getElementById('closeConexaoModal').addEventListener('click', () => {
+    fetch('/api/desconectar-portas/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ porta_id: portaId })  // <- Aqui está o nome correto esperado no backend
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Conexão excluída com sucesso!');
+            // Esconde o modal antes de recarregar a página
             document.getElementById('modalConexao').classList.remove('show');
             document.getElementById('modalOverlayConexao').style.display = 'none';
-        });
+
+            // Pequeno delay para garantir que o modal feche antes do reload
+            setTimeout(() => {
+                location.reload();
+            }, 100);
+        } else {
+            alert('Erro ao excluir: ' + (data.error || 'Erro desconhecido.'));
+        }
+    })
+    .catch(error => {
+        console.error('Erro ao excluir conexão:', error);
+        alert('Erro na requisição.');
+    });
+}
 
     // Renderizar os equipamentos
     const equipamentosG = g.selectAll('.equipamento')
@@ -625,12 +724,17 @@ function renderMapa() {
         .attr('class', 'equipamento')
         .attr('transform', d => `translate(${d.x},${d.y})`)
         .call(drag)
-        .on('click', function (event, d) {
+        .on('click', function(event, d) {
+            // Clique com o botão esquerdo (mantenha o evento original)
             if (userIsAdmin) {
                 showModal(event, d);
             } else {
                 alert("Você não tem permissão para visualizar essas informações.");
             }
+        })
+        .on('contextmenu', function(event, d) {
+            // Clique com o botão direito do mouse
+            handleRightClick(event, d);
         });
 
     // Renderiza os ícones no mapa
@@ -735,6 +839,270 @@ function renderMapa() {
         .style('font-size', '12px')
         .style('pointer-events', 'none');
 
+// Função para exibir o modal e carregar as portas livres do equipamento escolhido
+function handleRightClick(event, equipamentoId) {
+    event.preventDefault(); // Prevenir o menu de contexto padrão
+
+    const empresaId = document.getElementById('empresa-selector').value;
+
+    if (!equipamentoId || !equipamentoId.id || !empresaId) {
+        alert('ID do equipamento ou ID da empresa inválidos!');
+        return;
+    }
+
+    // Corrigido: pegar o ID correto do objeto
+    const equipamentoIdNum = parseInt(equipamentoId.id);
+    const empresaIdNum = parseInt(empresaId);
+
+    // Busca o equipamento correto dentro da lista de nodes
+    const equipamento = nodes.find(node => parseInt(node.id) === equipamentoIdNum);
+
+    if (!equipamento) {
+        alert(`Equipamento com ID ${equipamentoIdNum} não encontrado na lista de nodes.`);
+        return;
+    }
+
+    if (parseInt(equipamento.empresa) !== empresaIdNum) {
+        alert('Equipamento não pertence à empresa selecionada!');
+        return;
+    }
+
+    // Obter as portas livres do equipamento
+    fetch(`/api/portas?equipamento_id=${equipamentoIdNum}&empresa_id=${empresaIdNum}`)
+        .then(response => {
+            if (!response.ok) {
+                return Promise.reject('Falha ao buscar as portas livres.');
+            }
+            return response.json();
+        })
+        .then(data => {
+
+            if (data.error) {
+                alert(data.error);
+                document.getElementById('portaModal').style.display = "none";
+                return;
+            }
+
+            if (!Array.isArray(data)) {
+                alert('Ocorreu um erro ao processar as portas livres.');
+                return;
+            }
+
+            filtrarEquipamentosPorEmpresa();
+
+            const portaDropdown = document.getElementById('porta-dropdown');
+            const portaModal = document.getElementById('portaModal');
+            const closeModal = document.getElementById('closeModal');
+            const conectarButton = document.getElementById('conectar');
+
+            if (!portaDropdown || !portaModal || !closeModal || !conectarButton) {
+                return; // Se algum desses elementos não existir, a função termina
+            }
+
+            portaDropdown.innerHTML = '<option value="">Selecione uma porta</option>';
+
+            data.forEach(porta => {
+                const option = document.createElement('option');
+                option.value = porta.id;
+                option.textContent = `${porta.nome} - ${porta.tipo} - ${porta.speed}`;
+                portaDropdown.appendChild(option);
+            });
+
+            portaModal.style.display = "block"; // Exibir o modal
+
+            // Agora, verificamos se o botão "Conectar" existe antes de adicionar o eventListener
+            if (conectarButton) {
+                conectarButton.addEventListener('click', function(event) {
+                    event.preventDefault(); // Previne o envio do formulário e recarregamento da página
+
+                    const portaOrigemId = localStorage.getItem('portaOrigemSelecionada');
+                    const portaDestinoId = localStorage.getItem('portaDestinoSelecionada');
+                    const observacao = document.getElementById('observacao').value;
+
+                    // Verifique se a porta de origem e destino estão selecionadas e a observação foi preenchida
+                    if (portaOrigemId && portaDestinoId && observacao) {
+                        conectarPortas(portaOrigemId, portaDestinoId, observacao);
+                    } else {
+                        alert('Por favor, selecione uma porta de origem e uma de destino, juntamente com a observação.');
+                    }
+                });
+            }
+
+            // Ao clicar no botão "Fechar"
+            const closeModalButton = document.getElementById('closeModalConexao');
+            if (closeModalButton) {
+                closeModalButton.addEventListener('click', function() {
+                    const portaModal = document.getElementById('portaModal');
+                    portaModal.style.display = "none"; // Fecha o modal
+                });
+            }
+
+            // Fechar o modal ao clicar fora dele
+            window.onclick = function(event) {
+                const portaModal = document.getElementById('portaModal');
+                if (event.target == portaModal) {
+                    portaModal.style.display = "none"; // Fecha o modal
+                }
+            };
+
+            // Armazenar as seleções no localStorage
+            portaDropdown.addEventListener('change', function() {
+                const portaOrigemSelecionada = portaDropdown.value;
+                localStorage.setItem('portaOrigemSelecionada', portaOrigemSelecionada);
+            });
+
+            const portaDestinoDropdown = document.getElementById('porta-destino-dropdown');
+            const equipamentoDestinoDropdown = document.getElementById('equipamento-destino-dropdown');
+
+            portaDestinoDropdown.addEventListener('change', function() {
+                const portaDestinoSelecionada = portaDestinoDropdown.value;
+                localStorage.setItem('portaDestinoSelecionada', portaDestinoSelecionada);
+            });
+
+            equipamentoDestinoDropdown.addEventListener('change', function() {
+                const equipamentoDestinoSelecionado = equipamentoDestinoDropdown.value;
+                localStorage.setItem('equipamentoDestinoSelecionado', equipamentoDestinoSelecionado);
+            });
+
+        })
+        .catch(error => {
+            //alert('Ocorreu um erro ao tentar buscar as portas livres.');
+        });
+}
+
+
+// Função para conectar as portas, agora com os dados necessários
+function conectarPortas(portaOrigemId, portaDestinoId, observacao) {
+    // Definindo o payload com os dados corretos que a API espera
+    const payload = {
+        porta_origem_id: portaOrigemId,
+        porta_destino_id: portaDestinoId,
+        observacao: observacao  // Enviando apenas os dados necessários
+    };
+
+    fetch('/api/conectar-portas/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCSRFToken()  // Adicionando o CSRF Token
+        },
+        body: JSON.stringify(payload),  // Passando o payload correto
+        credentials: 'same-origin'  // Garantir que os cookies sejam enviados corretamente
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.message) {
+            alert(data.message);
+            // Fechar o modal após a conexão ser bem-sucedida
+            location.reload();
+            const portaModal = document.getElementById('portaModal');
+            portaModal.style.display = "none"; // Fecha o modal
+        } else {
+            alert("Erro ao conectar portas: " + (data.error || "Erro desconhecido"));
+        }
+    })
+    .catch(error => {
+        alert("Ocorreu um erro ao tentar conectar as portas.");
+    });
+}
+
+// função para filtrar os equipamentos e mostrar no DropDown
+function filtrarEquipamentosPorEmpresa() {
+    const empresaId = document.getElementById('empresa-selector').value;
+
+    // Filtrar os equipamentos pela empresa selecionada
+    const equipamentosFiltrados = empresaId
+        ? nodes.filter(equipamento => equipamento.empresa === parseInt(empresaId))
+        : [];  // Caso nenhum empresa seja selecionada, não mostra equipamentos
+
+    const equipamentosDropdown = document.getElementById('equipamento-dropdown');
+    equipamentosDropdown.innerHTML = '<option value="">Selecione um equipamento</option>'; // Resetar dropdown
+
+    // Adiciona as opções de equipamentos ao dropdown
+    equipamentosFiltrados.forEach(equipamento => {
+        const option = document.createElement('option');
+        option.value = equipamento.id;
+        option.textContent = `${equipamento.nome} - ${equipamento.tipo} - ${equipamento.status}`;
+        equipamentosDropdown.appendChild(option);
+    });
+}
+
+document.getElementById('equipamento-dropdown').addEventListener('change', function() {
+    const equipamentoId = this.value;
+    const empresaId = document.getElementById('empresa-selector').value;
+
+    if (!equipamentoId || !empresaId) {
+        alert('Por favor, selecione um equipamento e uma empresa.');
+        return;
+    }
+
+    // Buscar as portas livres do equipamento selecionado
+    fetch(`/api/portas?equipamento_id=${equipamentoId}&empresa_id=${empresaId}`)
+        .then(response => {
+            if (!response.ok) {
+                return Promise.reject('Falha ao buscar as portas livres.');
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.error) {
+                alert(data.error);
+                return;
+            }
+
+            if (!data || !Array.isArray(data)) {
+                alert('Ocorreu um erro ao processar as portas livres.');
+                return;
+            }
+
+            // Exibir as portas no dropdown de portas de destino
+            const portaDestinoDropdown = document.getElementById('porta-destino-dropdown');
+            portaDestinoDropdown.innerHTML = '<option value="">Selecione uma porta</option>'; // Resetar dropdown
+
+            data.forEach(porta => {
+                const option = document.createElement('option');
+                option.value = porta.id;
+                option.textContent = `${porta.nome} - ${porta.tipo} - ${porta.speed}`;
+                portaDestinoDropdown.appendChild(option);
+            });
+        })
+        .catch(error => {
+        //    alert('Ocorreu um erro ao tentar buscar as portas livres.');
+        });
+});
+
+
+
+
+// função para filtrar os equipamentos e mostrar no DropDown
+function filtrarEquipamentosPorEmpresa() {
+    const empresaId = document.getElementById('empresa-selector').value;
+
+    // Filtrar os equipamentos pela empresa selecionada
+    const equipamentosFiltrados = empresaId
+        ? nodes.filter(equipamento => equipamento.empresa === parseInt(empresaId))
+        : [];  // Caso nenhum empresa seja selecionada, não mostra equipamentos
+
+    const equipamentosDropdown = document.getElementById('equipamento-dropdown');
+    equipamentosDropdown.innerHTML = '<option value="">Selecione um equipamento</option>'; // Resetar dropdown
+
+    // Adiciona as opções de equipamentos ao dropdown
+    equipamentosFiltrados.forEach(equipamento => {
+        const option = document.createElement('option');
+        option.value = equipamento.id;
+        option.textContent = `${equipamento.nome} - ${equipamento.tipo} - ${equipamento.status}`;
+        equipamentosDropdown.appendChild(option);
+    });
+}
+
+
+function getCSRFToken() {
+    return document.cookie.split('; ')
+        .find(row => row.startsWith('csrftoken='))
+        ?.split('=')[1];
+}
+
+
     // Função de arrasto
     function dragStarted(event, d) {
         d3.select(this).raise().classed('active', true);
@@ -762,76 +1130,117 @@ function renderMapa() {
         d3.select(this).classed('active', false);
         salvarPosicoes();
     }
-    // Função para mostrar informações da conexão no modal
-    function mostrarInformacoesConexao(d) {
-        const equipamentoFonte = nodes.find(node => node.id === d.source);
-        const equipamentoDestino = nodes.find(node => node.id === d.target);
 
-        const portaFonte = d.porta_origem || 'N/A';
-        const portaDestino = d.porta_destino || 'N/A';
-        const portaObs = d.Obs || 'N/A';
+function mostrarInformacoesConexao(d) {
+    const equipamentoFonte = nodes.find(node => node.id === d.source);
+    const equipamentoDestino = nodes.find(node => node.id === d.target);
 
-        document.querySelector('.modal-conexao-header').textContent = `Conexão ${d.tipo}`;
-        document.querySelector('.modal-conexao-body').innerHTML = `
-            <p><strong>Velocidade:</strong> ${d.speed}</p>
-            <p><strong>Fonte:</strong> ${equipamentoFonte.nome} (${portaFonte})</p>
-            <p><strong>Destino:</strong> ${equipamentoDestino.nome} (${portaDestino})</p>
-            <p><strong>Obs.:</strong> ${d.Obs} </p>
-        `;
+    const portaFonte = d.porta_origem || 'N/A';
+    const portaDestino = d.porta_destino || 'N/A';
+    const portaObs = d.Obs || 'N/A';
+    const portaId = d.porta_origem_id;
 
-        document.getElementById('modalConexao').classList.add('show');
-        document.getElementById('modalOverlayConexao').style.display = 'block';
+    document.querySelector('.modal-conexao-header').textContent = `Conexão ${d.tipo}`;
+    document.querySelector('.modal-conexao-body').innerHTML = `
+        <p><strong>Velocidade:</strong> ${d.speed}</p>
+        <p><strong>Fonte:</strong> ${equipamentoFonte.nome} (${portaFonte})</p>
+        <p><strong>Destino:</strong> ${equipamentoDestino.nome} (${portaDestino})</p>
+        <p><strong>Obs.:</strong> ${portaObs}</p>`;
+
+    document.getElementById('modalConexao').classList.add('show');
+    document.getElementById('modalOverlayConexao').style.display = 'block';
+
+    // Configura o botão de excluir
+    const excluirBtn = document.getElementById('excluirConexaoBtn');
+    if (excluirBtn) {
+        excluirBtn.replaceWith(excluirBtn.cloneNode(true));
+        const novoExcluirBtn = document.getElementById('excluirConexaoBtn');
+
+        novoExcluirBtn.onclick = function () {
+
+            if (!portaId) {
+                alert("Erro: ID da porta de origem não está disponível.");
+                return;
+            }
+
+            if (confirm('Tem certeza que deseja excluir esta conexão?')) {
+                fetch('/api/desconectar-portas/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ porta_id: portaId })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Conexão removida com sucesso!');
+                        location.reload();
+                    } else {
+                        alert('Erro ao desconectar: ' + (data.error || 'Erro desconhecido.'));
+                    }
+                })
+                .catch(() => {
+                    alert('Erro na requisição.');
+                });
+            }
+        };
     }
 
-    // Fechar modal de conexão
-    document.getElementById('closeConexaoModal').addEventListener('click', () => {
-        document.getElementById('modalConexao').classList.remove('show');
-        document.getElementById('modalOverlayConexao').style.display = 'none';
-    });
-
-// Função para abrir o modal e buscar as informações do equipamento no backend
-function showModal(event, d) {
-    // Requisição AJAX para buscar as informações do equipamento pelo ID
-    fetch(`/api/equipamento/${d.id}/`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.error) {
-                alert(data.error);  // Caso o equipamento não seja encontrado
-            } else {
-                // Atualiza o modal com os dados recebidos
-                document.querySelector('.modal-header').textContent = `Equipamento ${data.nome}`;
-                document.getElementById('input-ip').value = data.ip || '';
-                document.getElementById('input-usuario').value = data.usuario || '';
-                document.getElementById('input-senha').value = data.senha || '';
-                document.getElementById('input-porta').value = data.porta || '';
-                document.getElementById('input-protocolo').value = data.protocolo || '';
-
-                // Exibe o modal
-                document.getElementById('modalEquipamento').classList.add('show');
-                document.getElementById('modalOverlay').style.display = 'block';
-            }
-        })
-        .catch(error => console.error('Erro ao buscar informações do equipamento:', error));
-}
-    // Fechar modal
-    document.getElementById('closeModal').addEventListener('click', () => {
-        document.getElementById('modalEquipamento').classList.remove('show');
-        document.getElementById('modalOverlay').style.display = 'none';
-    });
-
+    // Configura o botão de fechar modal
+    const fecharBtn = document.getElementById('fecharConexaoBtn');
+    if (fecharBtn) {
+        fecharBtn.onclick = function () {
+            document.getElementById('modalConexao').classList.remove('show');
+            document.getElementById('modalOverlayConexao').style.display = 'none';
+        };
+    }
 }
 
+
+        // Função para abrir o modal e buscar as informações do equipamento no backend
+        function showModal(event, d) {
+            // Requisição AJAX para buscar as informações do equipamento pelo ID
+            fetch(`/api/equipamento/${d.id}/`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        alert(data.error);  // Caso o equipamento não seja encontrado
+                    } else {
+                        // Atualiza o modal com os dados recebidos
+                        document.querySelector('.modal-header').textContent = `Equipamento ${data.nome}`;
+                        document.getElementById('input-ip').value = data.ip || '';
+                        document.getElementById('input-usuario').value = data.usuario || '';
+                        document.getElementById('input-senha').value = data.senha || '';
+                        document.getElementById('input-porta').value = data.porta || '';
+                        document.getElementById('input-protocolo').value = data.protocolo || '';
+
+                        // Exibe o modal
+                        document.getElementById('modalEquipamento').classList.add('show');
+                        document.getElementById('modalOverlay').style.display = 'block';
+                    }
+                })
+                .catch(error => console.error('Erro ao buscar informações do equipamento:', error));
+        }
+            // Fechar modal
+            document.getElementById('closeModal').addEventListener('click', () => {
+                document.getElementById('modalEquipamento').classList.remove('show');
+                document.getElementById('modalOverlay').style.display = 'none';
+            });
+
+        }
 
     // Executa a função quando a empresa é alterada
     document.getElementById('empresa-selector').addEventListener('change', renderMapa);
 
+
     // Atualizar o mapa a cada 30 segundos
     setInterval(() => {
         // Fechar o modal, se estiver aberto
-        if (document.getElementById('modalEquipamento').classList.contains('show')) {
-            document.getElementById('modalEquipamento').classList.remove('show');
-            document.getElementById('modalOverlay').style.display = 'none';
-        }
+        //if (document.getElementById('modalEquipamento').classList.contains('show')) {
+        //    document.getElementById('modalEquipamento').classList.remove('show');
+        //    document.getElementById('modalOverlay').style.display = 'none';
+        //}
 
         atualizarMapa();
         renderMapa();

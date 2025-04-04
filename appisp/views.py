@@ -2,6 +2,8 @@ from django import forms
 from django.contrib.auth.models import User
 from dal import autocomplete
 import platform
+
+from django.db import transaction
 from django.http import JsonResponse
 from rest_framework.authentication import TokenAuthentication
 from django.db.models import Prefetch
@@ -11,11 +13,12 @@ from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404
 from rest_framework.decorators import api_view, authentication_classes
-
 from .authentication import EmpresaTokenAuthentication
 from .models import Porta, Empresa, Pop, Rack, Equipamento, BlocoIP, EnderecoIP, VlanPorta, Vlan, EmpresaToken
 from .forms import PortaForm, EnderecoIPForm
 from rest_framework.permissions import BasePermission
+import json
+from rest_framework.response import Response
 
 def get_equipamento(request, equipamento_id):
     try:
@@ -114,7 +117,6 @@ class TokenRequiredPermission(BasePermission):
             return False
 
 
-
 class DisableSessionAuthenticationMiddleware:
     """
     Middleware para desabilitar a autenticação de sessão em algumas rotas
@@ -179,7 +181,6 @@ def listar_equipamentosApi(request):
         return JsonResponse({"error": "Token inválido"}, status=403)
 
 
-
 def get_equipamentos(request):
     empresa_id = request.GET.get("empresa_id")
     if empresa_id:
@@ -214,6 +215,96 @@ def get_ips(request):
 
 def ip_management_view(request):
     return render(request, "ip_management.html")
+
+
+def api_portas(request):
+    equipamento_id = request.GET.get('equipamento_id')
+
+    if equipamento_id:
+        try:
+            # Convertendo o equipamento_id para um número inteiro
+            equipamento_id = int(equipamento_id)
+
+            # Filtrando as portas do equipamento e garantindo que a porta não tenha uma conexão
+            portas = Porta.objects.filter(
+                equipamento_id=equipamento_id,
+                conexao__isnull=True  # Garante que a porta não está conectada
+            ).values('id', 'nome', 'tipo', 'speed')
+
+            if portas.exists():  # Verifique se existem portas
+                return JsonResponse(list(portas), safe=False)
+            else:
+                # Em vez de retornar 404, retornamos 200 com a mensagem de erro
+                return JsonResponse({"error": "Nenhuma porta livre encontrada."}, status=200)
+
+        except ValueError:
+            return JsonResponse({"error": "ID inválido."}, status=400)
+    else:
+        return JsonResponse({"error": "Equipamento ID não fornecido."}, status=400)
+
+
+@api_view(['POST'])
+def conectar_portas(request):
+    try:
+        data = request.data
+
+        porta_origem_id = data.get("porta_origem_id")
+        porta_destino_id = data.get("porta_destino_id")
+        observacao = data.get("observacao")  # Captura o campo observação da requisição
+
+        if not all([porta_origem_id, porta_destino_id]):
+            return Response({"error": "IDs das portas são obrigatórios"}, status=400)
+
+        with transaction.atomic():  # Garante consistência no banco de dados
+            porta_origem = Porta.objects.get(id=porta_origem_id)
+            porta_destino = Porta.objects.get(id=porta_destino_id)
+
+            # Se a porta de origem já está conectada, removemos a conexão antiga
+            if porta_origem.conexao:
+                porta_origem.conexao.conexao = None  # Remove a conexão inversa da outra porta
+                porta_origem.conexao.save(update_fields=['conexao'])
+                porta_origem.conexao = None
+                porta_origem.save(update_fields=['conexao'])
+
+            # Se a porta de destino já está conectada, removemos a conexão antiga
+            if porta_destino.conexao:
+                porta_destino.conexao.conexao = None  # Remove a conexão inversa da outra porta
+                porta_destino.conexao.save(update_fields=['conexao'])
+                porta_destino.conexao = None
+                porta_destino.save(update_fields=['conexao'])
+
+            # Criar a nova conexão
+            porta_origem.conexao = porta_destino
+            porta_origem.save(update_fields=['conexao'])
+
+            # Agora salvamos a observação na porta de destino
+            porta_destino.observacao = observacao  # Atualiza a observação na porta de destino
+            porta_destino.save(update_fields=['observacao'])
+
+        return Response({"message": "Portas conectadas com sucesso!"}, status=200)
+
+    except Porta.DoesNotExist:
+        return Response({"error": "Uma ou ambas as portas não foram encontradas"}, status=404)
+    except Exception as e:
+        return Response({"error": f"Erro inesperado: {str(e)}"}, status=500)
+
+
+@api_view(['POST'])
+def desconectar_portas(request):
+    porta_id = request.data.get('porta_id')
+
+    if not porta_id:
+        return Response({"success": False, "error": "ID da porta não fornecido."}, status=400)
+
+    try:
+        porta = Porta.objects.get(id=porta_id)
+        porta.conexao = None
+        porta.save()
+        return Response({"success": True})
+    except Porta.DoesNotExist:
+        return Response({"success": False, "error": "Porta não encontrada."}, status=404)
+    except Exception as e:
+        return Response({"success": False, "error": str(e)}, status=500)
 
 
 def get_portas(request):
@@ -439,13 +530,15 @@ def mapa(request):
         for porta in equipamento.portas.all():
             if porta.conexao:
                 links.append({
-                    'source': porta.equipamento.id,  # Equipamento de origem
-                    'target': porta.conexao.equipamento.id,  # Equipamento de destino
-                    'porta_origem': porta.nome,  # Nome da porta de origem
-                    'porta_destino': porta.conexao.nome,  # Nome da porta de destino
-                    'tipo': porta.tipo,  # Tipo da conexão (Fibra, Elétrico, etc.)
-                    'speed': porta.speed,  # Velocidade da porta (100M, 1G, etc.)
-                    'Obs': porta.observacao,  # Observação da porta
+                    'source': porta.equipamento.id,
+                    'target': porta.conexao.equipamento.id,
+                    'porta_origem': porta.nome,
+                    'porta_origem_id': porta.id,  # 👈 AQUI
+                    'porta_destino': porta.conexao.nome,
+                    'porta_destino_id': porta.conexao.id,  # 👈 E AQUI
+                    'tipo': porta.tipo,
+                    'speed': porta.speed,
+                    'Obs': porta.observacao,
                 })
 
     # Contexto para enviar para o template

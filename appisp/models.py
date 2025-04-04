@@ -172,6 +172,17 @@ class Porta(models.Model):
 
         super().save(*args, **kwargs)
 
+        # Armazena a observação da porta atual
+        observacao_atual = self.observacao
+
+        # Se a porta está conectada a outra porta (B)
+        if self.conexao:
+            # Verifica se a observação de A é diferente da de B
+            if self.conexao.observacao != observacao_atual:
+                # Atualiza a observação da porta conectada (B) com a observação da porta A
+                self.conexao.observacao = observacao_atual
+                self.conexao.save(update_fields=['observacao'])  # Atualiza somente a observação da porta conectada
+
         # Se a porta está conectada a outra porta
         if self.conexao:
             if self.conexao.conexao != self:
