@@ -96,6 +96,10 @@ DATABASES = {
         'PASSWORD': 'Anas2108@@',
         'HOST': 'mariadb-ispdoc',
         'PORT': '3306',
+        'OPTIONS': {
+            'charset': 'utf8mb4',
+            'init_command': "SET NAMES 'utf8mb4'",
+        },
     }
 }
 
