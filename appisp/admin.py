@@ -899,6 +899,13 @@ class IntegracaoZabbixAdmin(admin.ModelAdmin):
     def sincronizar_equipamentos(self, request, pk):
         integracao = get_object_or_404(IntegracaoZabbix, pk=pk)
 
+        def filtro_equipamento_por_palavras_chave(nome_equipamento, palavras=["sw_", "PPPoE", "BRAS", "BORDA", "CORE", \
+                                                                              "OLT", "ROTEADOR", "BGP"]):
+
+            if not palavras:
+                return True
+            return any(palavra.lower() in nome_equipamento.lower() for palavra in palavras)
+
         auth_payload = {
             "jsonrpc": "2.0",
             "method": "user.login",
@@ -937,23 +944,35 @@ class IntegracaoZabbixAdmin(admin.ModelAdmin):
                 ip = host.get("interfaces", [{}])[0].get("ip", "")
                 nome = host.get("name", "Sem Nome")
 
-                if not Equipamento.objects.filter(ip=ip).exists():
-                    Equipamento.objects.create(
-                        nome=nome,
-                        ip=ip,
-                        usuario='admin',
-                        senha='admin',
-                        porta=22,
-                        protocolo='SSH',
-                        empresa=integracao.empresa,
-                        pop=Pop.objects.filter(empresa=integracao.empresa).first(),
-                        fabricante=Fabricante.objects.first(),
-                        modelo=Modelo.objects.first(),
-                        tipo='Switch',
-                        status='Ativo',
-                        observacao='Importado do Zabbix'
-                    )
-                    criados += 1
+                if filtro_equipamento_por_palavras_chave(nome):
+                    if not Equipamento.objects.filter(ip=ip, empresa=integracao.empresa).exists():
+                        # Certifique-se de que Pop, Fabricante e Modelo existam ou defina uma lógica para obtê-los
+                        pop = Pop.objects.filter(empresa=integracao.empresa).first()
+                        fabricante = Fabricante.objects.first()
+                        modelo = Modelo.objects.first()
+
+                        if pop and fabricante and modelo:
+                            Equipamento.objects.create(
+                                nome=nome,
+                                ip=ip,
+                                usuario='admin',
+                                senha='admin',
+                                porta=22,
+                                protocolo='SSH',
+                                empresa=integracao.empresa,
+                                pop=pop,
+                                fabricante=fabricante,
+                                modelo=modelo,
+                                tipo='Switch',
+                                status='Ativo',
+                                observacao='Importado do Zabbix'
+                            )
+                            criados += 1
+                        else:
+                            print(
+                                f"⚠️ Não foi possível criar o equipamento '{nome}' pois Pop, Fabricante ou Modelo não foram encontrados.")
+                else:
+                    print(f"⏭️ Equipamento ignorado por filtro: {nome}")
 
             self.message_user(request, f"✅ {criados} equipamento(s) importado(s) com sucesso!")
         except Exception as e:
