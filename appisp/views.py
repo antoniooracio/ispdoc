@@ -1,10 +1,13 @@
+import requests
 from django import forms
+from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.models import User
 from dal import autocomplete
 import platform
-
+from django.contrib import messages
 from django.db import transaction
 from django.http import JsonResponse
+from django.urls import reverse
 from rest_framework.authentication import TokenAuthentication
 from django.db.models import Prefetch
 from concurrent.futures import ThreadPoolExecutor
@@ -14,7 +17,8 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404
 from rest_framework.decorators import api_view, authentication_classes
 from .authentication import EmpresaTokenAuthentication
-from .models import Porta, Empresa, Pop, Rack, Equipamento, BlocoIP, EnderecoIP, VlanPorta, Vlan, EmpresaToken
+from .models import Porta, Empresa, Pop, Rack, Equipamento, BlocoIP, EnderecoIP, VlanPorta, Vlan, EmpresaToken, \
+                    IntegracaoZabbix
 from .forms import PortaForm, EnderecoIPForm
 from rest_framework.permissions import BasePermission
 import json
@@ -884,3 +888,26 @@ def estrutura_bloco(request, bloco_id):
         return JsonResponse({'error': 'Bloco não encontrado'}, status=404)
 
 
+@staff_member_required
+def testar_conexao(request, pk):
+    integracao = get_object_or_404(IntegracaoZabbix, pk=pk)
+    payload = {
+        "jsonrpc": "2.0",
+        "method": "user.login",
+        "params": {
+            "user": integracao.usuario,
+            "password": integracao.senha
+        },
+        "id": 1
+    }
+    try:
+        response = requests.post(integracao.url, json=payload, timeout=5)
+        data = response.json()
+        if 'result' in data:
+            messages.success(request, "✅ Conexão com Zabbix bem-sucedida!")
+        else:
+            messages.error(request, f"❌ Falha na autenticação com o Zabbix: {data.get('error')}")
+    except Exception as e:
+        messages.warning(request, f"⚠️ Erro ao conectar: {str(e)}")
+
+    return redirect(reverse('admin:appisp_integracaozabbix_change', args=[pk]))

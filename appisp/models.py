@@ -564,3 +564,47 @@ class Rede(models.Model):
 
     def __str__(self):
         return f"{self.nome} - {self.ip} ({self.maquina.nome})"
+
+
+class IntegracaoZabbix(models.Model):
+    empresa = models.OneToOneField(
+        Empresa,
+        on_delete=models.CASCADE,
+        related_name='integracao_zabbix'
+    )
+    url = models.URLField(
+        verbose_name='URL da API Zabbix',
+        help_text='Ex: http://zabbix.suaempresa.com/api_jsonrpc.php'
+    )
+    usuario = models.CharField(
+        max_length=100,
+        verbose_name='Usuário Zabbix',
+        help_text='Usuário com permissão de API no Zabbix'
+    )
+    senha = models.CharField(
+        max_length=100,
+        verbose_name='Senha Zabbix'
+    )
+    observacoes = models.TextField(
+        blank=True,
+        null=True,
+        help_text='Informações adicionais da integração'
+    )
+    ativo = models.BooleanField(
+        default=True,
+        help_text='Marque para habilitar a integração'
+    )
+    data_criacao = models.DateTimeField(auto_now_add=True)
+    ultima_sincronizacao = models.DateTimeField(
+        blank=True,
+        null=True,
+        help_text='Data da última sincronização com o Zabbix'
+    )
+
+    class Meta:
+        verbose_name = 'Integração com Zabbix'
+        verbose_name_plural = 'Integrações com Zabbix'
+        ordering = ['empresa']
+
+    def __str__(self):
+        return f'Zabbix - {self.empresa.nome}'

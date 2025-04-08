@@ -1,3 +1,7 @@
+import json
+
+import requests
+import re
 from django.contrib import admin, messages
 from django import forms
 from django.urls import path
@@ -6,14 +10,17 @@ from django.utils.translation import gettext_lazy as _
 from django.contrib.auth.models import Group, User
 from django.contrib.auth.admin import GroupAdmin, UserAdmin
 from django.contrib.admin import AdminSite
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, get_object_or_404, redirect
 from django.http import HttpResponseRedirect
 from .forms import PortaForm, RackForm, RackEquipamentoForm, EnderecoIPForm
 from .views import mapa, mapa_racks
 from django.contrib.admin import SimpleListFilter
 from .models import Empresa, Pop, Fabricante, Modelo, Equipamento, Porta, BlocoIP, EnderecoIP, Rack, RackEquipamento, \
-    MaquinaVirtual, Disco, Rede, Vlan, VlanPorta, EmpresaToken
+    MaquinaVirtual, Disco, Rede, Vlan, VlanPorta, EmpresaToken, IntegracaoZabbix
 import ipaddress
+from django.utils.html import format_html
+
+
 
 class PopEmpresaFilter(SimpleListFilter):
     title = "Pop"
@@ -822,6 +829,274 @@ class EmpresaTokenAdmin(admin.ModelAdmin):
     readonly_fields = ("token",)  # Deixa o token apenas para leitura
 
 
+@admin.register(IntegracaoZabbix)
+class IntegracaoZabbixAdmin(admin.ModelAdmin):
+    list_display = ('empresa', 'url', 'ativo', 'ultima_sincronizacao', 'testar_conexao_button', 'sincronizar_equipamentos_button', 'sincronizar_portas_link')
+    readonly_fields = ('ultima_sincronizacao', 'testar_conexao_button', 'sincronizar_equipamentos_button', 'sincronizar_portas_link')
+    fields = (
+        'empresa', 'url', 'usuario', 'senha',
+        'observacoes', 'ativo', 'ultima_sincronizacao',
+        'testar_conexao_button', 'sincronizar_equipamentos_button', 'sincronizar_portas_link'
+    )
+
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path('testar-conexao/<int:pk>/', self.admin_site.admin_view(self.testar_conexao), name='testar_conexao'),
+            path('sincronizar-equipamentos/<int:pk>/', self.admin_site.admin_view(self.sincronizar_equipamentos), name='sincronizar_equipamentos'),
+            path('<int:pk>/sincronizar_portas/', self.admin_site.admin_view(self.sincronizar_portas), name='sincronizar_portas'),
+        ]
+        return custom_urls + urls
+
+    def testar_conexao_button(self, obj):
+        if obj.pk:
+            return format_html(
+                '<a class="button" href="{}">🔄 Testar Conexão</a>',
+                reverse('admin:testar_conexao', args=[obj.pk])
+            )
+        return "Salve antes de testar"
+    testar_conexao_button.short_description = "Testar Conexão com Zabbix"
+
+    def sincronizar_equipamentos_button(self, obj):
+        if obj.pk:
+            return format_html(
+                '<a class="button" href="{}">🔄 Buscar Equipamentos</a>',
+                reverse('admin:sincronizar_equipamentos', args=[obj.pk])
+            )
+        return "Salve antes de sincronizar"
+    sincronizar_equipamentos_button.short_description = "Buscar Equipamentos do Zabbix"
+
+    def sincronizar_portas_link(self, obj):
+        if obj.pk:
+            url = reverse('admin:sincronizar_portas', args=[obj.pk])
+            return format_html('<a class="button" href="{}">🔌 Sincronizar Portas</a>', url)
+        return "Salve antes de sincronizar"
+    sincronizar_portas_link.short_description = 'Sincronizar Portas'
+
+    def testar_conexao(self, request, pk):
+        integracao = get_object_or_404(IntegracaoZabbix, pk=pk)
+        payload = {
+            "jsonrpc": "2.0",
+            "method": "user.login",
+            "params": {
+                "user": integracao.usuario,
+                "password": integracao.senha
+            },
+            "id": 1
+        }
+        try:
+            response = requests.post(integracao.url, json=payload, timeout=5)
+            data = response.json()
+            if 'result' in data:
+                self.message_user(request, "✅ Conexão com Zabbix bem-sucedida!")
+            else:
+                self.message_user(request, f"❌ Falha na autenticação com o Zabbix: {data.get('error')}", level='error')
+        except Exception as e:
+            self.message_user(request, f"⚠️ Erro ao conectar: {str(e)}", level='error')
+
+        return redirect(f'/admin/appisp/integracaozabbix/{pk}/change')
+
+    def sincronizar_equipamentos(self, request, pk):
+        integracao = get_object_or_404(IntegracaoZabbix, pk=pk)
+
+        auth_payload = {
+            "jsonrpc": "2.0",
+            "method": "user.login",
+            "params": {
+                "user": integracao.usuario,
+                "password": integracao.senha
+            },
+            "id": 1
+        }
+
+        try:
+            login_response = requests.post(integracao.url, json=auth_payload, timeout=5)
+            login_data = login_response.json()
+            token = login_data.get("result")
+
+            if not token:
+                self.message_user(request, f"❌ Erro ao autenticar: {login_data.get('error')}", level='error')
+                return redirect(f'/admin/appisp/integracaozabbix/{pk}/change')
+
+            host_payload = {
+                "jsonrpc": "2.0",
+                "method": "host.get",
+                "params": {
+                    "output": ["host", "name"],
+                    "selectInterfaces": ["ip"]
+                },
+                "auth": token,
+                "id": 2
+            }
+
+            host_response = requests.post(integracao.url, json=host_payload, timeout=10)
+            hosts = host_response.json().get("result", [])
+
+            criados = 0
+            for host in hosts:
+                ip = host.get("interfaces", [{}])[0].get("ip", "")
+                nome = host.get("name", "Sem Nome")
+
+                if not Equipamento.objects.filter(ip=ip).exists():
+                    Equipamento.objects.create(
+                        nome=nome,
+                        ip=ip,
+                        usuario='admin',
+                        senha='admin',
+                        porta=22,
+                        protocolo='SSH',
+                        empresa=integracao.empresa,
+                        pop=Pop.objects.filter(empresa=integracao.empresa).first(),
+                        fabricante=Fabricante.objects.first(),
+                        modelo=Modelo.objects.first(),
+                        tipo='Switch',
+                        status='Ativo',
+                        observacao='Importado do Zabbix'
+                    )
+                    criados += 1
+
+            self.message_user(request, f"✅ {criados} equipamento(s) importado(s) com sucesso!")
+        except Exception as e:
+            self.message_user(request, f"⚠️ Erro ao sincronizar: {str(e)}", level='error')
+
+        return redirect(f'/admin/appisp/integracaozabbix/{pk}/change')
+
+    def sincronizar_portas(self, request, pk):
+        integracao = get_object_or_404(IntegracaoZabbix, pk=pk)
+
+        def filtro_por_palavras_chave(descricao, palavras=["ethernet"]):
+            if not palavras:
+                return True
+            return any(palavra.lower() in descricao.lower() for palavra in palavras)
+
+        try:
+            login_response = requests.post(integracao.url, json={
+                "jsonrpc": "2.0",
+                "method": "user.login",
+                "params": {"user": integracao.usuario, "password": integracao.senha},
+                "id": 1
+            }, timeout=10)
+            login_response.raise_for_status()  # Levanta uma exceção para erros HTTP
+            token = login_response.json().get("result")
+            if not token:
+                raise Exception("Falha na autenticação")
+
+            hosts_response = requests.post(integracao.url, json={
+                "jsonrpc": "2.0",
+                "method": "host.get",
+                "params": {"output": ["host", "name"]},
+                "auth": token,
+                "id": 2
+            }, timeout=10)
+            hosts_response.raise_for_status()
+            hosts = hosts_response.json().get("result", [])
+
+            portas_criadas = 0
+
+            for host in hosts:
+                nome_host = host["host"]
+                equipamento = Equipamento.objects.filter(nome=nome_host, empresa=integracao.empresa).first()
+
+                if not equipamento:
+                    continue
+
+                item_payload = {
+                    "jsonrpc": "2.0",
+                    "method": "item.get",
+                    "params": {
+                        "output": ["name", "key_"],
+                        "hostids": host["hostid"]
+                    },
+                    "auth": token,
+                    "id": 3
+                }
+
+                item_response = requests.post(integracao.url, json=item_payload, timeout=10)
+                item_response.raise_for_status()
+                items = item_response.json().get("result", [])
+
+                nomes_interface = {}
+                itens_porta = []
+
+                for item in items:
+                    chave = item.get("key_", "")
+                    nome = item.get("name", "").strip()
+
+                    if chave.startswith("net.if.type"):
+                        match = re.search(r'net\.if\.type\[(.*?)\]', chave)
+                        if match:
+                            indice = match.group(1).replace("ifType.", "")
+                            nome_interface_match = re.search(r'Interface (.+?)(?:\(|:)', nome)
+                            if nome_interface_match:
+                                nome_interface = nome_interface_match.group(1).strip()
+                                nomes_interface[indice] = nome_interface
+                            else:
+                                nome_interface_match_alt = re.search(r'(\w+)\s*Interface', nome)
+                                if nome_interface_match_alt:
+                                    nome_interface = nome_interface_match_alt.group(1).strip()
+                                    nomes_interface[indice] = nome_interface
+                                else:
+                                    nome_interface = nome  # Se não encontrar "Interface", usa o nome completo
+                                print(
+                                    f"⚠️ Atenção: Padrão de nome de interface não reconhecido para '{nome}'. Usando '{nome_interface}'.")
+
+                    elif chave.startswith(("net.if.in", "net.if.out", "net.if.speed")):
+                        itens_porta.append(item)
+
+                nomes_processados = set()
+
+                for item in itens_porta:
+                    chave = item.get("key_", "")
+                    match = re.search(r'net\.if\.\w+\[(.*?)\]', chave)
+                    if not match:
+                        continue
+
+                    indice = match.group(1)
+                    nome_porta = nomes_interface.get(indice)
+                    if not nome_porta:
+                        continue
+
+                    if not filtro_por_palavras_chave(nome_porta, palavras=[]):
+                        continue
+
+                    nome_normalizado = nome_porta.lower().replace(" ", "").replace("/", "").replace("-", "")
+                    if nome_normalizado in nomes_processados:
+                        continue
+                    nomes_processados.add(nome_normalizado)
+
+                    try:
+                        porta, criada = Porta.objects.update_or_create(
+                            equipamento=equipamento,
+                            nome=nome_porta,
+                            defaults={
+                                'empresa': equipamento.empresa,
+                                'speed': '1 Gbps',
+                                'tipo': 'Fibra',
+                                'observacao': 'Importado do Zabbix',
+                            }
+                        )
+
+                        # Atualiza empresa caso não exista
+                        if not criada and not porta.empresa:
+                            porta.empresa = equipamento.empresa
+                            porta.save(update_fields=['empresa'])
+
+                        if criada:
+                            portas_criadas += 1
+                    except Exception as db_error:
+                        print(
+                            f"⚠️ Erro ao salvar/atualizar porta '{nome_porta}' para o equipamento '{equipamento.nome}': {db_error}")
+
+            self.message_user(request, f"✅ {portas_criadas} porta(s) importada(s) com sucesso!")
+
+        except requests.exceptions.RequestException as req_err:
+            self.message_user(request, f"⚠️ Erro de comunicação com o Zabbix: {req_err}", level=messages.ERROR)
+        except Exception as e:
+            self.message_user(request, f"⚠️ Erro ao buscar portas: {str(e)}", level=messages.ERROR)
+
+        return redirect(f'/admin/appisp/integracaozabbix/{pk}/change')
+
+
 # Classe personalizada de Admin
 class CustomAdminSite(AdminSite):
     site_header = "Documentação de Rede"
@@ -877,6 +1152,7 @@ admin_site.register(MaquinaVirtual, MaquinaVirtualAdmin)
 admin_site.register(Vlan, VlanAdmin)
 admin_site.register(VlanPorta, VlanPortaAdmin)
 admin_site.register(EmpresaToken, EmpresaTokenAdmin)
+admin_site.register(IntegracaoZabbix, IntegracaoZabbixAdmin)
 
 # Em vez de usar admin.site, agora usamos admin_site
 # Para fazer isso funcionar, você precisará alterar as URLs do seu projeto Django para usar o custom_admin

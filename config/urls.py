@@ -25,7 +25,7 @@ from appisp.views import (EquipamentoAutocomplete, PortaAutocomplete, mapa, atua
                           get_sub_blocos, visualizar_vlans_por_equipamento, mapa_vlans_json, relatorio_vlans,
                           alertas_vlans, lista_empresas_json, lista_vlans_json, estrutura_bloco, estrutura_bloco, get_portas,
                           verificar_status_equipamentos, listar_equipamentosApi, atualizar_status_equipamento, get_map_data,
-                          get_equipamento, api_portas, conectar_portas, desconectar_portas,
+                          get_equipamento, api_portas, conectar_portas, desconectar_portas, testar_conexao,
                           )
 from appisp.models import Porta
 from django.contrib.auth.decorators import login_required
@@ -63,6 +63,9 @@ urlpatterns = [
     path('alertas_vlans/', alertas_vlans, name='alertas_vlans'),
     path('ajax/portas_por_equipamento/<int:equipamento_id>/', get_portas_por_equipamento,
          name='portas_por_equipamento'),
+
+    path('testar-conexao/<int:pk>/', testar_conexao, name='testar_conexao'),
+
     path("ajax/ips_por_bloco/<int:bloco_id>/", listar_ips_por_bloco, name="listar_ips_por_bloco"),
     path('ajax/sub_blocos_por_bloco/<int:bloco_id>/', get_sub_blocos, name='ajax_sub_blocos_por_bloco'),
     path("lista_empresas_json/", lista_empresas_json, name="lista_empresas_json"),
