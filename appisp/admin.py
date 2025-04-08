@@ -961,13 +961,19 @@ class IntegracaoZabbixAdmin(admin.ModelAdmin):
 
         return redirect(f'/admin/appisp/integracaozabbix/{pk}/change')
 
+    import re
+
     def sincronizar_portas(self, request, pk):
         integracao = get_object_or_404(IntegracaoZabbix, pk=pk)
 
-        def filtro_por_palavras_chave(descricao, palavras=["ethernet"]):
+        def filtro_por_palavras_chave(descricao, palavras=["ethernet", "sfp", "eoip", "interface"]):
+
             if not palavras:
                 return True
             return any(palavra.lower() in descricao.lower() for palavra in palavras)
+
+        portas_criadas = 0
+        hosts_processados = 0
 
         try:
             login_response = requests.post(integracao.url, json={
@@ -976,7 +982,7 @@ class IntegracaoZabbixAdmin(admin.ModelAdmin):
                 "params": {"user": integracao.usuario, "password": integracao.senha},
                 "id": 1
             }, timeout=10)
-            login_response.raise_for_status()  # Levanta uma exceção para erros HTTP
+            login_response.raise_for_status()
             token = login_response.json().get("result")
             if not token:
                 raise Exception("Falha na autenticação")
@@ -991,108 +997,134 @@ class IntegracaoZabbixAdmin(admin.ModelAdmin):
             hosts_response.raise_for_status()
             hosts = hosts_response.json().get("result", [])
 
-            portas_criadas = 0
-
             for host in hosts:
-                nome_host = host["host"]
-                equipamento = Equipamento.objects.filter(nome=nome_host, empresa=integracao.empresa).first()
+                try:
+                    hosts_processados += 1
+                    nome_host = host["host"]
+                    equipamento = Equipamento.objects.filter(nome=nome_host, empresa=integracao.empresa).first()
 
-                if not equipamento:
-                    continue
+                    if not equipamento:
+                        continue
 
-                item_payload = {
-                    "jsonrpc": "2.0",
-                    "method": "item.get",
-                    "params": {
-                        "output": ["name", "key_"],
-                        "hostids": host["hostid"]
-                    },
-                    "auth": token,
-                    "id": 3
-                }
 
-                item_response = requests.post(integracao.url, json=item_payload, timeout=10)
-                item_response.raise_for_status()
-                items = item_response.json().get("result", [])
+                    item_payload = {
+                        "jsonrpc": "2.0",
+                        "method": "item.get",
+                        "params": {
+                            "output": ["name", "key_"],
+                            "hostids": host["hostid"]
+                        },
+                        "auth": token,
+                        "id": 3
+                    }
 
-                nomes_interface = {}
-                itens_porta = []
+                    item_response = requests.post(integracao.url, json=item_payload, timeout=10)
+                    item_response.raise_for_status()
+                    items = item_response.json().get("result", [])
 
-                for item in items:
-                    chave = item.get("key_", "")
-                    nome = item.get("name", "").strip()
+                    nomes_interface = {}
+                    itens_porta = []
 
-                    if chave.startswith("net.if.type"):
-                        match = re.search(r'net\.if\.type\[(.*?)\]', chave)
-                        if match:
-                            indice = match.group(1).replace("ifType.", "")
+                    nomes_interfaces_list = []
+
+                    for item in items:
+                        chave = item.get("key_", "")
+                        nome = item.get("name", "").strip()
+
+                        if chave.startswith("net.if.type"):
+                            nome_interface = None
                             nome_interface_match = re.search(r'Interface (.+?)(?:\(|:)', nome)
                             if nome_interface_match:
                                 nome_interface = nome_interface_match.group(1).strip()
-                                nomes_interface[indice] = nome_interface
+                                nome_interface = re.sub(r'\([^)]+\)', '', nome_interface).strip()
                             else:
-                                nome_interface_match_alt = re.search(r'(\w+)\s*Interface', nome)
+                                nome_interface_match_alt = re.search(r'(\S+)\s*Interface', nome)
                                 if nome_interface_match_alt:
                                     nome_interface = nome_interface_match_alt.group(1).strip()
-                                    nomes_interface[indice] = nome_interface
+                                    nome_interface = re.sub(r'\([^)]+\)', '', nome_interface).strip()
                                 else:
-                                    nome_interface = nome  # Se não encontrar "Interface", usa o nome completo
-                                print(
-                                    f"⚠️ Atenção: Padrão de nome de interface não reconhecido para '{nome}'. Usando '{nome_interface}'.")
+                                    nome_interface = nome
+                                    nome_interface = re.sub(r'\([^)]+\)', '', nome_interface).strip()
 
-                    elif chave.startswith(("net.if.in", "net.if.out", "net.if.speed")):
-                        itens_porta.append(item)
+                            if nome_interface:
+                                nomes_interfaces_list.append(nome_interface)
 
-                nomes_processados = set()
+                        elif chave.startswith(("net.if.in", "net.if.out", "net.if.speed")):
+                            itens_porta.append(item)
 
-                for item in itens_porta:
-                    chave = item.get("key_", "")
-                    match = re.search(r'net\.if\.\w+\[(.*?)\]', chave)
-                    if not match:
-                        continue
+                    nomes_processados = set()
+                    interface_index = 0
 
-                    indice = match.group(1)
-                    nome_porta = nomes_interface.get(indice)
-                    if not nome_porta:
-                        continue
+                    for item in itens_porta:
+                        chave = item.get("key_", "")
+                        nome_item = item.get("name", "").strip()
+                        nome_porta = None
 
-                    if not filtro_por_palavras_chave(nome_porta, palavras=[]):
-                        continue
+                        # Tenta encontrar um nome de interface na lista pelo índice (ordem dos itens)
+                        if interface_index < len(nomes_interfaces_list):
+                            nome_porta = nomes_interfaces_list[interface_index]
+                            interface_index += 1
+                        else:
+                            # Se não houver mais nomes na lista, tenta encontrar no nome do item
+                            nome_porta_match = re.search(r'Interface (.+?)(?:\(|:)', nome_item)
+                            if nome_porta_match:
+                                nome_porta = nome_porta_match.group(1).strip()
+                                nome_porta = re.sub(r'\([^)]+\)', '', nome_porta).strip()
+                            else:
+                                nome_porta_match_alt = re.search(r'(\S+)\s*Interface', nome_item)
+                                if nome_porta_match_alt:
+                                    nome_porta = nome_porta_match_alt.group(1).strip()
+                                    nome_porta = re.sub(r'\([^)]+\)', '', nome_porta).strip()
+                                else:
+                                    continue
 
-                    nome_normalizado = nome_porta.lower().replace(" ", "").replace("/", "").replace("-", "")
-                    if nome_normalizado in nomes_processados:
-                        continue
-                    nomes_processados.add(nome_normalizado)
+                        if nome_porta:
+                            nome_porta_completo = nome_porta.strip()
+                            if "(" not in nome_porta_completo:
+                                nome_porta_completo = nome_porta_completo
 
-                    try:
-                        porta, criada = Porta.objects.update_or_create(
-                            equipamento=equipamento,
-                            nome=nome_porta,
-                            defaults={
-                                'empresa': equipamento.empresa,
-                                'speed': '1 Gbps',
-                                'tipo': 'Fibra',
-                                'observacao': 'Importado do Zabbix',
-                            }
-                        )
+                            if not filtro_por_palavras_chave(nome_porta_completo):  # Chamada sem a lista vazia
+                                continue
 
-                        # Atualiza empresa caso não exista
-                        if not criada and not porta.empresa:
-                            porta.empresa = equipamento.empresa
-                            porta.save(update_fields=['empresa'])
+                            nome_normalizado = nome_porta_completo.lower().replace(" ", "").replace("/", "").replace(
+                                "-", "")
+                            if nome_normalizado in nomes_processados:
+                                continue
+                            nomes_processados.add(nome_normalizado)
 
-                        if criada:
-                            portas_criadas += 1
-                    except Exception as db_error:
-                        print(
-                            f"⚠️ Erro ao salvar/atualizar porta '{nome_porta}' para o equipamento '{equipamento.nome}': {db_error}")
+                            try:
+                                porta, criada = Porta.objects.update_or_create(
+                                    equipamento=equipamento,
+                                    nome=nome_porta_completo,
+                                    defaults={
+                                        'empresa': equipamento.empresa,
+                                        'speed': '1G',
+                                        'tipo': 'Fibra',
+                                        'observacao': 'Importado do Zabbix',
+                                    }
+                                )
+                                if criada:
+                                    portas_criadas += 1
+                            except Exception as db_error:
+                                import traceback
+                                print(f"⚠️ Erro ao salvar/atualizar porta: {db_error}")
+                                traceback.print_exc()
 
-            self.message_user(request, f"✅ {portas_criadas} porta(s) importada(s) com sucesso!")
+                except requests.exceptions.RequestException as req_err_host:
+                    print(f"⚠️ Erro de comunicação com o Zabbix ao processar o host {host['host']}: {req_err_host}")
+                except Exception as e_host:
+                    import traceback
+                    print(f"⚠️ Erro ao processar o host {host['host']}: {e_host}")
+                    traceback.print_exc()
 
-        except requests.exceptions.RequestException as req_err:
-            self.message_user(request, f"⚠️ Erro de comunicação com o Zabbix: {req_err}", level=messages.ERROR)
-        except Exception as e:
-            self.message_user(request, f"⚠️ Erro ao buscar portas: {str(e)}", level=messages.ERROR)
+            self.message_user(request,
+                              f"✅ {portas_criadas} porta(s) importada(s) com sucesso de {hosts_processados} hosts!")
+
+        except requests.exceptions.RequestException as req_err_global:
+            self.message_user(request, f"⚠️ Erro de comunicação global com o Zabbix: {req_err_global}",
+                              level=messages.ERROR)
+        except Exception as e_global:
+            self.message_user(request, f"⚠️ Erro global ao buscar portas: {str(e_global)}", level=messages.ERROR)
 
         return redirect(f'/admin/appisp/integracaozabbix/{pk}/change')
 
