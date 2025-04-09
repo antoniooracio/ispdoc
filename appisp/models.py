@@ -585,6 +585,7 @@ class IntegracaoZabbix(models.Model):
         max_length=100,
         verbose_name='Senha Zabbix'
     )
+    token = models.CharField("Token de API", max_length=255, blank=True, null=True)
     observacoes = models.TextField(
         blank=True,
         null=True,

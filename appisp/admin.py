@@ -1,5 +1,5 @@
 import json
-
+from django.utils import timezone
 import requests
 import re
 from django.contrib import admin, messages
@@ -19,6 +19,7 @@ from .models import Empresa, Pop, Fabricante, Modelo, Equipamento, Porta, BlocoI
     MaquinaVirtual, Disco, Rede, Vlan, VlanPorta, EmpresaToken, IntegracaoZabbix
 import ipaddress
 from django.utils.html import format_html
+from django.contrib import admin
 
 
 
@@ -834,10 +835,31 @@ class IntegracaoZabbixAdmin(admin.ModelAdmin):
     list_display = ('empresa', 'url', 'ativo', 'ultima_sincronizacao', 'testar_conexao_button', 'sincronizar_equipamentos_button', 'sincronizar_portas_link')
     readonly_fields = ('ultima_sincronizacao', 'testar_conexao_button', 'sincronizar_equipamentos_button', 'sincronizar_portas_link')
     fields = (
-        'empresa', 'url', 'usuario', 'senha',
+        'empresa', 'url', 'usuario', 'senha', 'token',
         'observacoes', 'ativo', 'ultima_sincronizacao',
         'testar_conexao_button', 'sincronizar_equipamentos_button', 'sincronizar_portas_link'
     )
+
+    def get_form(self, request, obj=None, **kwargs):
+        # Pegando as empresas associadas ao usuário logado
+        user_empresas = request.user.empresas.all()  # Acessando o relacionamento reverso do modelo User
+
+        # Criando o formulário customizado
+        class IntegracaoZabbixForm(forms.ModelForm):
+            empresa = forms.ModelChoiceField(queryset=user_empresas)
+
+            class Meta:
+                model = IntegracaoZabbix
+                fields = '__all__'
+
+        return IntegracaoZabbixForm
+
+    def get_queryset(self, request):
+        # Filtra as integrações para mostrar apenas as da empresa do usuário
+        qs = super().get_queryset(request)
+        if request.user.is_superuser:
+            return qs  # Superusuários podem ver tudo
+        return qs.filter(empresa__in=request.user.empresas.all())  # Filtra por empresas associadas ao usuário
 
     def get_urls(self):
         urls = super().get_urls()
@@ -873,8 +895,10 @@ class IntegracaoZabbixAdmin(admin.ModelAdmin):
         return "Salve antes de sincronizar"
     sincronizar_portas_link.short_description = 'Sincronizar Portas'
 
-    def testar_conexao(self, request, pk):
-        integracao = get_object_or_404(IntegracaoZabbix, pk=pk)
+    def autenticar(self, integracao):
+        if integracao.token:
+            return integracao.token  # Usar o token se disponível
+        # Caso contrário, autenticar com usuário e senha
         payload = {
             "jsonrpc": "2.0",
             "method": "user.login",
@@ -884,13 +908,22 @@ class IntegracaoZabbixAdmin(admin.ModelAdmin):
             },
             "id": 1
         }
+        response = requests.post(integracao.url, json=payload, timeout=5)
+        data = response.json()
+        return data.get("result")
+
+    def atualizar_ultima_sincronizacao(self, integracao):
+        integracao.ultima_sincronizacao = timezone.now()
+        integracao.save()
+
+    def testar_conexao(self, request, pk):
+        integracao = get_object_or_404(IntegracaoZabbix, pk=pk)
         try:
-            response = requests.post(integracao.url, json=payload, timeout=5)
-            data = response.json()
-            if 'result' in data:
+            token = self.autenticar(integracao)
+            if token:
                 self.message_user(request, "✅ Conexão com Zabbix bem-sucedida!")
             else:
-                self.message_user(request, f"❌ Falha na autenticação com o Zabbix: {data.get('error')}", level='error')
+                self.message_user(request, "❌ Falha na autenticação com o Zabbix", level='error')
         except Exception as e:
             self.message_user(request, f"⚠️ Erro ao conectar: {str(e)}", level='error')
 
@@ -901,28 +934,15 @@ class IntegracaoZabbixAdmin(admin.ModelAdmin):
 
         def filtro_equipamento_por_palavras_chave(nome_equipamento, palavras=["sw_", "PPPoE", "BRAS", "BORDA", "CORE", \
                                                                               "OLT", "ROTEADOR", "BGP"]):
-
             if not palavras:
                 return True
             return any(palavra.lower() in nome_equipamento.lower() for palavra in palavras)
 
-        auth_payload = {
-            "jsonrpc": "2.0",
-            "method": "user.login",
-            "params": {
-                "user": integracao.usuario,
-                "password": integracao.senha
-            },
-            "id": 1
-        }
-
         try:
-            login_response = requests.post(integracao.url, json=auth_payload, timeout=5)
-            login_data = login_response.json()
-            token = login_data.get("result")
+            token = self.autenticar(integracao)
 
             if not token:
-                self.message_user(request, f"❌ Erro ao autenticar: {login_data.get('error')}", level='error')
+                self.message_user(request, "❌ Erro ao autenticar: Falha na autenticação", level='error')
                 return redirect(f'/admin/appisp/integracaozabbix/{pk}/change')
 
             host_payload = {
@@ -969,24 +989,23 @@ class IntegracaoZabbixAdmin(admin.ModelAdmin):
                             )
                             criados += 1
                         else:
-                            print(
-                                f"⚠️ Não foi possível criar o equipamento '{nome}' pois Pop, Fabricante ou Modelo não foram encontrados.")
+                            print(f"⚠️ Não foi possível criar o equipamento '{nome}' pois Pop, Fabricante ou Modelo não foram encontrados.")
                 else:
                     print(f"⏭️ Equipamento ignorado por filtro: {nome}")
 
             self.message_user(request, f"✅ {criados} equipamento(s) importado(s) com sucesso!")
+
+            # Atualiza a data da última sincronização
+            self.atualizar_ultima_sincronizacao(integracao)
         except Exception as e:
             self.message_user(request, f"⚠️ Erro ao sincronizar: {str(e)}", level='error')
 
         return redirect(f'/admin/appisp/integracaozabbix/{pk}/change')
 
-    import re
-
     def sincronizar_portas(self, request, pk):
         integracao = get_object_or_404(IntegracaoZabbix, pk=pk)
 
         def filtro_por_palavras_chave(descricao, palavras=["ethernet", "sfp", "eoip", "interface"]):
-
             if not palavras:
                 return True
             return any(palavra.lower() in descricao.lower() for palavra in palavras)
@@ -995,14 +1014,8 @@ class IntegracaoZabbixAdmin(admin.ModelAdmin):
         hosts_processados = 0
 
         try:
-            login_response = requests.post(integracao.url, json={
-                "jsonrpc": "2.0",
-                "method": "user.login",
-                "params": {"user": integracao.usuario, "password": integracao.senha},
-                "id": 1
-            }, timeout=10)
-            login_response.raise_for_status()
-            token = login_response.json().get("result")
+            token = self.autenticar(integracao)
+
             if not token:
                 raise Exception("Falha na autenticação")
 
@@ -1024,7 +1037,6 @@ class IntegracaoZabbixAdmin(admin.ModelAdmin):
 
                     if not equipamento:
                         continue
-
 
                     item_payload = {
                         "jsonrpc": "2.0",
@@ -1079,12 +1091,10 @@ class IntegracaoZabbixAdmin(admin.ModelAdmin):
                         nome_item = item.get("name", "").strip()
                         nome_porta = None
 
-                        # Tenta encontrar um nome de interface na lista pelo índice (ordem dos itens)
                         if interface_index < len(nomes_interfaces_list):
                             nome_porta = nomes_interfaces_list[interface_index]
                             interface_index += 1
                         else:
-                            # Se não houver mais nomes na lista, tenta encontrar no nome do item
                             nome_porta_match = re.search(r'Interface (.+?)(?:\(|:)', nome_item)
                             if nome_porta_match:
                                 nome_porta = nome_porta_match.group(1).strip()
@@ -1102,11 +1112,10 @@ class IntegracaoZabbixAdmin(admin.ModelAdmin):
                             if "(" not in nome_porta_completo:
                                 nome_porta_completo = nome_porta_completo
 
-                            if not filtro_por_palavras_chave(nome_porta_completo):  # Chamada sem a lista vazia
+                            if not filtro_por_palavras_chave(nome_porta_completo):
                                 continue
 
-                            nome_normalizado = nome_porta_completo.lower().replace(" ", "").replace("/", "").replace(
-                                "-", "")
+                            nome_normalizado = nome_porta_completo.lower().replace(" ", "").replace("/", "").replace("-", "")
                             if nome_normalizado in nomes_processados:
                                 continue
                             nomes_processados.add(nome_normalizado)
@@ -1139,6 +1148,9 @@ class IntegracaoZabbixAdmin(admin.ModelAdmin):
             self.message_user(request,
                               f"✅ {portas_criadas} porta(s) importada(s) com sucesso de {hosts_processados} hosts!")
 
+            # Atualiza a data da última sincronização
+            self.atualizar_ultima_sincronizacao(integracao)
+
         except requests.exceptions.RequestException as req_err_global:
             self.message_user(request, f"⚠️ Erro de comunicação global com o Zabbix: {req_err_global}",
                               level=messages.ERROR)
@@ -1146,6 +1158,7 @@ class IntegracaoZabbixAdmin(admin.ModelAdmin):
             self.message_user(request, f"⚠️ Erro global ao buscar portas: {str(e_global)}", level=messages.ERROR)
 
         return redirect(f'/admin/appisp/integracaozabbix/{pk}/change')
+
 
 
 # Classe personalizada de Admin
