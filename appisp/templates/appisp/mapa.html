@@ -1366,16 +1366,22 @@ document.querySelector('.modal-conexao-body').innerHTML = `
 </script>
 
 <script>
-function toggleModalPassword(inputId, btn) {
-    const input = document.getElementById(inputId);
-    if (input.type === "password") {
-        input.type = "text";
-        btn.textContent = "🙈";
-    } else {
-        input.type = "password";
-        btn.textContent = "👁";
+    const userIsSenha = {{ user_is_senha|yesno:"true,false" }};
+
+    function toggleModalPassword(inputId, btn) {
+        if (!userIsSenha) {
+            return;
+        }
+
+        const input = document.getElementById(inputId);
+        if (input.type === "password") {
+            input.type = "text";
+            btn.textContent = "🙈";
+        } else {
+            input.type = "password";
+            btn.textContent = "👁";
+        }
     }
-}
 </script>
 
 </body>

@@ -296,6 +296,21 @@ class MaquinaVirtualAdmin(admin.ModelAdmin):
     list_filter = ('empresa', 'equipamento')
     inlines = [DiscoInline, RedeInline]  # Adiciona os campos de discos e redes no formulário
 
+    def get_form(self, request, obj=None, **kwargs):
+        Form = super().get_form(request, obj, **kwargs)
+
+        class FormWithRequest(Form):
+            def __init__(self2, *args, **kwargs2):
+                kwargs2['request'] = request
+                super().__init__(*args, **kwargs2)
+
+        return FormWithRequest
+
+    def changeform_view(self, request, object_id=None, form_url='', extra_context=None):
+        extra_context = extra_context or {}
+        extra_context['user_is_senha'] = request.user.groups.filter(name='Senha').exists()
+        return super().changeform_view(request, object_id, form_url, extra_context=extra_context)
+
     def get_queryset(self, request):
         """ Filtra as máquinas virtuais para que usuários comuns só vejam as da sua empresa """
         qs = super().get_queryset(request)

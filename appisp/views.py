@@ -364,6 +364,7 @@ class EmpresaForm(forms.ModelForm):
 @login_required(login_url='/admin/login/')
 def mapa_racks(request):
     user = request.user
+    user_is_senha = user.groups.filter(name="Senha").exists()
     user_is_admin = user.groups.filter(name="Admin").exists()
 
     # Filtra apenas as empresas do usuário autenticado
@@ -412,6 +413,7 @@ def mapa_racks(request):
 
     context = {
         'userIsAdmin': user_is_admin,
+        'userIsSenha': user_is_senha,
         'empresas': empresas,
         'empresa_id': empresa_id,
         'pops': pops,  # Envia os POPs filtrados
@@ -494,6 +496,7 @@ def atualizar_posicao(request, equipamento_id):
 @login_required(login_url='/admin/login/')
 def mapa(request):
     user = request.user
+    user_is_senha = user.groups.filter(name="Senha").exists()
     user_is_admin = user.groups.filter(name="Admin").exists()
 
     # Filtra apenas as empresas do usuário autenticado
@@ -548,6 +551,7 @@ def mapa(request):
     # Contexto para enviar para o template
     context = {
         'userIsAdmin': user_is_admin,
+        'user_is_senha': user_is_senha,
         'empresas': empresas,
         'empresa_id': empresa_id,
         'nodes': nodes,  # Passando nodes (equipamentos) para o JS

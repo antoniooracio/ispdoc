@@ -81,7 +81,15 @@ class EquipamentoForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         self.request = kwargs.pop('request', None)
         super().__init__(*args, **kwargs)
-        if self.request and not self.request.user.groups.filter(name='Senha').exists():
+
+        user_is_senha = False
+        if self.request and self.request.user.groups.filter(name='Senha').exists():
+            user_is_senha = True
+
+        # Adiciona essa info ao atributo do widget
+        self.fields['senha'].widget.attrs['user_is_senha'] = user_is_senha
+
+        if not user_is_senha:
             self.fields['senha'].widget.attrs['readonly'] = True
 
     def clean_senha(self):
@@ -103,11 +111,18 @@ class MaquinaVirtualForm(forms.ModelForm):
                   'num_cores', 'sistema_operacional', 'tipo_acesso', 'porta', 'usuario', 'senha']
 
     def __init__(self, *args, **kwargs):
+        self.request = kwargs.pop('request', None)
         super().__init__(*args, **kwargs)
-        self.fields['equipamento'].queryset = Equipamento.objects.filter(tipo="VMWARE").order_by('nome')
-        # Assegure-se que o valor de 'senha' seja passado para o campo
-        if self.instance and self.instance.pk:
-            self.initial['senha'] = self.instance.senha
+
+        user_is_senha = False
+        if self.request and self.request.user.groups.filter(name='Senha').exists():
+            user_is_senha = True
+
+        # Adiciona essa info ao atributo do widget
+        self.fields['senha'].widget.attrs['user_is_senha'] = user_is_senha
+
+        if not user_is_senha:
+            self.fields['senha'].widget.attrs['readonly'] = True
 
     def clean_senha(self):
         senha = self.cleaned_data.get('senha')
