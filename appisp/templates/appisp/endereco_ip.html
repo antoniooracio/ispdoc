@@ -247,6 +247,9 @@
 </script>
 
 <script>
+    // Variável global para armazenar os sub-blocos
+    let subBlocosCache = [];
+
     document.getElementById('id_bloco').addEventListener('change', function () {
         var blocoId = this.value;
 
@@ -267,71 +270,78 @@
         tbodyIps.innerHTML = '';
 
         if (blocoId) {
-            // Buscar Sub-Blocos e IPs
-            fetch(`/ajax/sub_blocos_por_bloco/${blocoId}/`)
-                .then(response => response.json())
-                .then(data => {
-                    data.sub_blocos.forEach(function (sub_bloco) {
-                        var bloco_cidr = sub_bloco.bloco_cidr;
-                        var descricao = sub_bloco.descricao || '';
-                        var [ip, cidr] = bloco_cidr.split('/');
-                        var mascara = cidrParaMascara(cidr);
-                        var parente = sub_bloco.parent__bloco_cidr || 'N/A';
-                        var equipamento = sub_bloco.equipamento__nome || 'N/A';
 
-                        var { primeiro, ultimo } = calcularPrimeiroUltimoIP(bloco_cidr);
-                        var row = document.createElement('tr');
-                        row.innerHTML = `
-                            <td>${bloco_cidr}</td>
-                            <td>${mascara}</td>
-                            <td>${parente}</td>
-                            <td>${equipamento}</td>
-                            <td>${descricao}</td>
-                            <td>${primeiro}</td>
-                            <td>${ultimo}</td>
-                        `;
-                        tbodySubBlocos.appendChild(row);
-                    });
 
-                   // tabelaSubBlocos.style.display = data.sub_blocos.length > 0 ? 'table' : 'none';
-                })
-                .catch(error => console.error('Erro ao buscar sub-blocos:', error));
+    // Buscar Sub-Blocos e IPs
+    fetch(`/ajax/sub_blocos_por_bloco/${blocoId}/`)
+        .then(response => response.json())
+        .then(data => {
 
-            fetch(`/ajax/ips_por_bloco/${blocoId}/`)
-                .then(response => response.json())
-                .then(data => {
-                    data.ips.forEach(function (ip) {
-                        var row = document.createElement('tr');
-                        row.innerHTML = `
-                            <td>${ip.ip}</td>
-                            <td>${ip.equipamento__nome || ''}</td>
-                            <td>${ip.porta__nome || ''}</td>
-                            <td>${ip.finalidade || ''}</td>
-                            <td>${ip.next_hop || ''}</td>
-                            <td>${ip.is_gateway ? 'Sim' : 'Não'}</td>
-                            <td>
-                                <button class="btn-alterar" data-ip='${JSON.stringify(ip)}'>Alterar</button>
-                            </td>
-                        `;
-                        tbodyIps.appendChild(row);
-                    });
+            // Guardando os dados brutos para uso posterior
+            subBlocosCache = data.sub_blocos;
 
-                   // tabelaIps.style.display = data.ips.length > 0 ? 'table' : 'none';
+            data.sub_blocos.forEach(function (sub_bloco, index) {
+                var bloco_cidr = sub_bloco.bloco_cidr;
+                var descricao = sub_bloco.descricao || 'Descrição vazia';
+                var parente = sub_bloco.parent__bloco_cidr || 'N/A';
+                var equipamento = sub_bloco.equipamento__nome || 'N/A';
+                var [ip, cidr] = bloco_cidr.split('/');
+                var mascara = cidrParaMascara(cidr);
+                var { primeiro, ultimo } = calcularPrimeiroUltimoIP(bloco_cidr);
 
-                    // Adiciona evento para os botões de alteração
-                    document.querySelectorAll('.btn-alterar').forEach(btn => {
-                        btn.addEventListener('click', function () {
-                            var ipData = JSON.parse(this.getAttribute('data-ip'));
-                            preencherFormulario(ipData);
-                        });
-                    });
-                })
-                .catch(error => console.error('Erro ao buscar IPs:', error));
+                var row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${bloco_cidr}</td>
+                    <td>${mascara}</td>
+                    <td>${parente}</td>
+                    <td>${equipamento}</td>
+                    <td>${descricao}</td>
+                    <td>${primeiro}</td>
+                    <td>${ultimo}</td>
+                `;
+                tbodySubBlocos.appendChild(row);
+            });
+        })
+        .catch(error => console.error('❌ Erro ao buscar sub-blocos:', error));
+
+
+    fetch(`/ajax/ips_por_bloco/${blocoId}/`)
+        .then(response => response.json())
+        .then(data => {
+            data.ips.forEach(function (ip) {
+                var row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${ip.ip}</td>
+                    <td>${ip.equipamento__nome || ''}</td>
+                    <td>${ip.porta__nome || ''}</td>
+                    <td>${ip.finalidade || ''}</td>
+                    <td>${ip.next_hop || ''}</td>
+                    <td>${ip.is_gateway ? 'Sim' : 'Não'}</td>
+                    <td>
+                        <button class="btn-alterar" data-ip='${JSON.stringify(ip)}'>Alterar</button>
+                    </td>
+                `;
+                tbodyIps.appendChild(row);
+            });
+
+           // tabelaIps.style.display = data.ips.length > 0 ? 'table' : 'none';
+
+            // Adiciona evento para os botões de alteração
+            document.querySelectorAll('.btn-alterar').forEach(btn => {
+                btn.addEventListener('click', function () {
+                    var ipData = JSON.parse(this.getAttribute('data-ip'));
+                    preencherFormulario(ipData);
+                });
+            });
+        })
+        .catch(error => console.error('Erro ao buscar IPs:', error));
 
             // Exibir a árvore de blocos hierárquica
             fetch(`/ajax/dados_hierarquicos/${blocoId}/`)
+
                 .then(response => response.json())
                 .then(data => {
+                    // console.log('Dados do bloco principal:', data);
                     exibirArvore(data, arvoreContainer);
                 })
                 .catch(error => console.error('Erro ao carregar árvore hierárquica:', error));
@@ -348,8 +358,11 @@
 
         // Criação do nó principal do bloco
         var blocoNode = document.createElement('div');
+
         var [ip, cidr] = dados.bloco.split('/');
         var mascara = cidrParaMascara(cidr);
+
+
         blocoNode.classList.add('bloco-node');
         // blocoNode.innerHTML = `<strong>📂 ${dados.bloco} | Netmask: </strong>${mascara}`;
         blocoNode.innerHTML = `<strong class="bloco-nome">📂 ${dados.bloco}</strong> |
@@ -406,23 +419,23 @@
 
         // Função recursiva para exibir sub-blocos
         function exibirSubBlocos(subBlocos, containerNode) {
-
             if (subBlocos && subBlocos.length > 0) {
                 var subBlocosContainer = document.createElement('div');
                 subBlocosContainer.classList.add('sub-blocos-container');
 
                 subBlocos.forEach(function(subBloco) {
-
+                    // console.log(`Renderizando sub-bloco: ${subBloco.bloco}, Descrição: ${subBloco.descricao}`);
                     var subBlocoNode = document.createElement('div');
+
                     var [ip, cidr] = subBloco.bloco.split('/');
                     var mascara = cidrParaMascara(cidr);
+                    // Garantindo que a descrição existe antes de tentar exibi-la
+
                     subBlocoNode.classList.add('sub-bloco-node');
-                    // subBlocoNode.innerHTML = `<strong>📂 ${subBloco.bloco}  | Netmask: </strong>${mascara}`;
                     subBlocoNode.innerHTML = `<strong class="bloco-nome">📂 ${subBloco.bloco}</strong> |
-                          <span class="netmask">Netmask:</span> ${mascara} |
+                          <span class="netmask"> </span> ${mascara} |
                           <strong class="ip-primeiro">Primeiro IP:</strong> ${calcularPrimeiroUltimoIP(subBloco.bloco).primeiro} |
-                          <strong class="ip-ultimo">Último IP:</strong> ${calcularPrimeiroUltimoIP(subBloco.bloco).ultimo}`;
-                    // subBlocoNode.innerHTML = `<strong>📂 ${subBloco.bloco} | Netmask: </strong>${mascara} | <strong>Primeiro IP:</strong> ${calcularPrimeiroUltimoIP(subBloco.bloco).primeiro} | <strong>Último IP:</strong> ${calcularPrimeiroUltimoIP(subBloco.bloco).ultimo}`;
+                          <strong class="ip-ultimo">Último IP:</strong> ${calcularPrimeiroUltimoIP(subBloco.bloco).ultimo}`  ;
 
                     // Exibe os IPs do sub-bloco em tabela
                     if (subBloco.ips && subBloco.ips.length > 0) {
@@ -459,7 +472,8 @@
                         tabela.appendChild(tabelaBody);
                         subBlocoNode.appendChild(tabela);
                     } else {
-                        subBlocoNode.innerHTML = "";
+                        // Mesmo sem IPs, o sub-bloco será mostrado
+                        subBlocoNode.innerHTML += "<p><em>Sem IPs</em></p>";
                     }
 
                     // Função para converter IP para número (para ordenação correta)
@@ -475,7 +489,7 @@
 
                 containerNode.appendChild(subBlocosContainer);
             } else {
-                console.log('Nenhum sub-bloco encontrado');  // Log para verificar se não há sub-blocos
+                // console.log('Nenhum sub-bloco encontrado');  // Log para verificar se não há sub-blocos
             }
         }
 
@@ -499,6 +513,7 @@
         };
         return cidrMap[cidr] || "";
     }
+
     // Função para calcular o primeiro e o último IP de um bloco CIDR (IPv4 e IPv6)
     function calcularPrimeiroUltimoIP(blocoCIDR) {
         let [ip, cidr] = blocoCIDR.split('/');
@@ -557,38 +572,38 @@
     }
 
     // Função para calcular primeiro e último IP de um bloco IPv4
-function calcularIPv4(ip, cidr) {
-    let partes = ip.split('.').map(Number);
-    let mascaraBits = 32 - cidr;
-    let numIps = Math.pow(2, mascaraBits);
+    function calcularIPv4(ip, cidr) {
+        let partes = ip.split('.').map(Number);
+        let mascaraBits = 32 - cidr;
+        let numIps = Math.pow(2, mascaraBits);
 
-    let ipBase = (partes[0] << 24) | (partes[1] << 16) | (partes[2] << 8) | partes[3];
-    let primeiroIp = ipBase & (~(numIps - 1));
-    let ultimoIp = primeiroIp + numIps - 1;
+        let ipBase = (partes[0] << 24) | (partes[1] << 16) | (partes[2] << 8) | partes[3];
+        let primeiroIp = ipBase & (~(numIps - 1));
+        let ultimoIp = primeiroIp + numIps - 1;
 
-    return {
-        primeiro: [
-            (primeiroIp >> 24) & 255,
-            (primeiroIp >> 16) & 255,
-            (primeiroIp >> 8) & 255,
-            primeiroIp & 255
-        ].join('.'),
-        ultimo: [
-            (ultimoIp >> 24) & 255,
-            (ultimoIp >> 16) & 255,
-            (ultimoIp >> 8) & 255,
-            ultimoIp & 255
-        ].join('.')
-    };
-}
-
-function formatarMascara(bloco, mascara) {
-    // Se for IPv6, garantir que a máscara seja apenas um prefixo
-    if (bloco.includes(":")) {
-        return ``;
+        return {
+            primeiro: [
+                (primeiroIp >> 24) & 255,
+                (primeiroIp >> 16) & 255,
+                (primeiroIp >> 8) & 255,
+                primeiroIp & 255
+            ].join('.'),
+            ultimo: [
+                (ultimoIp >> 24) & 255,
+                (ultimoIp >> 16) & 255,
+                (ultimoIp >> 8) & 255,
+                ultimoIp & 255
+            ].join('.')
+        };
     }
-    return mascara;
-}
+
+    function formatarMascara(bloco, mascara) {
+        // Se for IPv6, garantir que a máscara seja apenas um prefixo
+        if (bloco.includes(":")) {
+            return ``;
+        }
+        return mascara;
+    }
 
     // Função para preencher o formulário com os dados do IP selecionado
     function preencherFormulario(ipData) {

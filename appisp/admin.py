@@ -12,7 +12,7 @@ from django.contrib.auth.admin import GroupAdmin, UserAdmin
 from django.contrib.admin import AdminSite
 from django.shortcuts import render, get_object_or_404, redirect
 from django.http import HttpResponseRedirect
-from .forms import PortaForm, RackForm, RackEquipamentoForm, EnderecoIPForm
+from .forms import PortaForm, RackForm, RackEquipamentoForm, EnderecoIPForm, MaquinaVirtualForm, EquipamentoForm
 from .views import mapa, mapa_racks
 from django.contrib.admin import SimpleListFilter
 from .models import Empresa, Pop, Fabricante, Modelo, Equipamento, Porta, BlocoIP, EnderecoIP, Rack, RackEquipamento, \
@@ -290,6 +290,7 @@ class VlanPortaAdmin(admin.ModelAdmin):
 
 @admin.register(MaquinaVirtual)
 class MaquinaVirtualAdmin(admin.ModelAdmin):
+    form = MaquinaVirtualForm
     list_display = ('nome', 'empresa', 'equipamento', 'sistema_operacional', 'tipo_acesso')
     search_fields = ('nome', 'empresa__nome', 'equipamento__nome', 'sistema_operacional')
     list_filter = ('empresa', 'equipamento')
@@ -794,10 +795,26 @@ class ModeloAdmin(admin.ModelAdmin):
 
 @admin.register(Equipamento)
 class EquipamentoAdmin(admin.ModelAdmin):
+    form = EquipamentoForm
     list_display = ('nome', 'ip', 'status', 'pop', 'empresa', 'fabricante', 'tipo')
     search_fields = ('nome', 'ip', 'pop__nome', 'empresa__nome', 'fabricante__nome', 'modelo__modelo', 'tipo')
 
     change_list_template = "admin/mapa_rede_changelist.html"  # Personalizamos o template
+
+    def get_form(self, request, obj=None, **kwargs):
+        Form = super().get_form(request, obj, **kwargs)
+
+        class FormWithRequest(Form):
+            def __init__(self2, *args, **kwargs2):
+                kwargs2['request'] = request
+                super().__init__(*args, **kwargs2)
+
+        return FormWithRequest
+
+    def changeform_view(self, request, object_id=None, form_url='', extra_context=None):
+        extra_context = extra_context or {}
+        extra_context['user_is_senha'] = request.user.groups.filter(name='Senha').exists()
+        return super().changeform_view(request, object_id, form_url, extra_context=extra_context)
 
     def get_list_filter(self, request):
         """ Aplica os filtros personalizados de empresa e POP. """

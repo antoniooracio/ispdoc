@@ -799,7 +799,7 @@ def detalhes_bloco(request, bloco_id):
             'sub_bloco': sub_bloco.bloco_cidr,
             'descricao': sub_bloco.descricao or 'N/A',
             'equipamento': sub_bloco.equipamento.nome if sub_bloco.equipamento else 'N/A',
-            'ips': list(ips)  # Lista de IPs associados ao sub-bloco
+            'ips': list(ips)  # Lista de IPs associados ao sub-bloco (pode ser vazia)
         })
 
     return render(request, 'seu_template.html', {
@@ -812,7 +812,13 @@ def get_sub_blocos(request, bloco_id):
     sub_blocos = BlocoIP.objects.filter(parent_id=bloco_id).select_related("parent", "equipamento").values(
         'id', 'bloco_cidr', 'tipo_ip', 'parent__bloco_cidr', 'equipamento__nome', 'descricao'
     )
+    # Adiciona uma chave "ips" vazia para os sub-blocos sem IPs
+    for sub_bloco in sub_blocos:
+        ips = EnderecoIP.objects.filter(bloco_id=sub_bloco['id']).values("id", "ip", "equipamento__nome", "porta__nome", "next_hop", "is_gateway", 'finalidade')
+        sub_bloco['ips'] = list(ips)  # Lista de IPs associada ao sub-bloco
+
     return JsonResponse({'sub_blocos': list(sub_blocos)})
+
 
 
 def listar_ips_por_bloco(request, bloco_id):
@@ -823,23 +829,20 @@ def listar_ips_por_bloco(request, bloco_id):
 
 def dados_hierarquicos(request, bloco_id):
     try:
-        # Encontre o bloco com o id fornecido
         bloco = BlocoIP.objects.get(id=bloco_id)
-
-        # Buscar sub-blocos diretamente ligados a esse bloco
-
         sub_blocos = BlocoIP.objects.filter(parent=bloco)
 
-        # Monta a estrutura de dados
         dados = {
             'bloco': bloco.bloco_cidr,
             'sub_blocos': []
         }
 
         for sub_bloco in sub_blocos:
-            # Coleta os IPs do sub-bloco
-            ips = EnderecoIP.objects.filter(bloco_id=bloco_id).values("id", "ip", "equipamento__nome", "porta__nome", "next_hop", "is_gateway", 'finalidade')
 
+            ips = EnderecoIP.objects.filter(bloco=sub_bloco).values(
+                "id", "ip", "equipamento__nome", "porta__nome",
+                "next_hop", "is_gateway", 'finalidade'
+            )
 
             sub_dados = {
                 'sub_bloco': sub_bloco.bloco_cidr,
@@ -850,9 +853,11 @@ def dados_hierarquicos(request, bloco_id):
 
             dados['sub_blocos'].append(sub_dados)
 
+
         return JsonResponse(dados)
 
     except BlocoIP.DoesNotExist:
+        print("❌ Bloco não encontrado")
         return JsonResponse({'error': 'Bloco não encontrado'}, status=404)
 
 
@@ -864,7 +869,6 @@ def estrutura_bloco(request, bloco_id):
 
         # Buscar os IPs associados a esse bloco
         ips = EnderecoIP.objects.filter(bloco=bloco).values("id", "ip", "equipamento__nome", "porta__nome", "next_hop", "is_gateway", 'finalidade')
-
 
         # Montar o dicionário com os dados
         return {

@@ -388,10 +388,20 @@
                 <label for="input-usuario">Usuário</label>
                 <input type="text" class="form-control" id="input-usuario" readonly>
             </div>
-            <div class="form-group">
-                <label for="input-senha">Senha</label>
-                <input type="text" class="form-control" id="input-senha" readonly>
-            </div>
+<div class="form-group">
+    <label for="input-senha">Senha</label>
+    <div class="input-group">
+        <div class="input-group-prepend">
+            <button type="button"
+                    class="btn-sm btn-outline-light"
+                    onclick="toggleModalPassword('input-senha', this)"
+                    title="Mostrar/Ocultar Senha">
+                👁
+            </button>
+        </div>
+        <input type="password" class="form-control col-md-6" id="input-senha" readonly>
+    </div>
+</div>
             <div class="form-group">
                 <label for="input-porta">Porta</label>
                 <input type="text" class="form-control" id="input-porta" readonly>
@@ -1353,6 +1363,19 @@ document.querySelector('.modal-conexao-body').innerHTML = `
             svg.call(d3.zoom().transform, zoomTransform);
         }, 100);
     }, 30000);
+</script>
+
+<script>
+function toggleModalPassword(inputId, btn) {
+    const input = document.getElementById(inputId);
+    if (input.type === "password") {
+        input.type = "text";
+        btn.textContent = "🙈";
+    } else {
+        input.type = "password";
+        btn.textContent = "👁";
+    }
+}
 </script>
 
 </body>

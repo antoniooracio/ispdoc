@@ -1,9 +1,16 @@
 import ipaddress
+from django.utils.safestring import mark_safe
 
 from dal import autocomplete
 from django import forms
 from django.contrib.auth.models import User
 from .models import Porta, Empresa, Equipamento, Rack, RackEquipamento, MaquinaVirtual, EnderecoIP, BlocoIP, Vlan
+
+class PasswordWithToggle(forms.PasswordInput):
+    template_name = 'widgets/password_with_toggle.html'
+
+    class Media:
+        js = ('js/show_password.js',)  # mesmo JS que já criamos
 
 
 class VlanForm(forms.ModelForm):
@@ -61,19 +68,52 @@ class LoteForm(forms.Form):
             self.fields["equipamento"].queryset = Equipamento.objects.all().order_by('nome')
 
 
+class EquipamentoForm(forms.ModelForm):
+    senha = forms.CharField(
+        widget=PasswordWithToggle(render_value=True, attrs={'id': 'id_senha_field'}),
+        required=False,  # Permite que o campo fique em branco, caso não deseje alterar a senha
+    )
+
+    class Meta:
+        model = Equipamento
+        fields = '__all__'
+
+    def __init__(self, *args, **kwargs):
+        self.request = kwargs.pop('request', None)
+        super().__init__(*args, **kwargs)
+        if self.request and not self.request.user.groups.filter(name='Senha').exists():
+            self.fields['senha'].widget.attrs['readonly'] = True
+
+    def clean_senha(self):
+        senha = self.cleaned_data.get('senha')
+        if not senha and self.instance:
+            return self.instance.senha  # mantém a senha antiga
+        return senha
+
+
 class MaquinaVirtualForm(forms.ModelForm):
+    senha = forms.CharField(
+        widget=PasswordWithToggle(render_value=True, attrs={'id': 'id_senha_field'}),
+        required=False,  # Permite que o campo fique em branco, caso não deseje alterar a senha
+    )
+
     class Meta:
         model = MaquinaVirtual
         fields = ['empresa', 'nome', 'equipamento', 'memoria', 'num_processadores',
                   'num_cores', 'sistema_operacional', 'tipo_acesso', 'porta', 'usuario', 'senha']
-        widgets = {
-            'senha': forms.PasswordInput(),
-        }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
         self.fields['equipamento'].queryset = Equipamento.objects.filter(tipo="VMWARE").order_by('nome')
+        # Assegure-se que o valor de 'senha' seja passado para o campo
+        if self.instance and self.instance.pk:
+            self.initial['senha'] = self.instance.senha
+
+    def clean_senha(self):
+        senha = self.cleaned_data.get('senha')
+        if not senha and self.instance:
+            return self.instance.senha  # Mantém a senha atual se não for alterada
+        return senha
 
 
 class EmpresaForm(forms.ModelForm):
