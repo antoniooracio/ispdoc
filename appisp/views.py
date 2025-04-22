@@ -36,6 +36,7 @@ def get_equipamento(request, equipamento_id):
             'porta': equipamento.porta,
             'protocolo': equipamento.protocolo,
             'status': equipamento.status,
+            'observacao': equipamento.observacao,
         }
         return JsonResponse(data)
     except Equipamento.DoesNotExist:

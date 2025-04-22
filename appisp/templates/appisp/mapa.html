@@ -380,37 +380,59 @@
     </div>
     <div class="modal-body">
         <form>
-            <div class="form-group">
-                <label for="input-ip">IP</label>
-                <input type="text" class="form-control" id="input-ip" readonly>
+            <div class="form-group row">
+                <label for="input-ip" class="col-sm-2 col-form-label">IP</label>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" id="input-ip" readonly>
+                </div>
             </div>
-            <div class="form-group">
-                <label for="input-usuario">Usuário</label>
-                <input type="text" class="form-control" id="input-usuario" readonly>
+
+            <div class="form-group row">
+                <label for="input-usuario" class="col-sm-2 col-form-label">Usuário</label>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" id="input-usuario" readonly>
+                </div>
             </div>
-<div class="form-group">
-    <label for="input-senha">Senha</label>
-    <div class="input-group">
-        <div class="input-group-prepend">
-            <button type="button"
-                    class="btn-sm btn-outline-light"
-                    onclick="toggleModalPassword('input-senha', this)"
-                    title="Mostrar/Ocultar Senha">
-                👁
-            </button>
-        </div>
-        <input type="password" class="form-control col-md-6" id="input-senha" readonly>
-    </div>
-</div>
-            <div class="form-group">
-                <label for="input-porta">Porta</label>
-                <input type="text" class="form-control" id="input-porta" readonly>
+
+            <div class="form-group row">
+                <label for="input-senha" class="col-sm-2 col-form-label">Senha</label>
+                <div class="col-sm-10">
+                    <div class="input-group">
+                        <div class="input-group-prepend">
+                            <button type="button"
+                                    class="btn btn-outline-secondary"
+                                    onclick="toggleModalPassword('input-senha', this)"
+                                    title="Mostrar/Ocultar Senha">
+                                👁
+                            </button>
+                        </div>
+                        <input type="password" class="form-control" id="input-senha" readonly>
+                    </div>
+                </div>
             </div>
-            <div class="form-group">
-                <label for="input-protocolo">Protocolo</label>
-                <input type="text" class="form-control" id="input-protocolo" readonly>
+
+            <div class="form-group row">
+                <label for="input-porta" class="col-sm-2 col-form-label">Porta</label>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" id="input-porta" readonly>
+                </div>
+            </div>
+
+            <div class="form-group row">
+                <label for="input-protocolo" class="col-sm-2 col-form-label">Protocolo</label>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" id="input-protocolo" readonly>
+                </div>
+            </div>
+
+            <div class="form-group row">
+                <label for="input-observacao" class="col-sm-2 col-form-label">Observação</label>
+                <div class="col-sm-10">
+                    <textarea class="form-control" rows="5" id="input-observacao" readonly></textarea>
+                </div>
             </div>
         </form>
+
     </div>
     <div class="modal-footer">
         <button type="button" class="btn btn-danger" id="closeModal">Fechar</button>
@@ -420,8 +442,10 @@
 <!-- Modal de Detalhes de Conexão -->
 <div class="modal-overlay" id="modalOverlayConexao"></div>
 <div class="modal-conexao" id="modalConexao">
-    <div class="modal-conexao-header">
-        Conexão {tipo}
+    <div class="modal-header">
+        <div class="modal-conexao-header">
+            Conexão: {tipo}
+        </div>
     </div>
 
     <div class="modal-conexao-body px-3 py-2">
@@ -444,10 +468,11 @@
     </div>
 
     <div class="modal-conexao-footer">
+        <div class="modal-footer">
+            <button type="button" class="btn btn-outline-warning" id="excluirConexaoBtn">Excluir Conexão</button>
 
-        <button type="button" class="btn btn-outline-warning" id="excluirConexaoBtn">Excluir Conexão</button>
-
-        <button type="button" class="btn btn-danger" id="fecharConexaoBtn">Fechar</button>
+            <button type="button" class="btn btn-danger" id="fecharConexaoBtn">Fechar</button>
+        </div>
     </div>
 </div>
 
@@ -1326,6 +1351,7 @@ document.querySelector('.modal-conexao-body').innerHTML = `
                         document.getElementById('input-senha').value = data.senha || '';
                         document.getElementById('input-porta').value = data.porta || '';
                         document.getElementById('input-protocolo').value = data.protocolo || '';
+                        document.getElementById('input-observacao').value = data.observacao || ''
 
                         // Exibe o modal
                         document.getElementById('modalEquipamento').classList.add('show');
