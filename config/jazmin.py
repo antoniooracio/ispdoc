@@ -79,7 +79,7 @@ JAZZMIN_SETTINGS = {
     # Remove o menu do dashboard
     "hide_dashboard": True,
 
-    # Hide these apps when generating side menu e.g (auth)
+    # Oculte esses aplicativos ao gerar o menu lateral, por exemplo (auth)
     "hide_apps": [],
 
     # Hide these models when generating side menu (e.g auth.user)
@@ -101,19 +101,27 @@ JAZZMIN_SETTINGS = {
     # Custom icons for side menu apps/models See https://fontawesome.com/icons?d=gallery&m=free&v=5.0.0,5.0.1,5.0.10,5.0.11,5.0.12,5.0.13,5.0.2,5.0.3,5.0.4,5.0.5,5.0.6,5.0.7,5.0.8,5.0.9,5.1.0,5.1.1,5.2.0,5.3.0,5.3.1,5.4.0,5.4.1,5.4.2,5.13.0,5.12.0,5.11.2,5.11.1,5.10.0,5.9.0,5.8.2,5.8.1,5.7.2,5.7.1,5.7.0,5.6.3,5.5.0,5.4.2
     # for the full list of 5.13.0 free icon classes
     "icons": {
-        "auth": "fas fa-users-cog",
+    #    "auth": "fas fa-users-cog",
         "auth.user": "fas fa-user",
         "auth.Group": "fas fa-users",
-        "core.enterprise": "fa-solid fa-city",
-        "core.ScriptEquipment": "fa-solid fa-scroll",
-        "core.manufacturer": "fa-solid fa-industry",
-        "core.modelEquipment": "fa-solid fa-toolbox",
-        "core.equipment": "fa-solid fa-screwdriver-wrench",
-
+        "appisp.EmpresaToken": "fa-classic fa-solid fa-key fa-fw",
+        "appisp.BlocoIP": "fa-classic fa-solid fa-network-wired fa-fw",
+        "appisp.empresa": "fa-classic fa-solid fa-building-un fa-fw",
+        "appisp.EnderecoIP": "fa-classic fa-solid fa-globe fa-fw",
+        "appisp.Porta": "fa-classic fa-solid fa-ethernet fa-fw",
+        "appisp.Equipamento": "fa-classic fa-solid fa-desktop fa-fw",
+        "appisp.Fabricante": "fa-classic fa-solid fa-industry fa-fw",
+        "appisp.IntegracaoZabbix": "fa-classic fa-solid fa-server fa-fw",
+        "appisp.MaquinaVirtual": "fa-classic fa-solid fa-microchip fa-fw",
+        "appisp.Pop": "fa-classic fa-solid fa-tower-observation fa-fw",
+        "appisp.VlanPorta": "fa-classic fa-solid fa-shuffle fa-fw",
+        "appisp.Vlan": "fa-classic fa-solid fa-sitemap fa-fw",
+        "appisp.Rack": "fa-classic fa-solid fa-table-list fa-fw",
+        "appisp.RackEquipamento": "fa-classic fa-regular fa-rectangle-list fa-fw",
     },
     # Icons that are used when one is not manually specified
-    "default_icon_parents": "fas fa-chevron-circle-right",
-    "default_icon_children": "fas fa-circle",
+    #"default_icon_parents": "fas fa-chevron-circle-right",
+    #"default_icon_children": "fas fa-circle",
 
     #################
     # Related Modal #
@@ -143,7 +151,7 @@ JAZZMIN_SETTINGS = {
     # - carousel
     "changeform_format": "horizontal_tabs",
     # override change forms on a per modeladmin basis
-    "changeform_format_overrides": {"auth.user": "collapsible", "auth.group": "vertical_tabs"},
+    "changeform_format_overrides": {"auth.user": "horizontal_tabs", "auth.group": "vertical_tabs"},
     # Add a language dropdown into the admin
     #"language_chooser": True,
 }

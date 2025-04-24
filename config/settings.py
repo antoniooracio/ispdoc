@@ -148,8 +148,36 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 JAZZMIN_SETTINGS = JAZZMIN_SETTINGS
 
 JAZZMIN_UI_TWEAKS = {
-    "theme": "slate",  # Tema padrão (claro)
-    "dark_mode_theme": "darkly",  # Tema para modo escuro
+    "navbar_small_text": False,
+    "footer_small_text": False,
+    "body_small_text": True,
+    "brand_small_text": False,
+    "brand_colour": "navbar-primary",
+    "accent": "accent-primary",
+    "navbar": "navbar-primary navbar-dark",
+    "no_navbar_border": False,
+    "navbar_fixed": False,
+    "layout_boxed": False,
+    "footer_fixed": False,
+    "sidebar_fixed": True,
+    "sidebar": "sidebar-dark-primary",
+    "sidebar_nav_small_text": False,
+    "sidebar_disable_expand": False,
+    "sidebar_nav_child_indent": False,
+    "sidebar_nav_compact_style": True,
+    "sidebar_nav_legacy_style": True,
+    "sidebar_nav_flat_style": False,
+    "theme": "cyborg",
+    "dark_mode_theme": "darkly",
+    "button_classes": {
+        "primary": "btn-outline-primary",
+        "secondary": "btn-outline-secondary",
+        "info": "btn-outline-info",
+        "warning": "btn-outline-warning",
+        "danger": "btn-outline-danger",
+        "success": "btn-outline-success"
+    },
+    "actions_sticky_top": False
 }
 
 CSRF_TRUSTED_ORIGINS = [

@@ -396,16 +396,17 @@
 
             <div class="form-group row">
                 <label for="input-senha" class="col-sm-2 col-form-label">Senha</label>
-                <div class="col-sm-10">
+                <div class="input-group-prepend">
+                    <button type="button"
+                            class="btn"
+                            onclick="toggleModalPassword('input-senha', this)"
+                            title="Mostrar/Ocultar Senha">
+                        👁
+                    </button>
+                </div>
+                <div class="col-sm-8">
                     <div class="input-group">
-                        <div class="input-group-prepend">
-                            <button type="button"
-                                    class="btn btn-outline-secondary"
-                                    onclick="toggleModalPassword('input-senha', this)"
-                                    title="Mostrar/Ocultar Senha">
-                                👁
-                            </button>
-                        </div>
+
                         <input type="password" class="form-control" id="input-senha" readonly>
                     </div>
                 </div>
