@@ -136,6 +136,7 @@ class Porta(models.Model):
         ('Eletrico', 'Elétrico'),
         ('Fibra', 'Fibra'),
         ('Radio', 'Rádio'),
+        ('Transporte', 'Transporte'),
     ]
 
     empresa = models.ForeignKey(
@@ -609,3 +610,43 @@ class IntegracaoZabbix(models.Model):
 
     def __str__(self):
         return f'Zabbix - {self.empresa.nome}'
+
+
+class IntegracaoNetbox(models.Model):
+    empresa = models.OneToOneField(
+        Empresa,
+        on_delete=models.CASCADE,
+        related_name='integracao_netbox'
+    )
+    url = models.URLField(
+        verbose_name='URL da API NetBox',
+        help_text='Ex: https://netbox.suaempresa.com/api/'
+    )
+    token = models.CharField(
+        max_length=255,
+        verbose_name='Token de API',
+        help_text='Token de acesso gerado no NetBox'
+    )
+    observacoes = models.TextField(
+        blank=True,
+        null=True,
+        help_text='Informações adicionais da integração'
+    )
+    ativo = models.BooleanField(
+        default=True,
+        help_text='Marque para habilitar a integração com o NetBox'
+    )
+    data_criacao = models.DateTimeField(auto_now_add=True)
+    ultima_sincronizacao = models.DateTimeField(
+        blank=True,
+        null=True,
+        help_text='Data da última sincronização com o NetBox'
+    )
+
+    class Meta:
+        verbose_name = 'Integração com NetBox'
+        verbose_name_plural = 'Integrações com NetBox'
+        ordering = ['empresa']
+
+    def __str__(self):
+        return f'NetBox - {self.empresa.nome}'
