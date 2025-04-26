@@ -4,3 +4,4 @@ from django.apps import AppConfig
 class AppispConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
     name = 'appisp'
+    verbose_name = 'ISP-DOC'

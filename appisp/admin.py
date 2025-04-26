@@ -6,6 +6,7 @@ from django.contrib import admin, messages
 from django import forms
 from django.urls import path
 from django.urls import reverse
+from django.utils.timezone import now
 from django.utils.translation import gettext_lazy as _
 from django.contrib.auth.models import Group, User
 from django.contrib.auth.admin import GroupAdmin, UserAdmin
@@ -16,7 +17,7 @@ from .forms import PortaForm, RackForm, RackEquipamentoForm, EnderecoIPForm, Maq
 from .views import mapa, mapa_racks
 from django.contrib.admin import SimpleListFilter
 from .models import Empresa, Pop, Fabricante, Modelo, Equipamento, Porta, BlocoIP, EnderecoIP, Rack, RackEquipamento, \
-    MaquinaVirtual, Disco, Rede, Vlan, VlanPorta, EmpresaToken, IntegracaoZabbix
+    MaquinaVirtual, Disco, Rede, Vlan, VlanPorta, EmpresaToken, IntegracaoZabbix, IntegracaoNetbox
 import ipaddress
 from django.utils.html import format_html
 from django.contrib import admin
@@ -1192,6 +1193,411 @@ class IntegracaoZabbixAdmin(admin.ModelAdmin):
         return redirect(f'/admin/appisp/integracaozabbix/{pk}/change')
 
 
+class IntegracaoNetboxAdmin(admin.ModelAdmin):
+    readonly_fields = ('ultima_sincronizacao', 'acoes_netbox')
+
+    fieldsets = (
+        (None, {
+            'fields': ('empresa', 'url', 'token', 'ativo', 'observacoes', 'ultima_sincronizacao', 'acoes_netbox')
+        }),
+    )
+
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path('<int:pk>/testar-token/', self.admin_site.admin_view(self.testar_token), name='testar_token_netbox'),
+            path('<int:pk>/obter-equipamentos/', self.admin_site.admin_view(self.obter_equipamentos), name='obter_equipamentos_netbox'),
+            path('<int:pk>/obter-blocos-ip/', self.admin_site.admin_view(self.obter_blocos_ip), name='obter_blocos_ip_netbox'),
+            path('<int:pk>/obter-enderecos-ip/', self.admin_site.admin_view(self.obter_enderecos_ip), name='obter_enderecos_ip_netbox'),
+            path('<int:pk>/sincronizar-equipamentos/', self.admin_site.admin_view(self.sincronizar_equipamentos_netbox), name='sincronizar_equipamentos_netbox'),
+            path('<int:pk>/sincronizar-portas/', self.admin_site.admin_view(self.sincronizar_portas_netbox),
+                 name='sincronizar_portas_netbox'),
+            path('<int:pk>/sincronizar-blocos-ip/', self.admin_site.admin_view(self.sincronizar_blocos_netbox),
+                 name='sincronizar_blocos_ip_netbox'),
+            path('<int:pk>/sincronizar-enderecos-ip/', self.admin_site.admin_view(self.sincronizar_enderecos_ip_netbox),
+                 name='sincronizar_enderecos_ip_netbox'),
+
+        ]
+        return custom_urls + urls
+
+    def acoes_netbox(self, obj):
+        if not obj.pk:
+            return "Salve a integração antes de usar as ações."
+
+        return format_html(
+            '<a class="button" href="{}">Testar Token</a>&nbsp;'
+            '<a class="button" href="{}">Obter Equipamentos</a>&nbsp;'
+            '<a class="button" href="{}">Obter Blocos IP</a>&nbsp;'
+            '<a class="button" href="{}">Obter Endereços IP</a>&nbsp;'
+            '<a class="button" style="background-color:green;color:white;" href="{}">Sincronizar Equipamentos</a>&nbsp;'
+            '<a class="button" style="background-color:#0073e6;color:white;" href="{}">Sincronizar Portas</a>'
+            '<a class="button" style="background-color:#5c1fff;color:white;" href="{}">Sincronizar Blocos IP</a>'
+            '<a class="button" style="background-color:#5c1fff;color:white;" href="{}">Sincronizar Endereços IP</a>',
+            reverse('admin:testar_token_netbox', args=[obj.pk]),
+            reverse('admin:obter_equipamentos_netbox', args=[obj.pk]),
+            reverse('admin:obter_blocos_ip_netbox', args=[obj.pk]),
+            reverse('admin:obter_enderecos_ip_netbox', args=[obj.pk]),
+            reverse('admin:sincronizar_equipamentos_netbox', args=[obj.pk]),
+            reverse('admin:sincronizar_portas_netbox', args=[obj.pk]),
+            reverse('admin:sincronizar_blocos_ip_netbox', args=[obj.pk]),
+            reverse('admin:sincronizar_enderecos_ip_netbox', args=[obj.pk]),
+        )
+    acoes_netbox.short_description = "Ações da Integração"
+    acoes_netbox.allow_tags = True
+
+    def testar_token(self, request, pk):
+        obj = get_object_or_404(IntegracaoNetbox, pk=pk)
+        headers = {"Authorization": f"Token {obj.token}"}
+        try:
+            resp = requests.get(f"{obj.url}status/", headers=headers, timeout=5)
+            if resp.status_code == 200:
+                messages.success(request, f"✅ Token válido para {obj.empresa.nome}.")
+            else:
+                messages.error(request, f"❌ Token inválido. Código: {resp.status_code}")
+        except Exception as e:
+            messages.error(request, f"❌ Erro ao testar token: {e}")
+        return HttpResponseRedirect(f"/admin/appisp/integracaonetbox/{pk}/change/")
+
+    def obter_equipamentos(self, request, pk):
+        obj = get_object_or_404(IntegracaoNetbox, pk=pk)
+        headers = {"Authorization": f"Token {obj.token}"}
+        try:
+            url = f"{obj.url}dcim/devices/"
+            resp = requests.get(url, headers=headers)
+            if resp.status_code == 200:
+                data = resp.json()
+                total = data.get("count", len(data.get("results", [])))
+                messages.success(request, f"📦 {total} equipamentos obtidos com sucesso.")
+            else:
+                messages.error(request, f"Erro ao obter equipamentos. Código: {resp.status_code}")
+        except Exception as e:
+            messages.error(request, f"Erro ao obter equipamentos: {e}")
+        return HttpResponseRedirect(f"/admin/appisp/integracaonetbox/{pk}/change/")
+
+    def obter_blocos_ip(self, request, pk):
+        obj = get_object_or_404(IntegracaoNetbox, pk=pk)
+        headers = {"Authorization": f"Token {obj.token}"}
+        try:
+            url = f"{obj.url}ipam/prefixes/"
+            resp = requests.get(url, headers=headers)
+            if resp.status_code == 200:
+                data = resp.json()
+                total = data.get("count", len(data.get("results", [])))
+                messages.success(request, f"📚 {total} blocos de IP obtidos com sucesso.")
+            else:
+                messages.error(request, f"Erro ao obter blocos IP. Código: {resp.status_code}")
+        except Exception as e:
+            messages.error(request, f"Erro ao obter blocos de IP: {e}")
+        return HttpResponseRedirect(f"/admin/appisp/integracaonetbox/{pk}/change/")
+
+    def obter_enderecos_ip(self, request, pk):
+        obj = get_object_or_404(IntegracaoNetbox, pk=pk)
+        headers = {"Authorization": f"Token {obj.token}"}
+        try:
+            url = f"{obj.url}ipam/ip-addresses/"
+            resp = requests.get(url, headers=headers)
+            if resp.status_code == 200:
+                data = resp.json()
+                total = data.get("count", len(data.get("results", [])))
+                messages.success(request, f"🌐 {total} endereços IP obtidos com sucesso.")
+            else:
+                messages.error(request, f"Erro ao obter endereços IP. Código: {resp.status_code}")
+        except Exception as e:
+            messages.error(request, f"Erro ao obter endereços IP: {e}")
+        return HttpResponseRedirect(f"/admin/appisp/integracaonetbox/{pk}/change/")
+
+    def sincronizar_equipamentos_netbox(self, request, pk):
+        from django.shortcuts import get_object_or_404, redirect
+        import requests
+        from .models import Equipamento, Fabricante, Modelo, Pop, IntegracaoNetbox  # ajuste o caminho se necessário
+
+        integracao = get_object_or_404(IntegracaoNetbox, pk=pk)
+        headers = {"Authorization": f"Token {integracao.token}"}
+        criados = 0
+
+        try:
+            url = f"{integracao.url.rstrip('/')}/dcim/devices/"  # com /api/ incluso
+            while url:
+                response = requests.get(url, headers=headers, timeout=10)
+                response.raise_for_status()
+                dados = response.json()
+                dispositivos = dados.get('results', [])
+                url = dados.get('next')  # próxima página ou None
+
+                for dispositivo in dispositivos:
+                    nome = dispositivo.get("name", "Sem Nome")
+
+                    # IP
+                    primary_ip = dispositivo.get("primary_ip4")
+                    ip = primary_ip.get("address").split('/')[0] if primary_ip and primary_ip.get(
+                        "address") else "0.0.0.0"
+
+                    # Modelo e Fabricante
+                    device_type = dispositivo.get("device_type") or {}
+                    nome_modelo = device_type.get("model", "Desconhecido")
+                    fabricante_data = device_type.get("manufacturer") or {}
+                    nome_fabricante = fabricante_data.get("name", "Desconhecido")
+
+                    # Verifica se já existe um equipamento com mesmo nome e empresa
+                    if not Equipamento.objects.filter(nome=nome, empresa=integracao.empresa).exists():
+                        # Buscar ou criar fabricante
+                        fabricante, _ = Fabricante.objects.get_or_create(nome=nome_fabricante)
+
+                        # Buscar ou criar modelo
+                        modelo, _ = Modelo.objects.get_or_create(modelo=nome_modelo, fabricante=fabricante)
+
+                        # Buscar ou criar POP (usa o primeiro POP da empresa)
+                        pop = Pop.objects.filter(empresa=integracao.empresa).first()
+                        if not pop:
+                            pop = Pop.objects.create(
+                                nome="POP Importado",
+                                endereco="Desconhecido",
+                                cidade="Desconhecida",
+                                empresa=integracao.empresa
+                            )
+
+                        # Criar o equipamento
+                        Equipamento.objects.create(
+                            nome=nome,
+                            ip=ip,
+                            usuario='admin',
+                            senha='admin',
+                            porta=22,
+                            protocolo='SSH',
+                            empresa=integracao.empresa,
+                            pop=pop,
+                            fabricante=fabricante,
+                            modelo=modelo,
+                            tipo='Switch',
+                            status='Ativo',
+                            observacao='Importado do NetBox'
+                        )
+                        criados += 1
+
+            self.message_user(request, f"✅ {criados} equipamento(s) importado(s) com sucesso do NetBox!")
+            self.atualizar_ultima_sincronizacao(integracao)
+
+        except Exception as e:
+            self.message_user(request, f"⚠️ Erro ao sincronizar do NetBox: {str(e)}", level='error')
+
+        return redirect(f'/admin/appisp/integracaonetbox/{pk}/change')
+
+    def sincronizar_portas_netbox(self, request, pk):
+        from .models import Equipamento, Porta
+        integracao = get_object_or_404(IntegracaoNetbox, pk=pk)
+        headers = {"Authorization": f"Token {integracao.token}"}
+        total_criadas = 0
+        total_atualizadas = 0
+
+        try:
+            url = f"{integracao.url.rstrip('/')}/dcim/interfaces/?limit=100"
+
+            while url:
+                response = requests.get(url, headers=headers, timeout=10)
+                response.raise_for_status()
+                data = response.json()
+                interfaces = data.get('results', [])
+                url = data.get('next')
+
+                for iface in interfaces:
+                    device = iface.get('device')
+                    device_name = device.get('name') if device else None
+                    port_name = iface.get('name')
+
+                    if not device_name or not port_name:
+                        continue
+
+                    equipamento = Equipamento.objects.filter(nome=device_name, empresa=integracao.empresa).first()
+                    if not equipamento:
+                        continue
+
+                    porta, created = Porta.objects.update_or_create(
+                        equipamento=equipamento,
+                        nome=port_name,
+                        defaults={
+                            "tipo": "Fibra",  # ou outra lógica se quiser mapear o tipo real
+                            "speed": "1G",  # valor default, pode adaptar se quiser usar info do NetBox
+                            "observacao": "",
+                            "empresa": equipamento.empresa,
+                        }
+                    )
+
+                    if created:
+                        total_criadas += 1
+                    else:
+                        total_atualizadas += 1
+
+            self.message_user(request,
+                              f"🔌 {total_criadas} portas criadas e {total_atualizadas} atualizadas com sucesso.")
+            self.atualizar_ultima_sincronizacao(integracao)
+
+        except Exception as e:
+            self.message_user(request, f"⚠️ Erro ao sincronizar portas: {str(e)}", level='error')
+
+        return redirect(f"/admin/appisp/integracaonetbox/{pk}/change")
+
+    def sincronizar_blocos_netbox(self, request, pk):
+        from .models import BlocoIP, Equipamento
+        integracao = get_object_or_404(IntegracaoNetbox, pk=pk)
+        headers = {"Authorization": f"Token {integracao.token}"}
+        total_criados = 0
+        total_atualizados = 0
+        erros = []
+
+        try:
+            url = f"{integracao.url.rstrip('/')}/ipam/prefixes/?limit=100"
+
+            while url:
+                response = requests.get(url, headers=headers, timeout=10)
+                response.raise_for_status()
+                data = response.json()
+                prefixos = data.get('results', [])
+                url = data.get('next')
+
+                for prefixo in prefixos:
+                    try:
+                        cidr = prefixo.get('prefix')
+                        descricao = prefixo.get('description', '')
+                        tipo_ip = 'IPv6' if ':' in cidr else 'IPv4'
+                        equipamento = None
+
+                        device_info = prefixo.get('device')
+                        if device_info and isinstance(device_info, dict):
+                            device_name = device_info.get('name')
+                            if device_name:
+                                equipamento = Equipamento.objects.filter(nome=device_name,
+                                                                         empresa=integracao.empresa).first()
+
+                        bloco, created = BlocoIP.objects.update_or_create(
+                            empresa=integracao.empresa,
+                            bloco_cidr=cidr,
+                            defaults={
+                                'tipo_ip': tipo_ip,
+                                'descricao': descricao,
+                                'equipamento': equipamento
+                            }
+                        )
+
+                        if created:
+                            total_criados += 1
+                        else:
+                            total_atualizados += 1
+
+                    except Exception as e:
+                        erros.append(f"{cidr}: {str(e)}")
+
+            self.atualizar_ultima_sincronizacao(integracao)
+
+            mensagem = f"✅ {total_criados} blocos criados, {total_atualizados} atualizados."
+            if erros:
+                mensagem += f" ⚠️ {len(erros)} erros durante a sincronização. Veja abaixo:\n"
+                for erro in erros[:10]:  # Mostra no máximo 10 erros no admin
+                    mensagem += f"\n• {erro}"
+                if len(erros) > 10:
+                    mensagem += f"\n... e mais {len(erros) - 10} erros."
+
+            self.message_user(request, mensagem, level='warning' if erros else 'info')
+
+        except Exception as e:
+            self.message_user(request, f"⚠️ Erro geral ao sincronizar blocos de IP: {str(e)}", level='error')
+
+        return redirect(f"/admin/appisp/integracaonetbox/{pk}/change")
+
+    def sincronizar_enderecos_ip_netbox(self, request, pk):
+        from .models import EnderecoIP, BlocoIP, Equipamento, Porta
+        integracao = get_object_or_404(IntegracaoNetbox, pk=pk)
+        headers = {"Authorization": f"Token {integracao.token}"}
+        total_criados = 0
+        total_atualizados = 0
+        erros = []
+
+        try:
+            url = f"{integracao.url.rstrip('/')}/ipam/ip-addresses/?limit=100"
+
+            while url:
+                response = requests.get(url, headers=headers, timeout=10)
+                response.raise_for_status()
+                data = response.json()
+                ip_addresses = data.get('results', [])
+                url = data.get('next')
+
+                for ip_info in ip_addresses:
+                    try:
+                        ip = ip_info.get('address')
+                        equipamento_info = ip_info.get('device')
+                        porta_info = ip_info.get('interface')
+                        bloco_info = ip_info.get('prefix')
+
+                        # Adiciona uma checagem para garantir que todos os dados necessários estão presentes
+                        if not ip or not equipamento_info or not porta_info or not bloco_info:
+                            erros.append(f"Faltando dados para o IP: {ip_info}")
+                            continue
+
+                        # Debug: Imprimir ip_info para investigar se os dados estão completos
+                        print(f"Processando IP: {ip_info}")
+
+                        # Encontrar o bloco de IP
+                        bloco_cidr = bloco_info.get('prefix')
+                        bloco = BlocoIP.objects.filter(bloco_cidr=bloco_cidr, empresa=integracao.empresa).first()
+                        if not bloco:
+                            erros.append(f"Bloco de IP não encontrado para o CIDR: {bloco_cidr}")
+                            continue
+
+                        # Encontrar o equipamento e porta
+                        equipamento = Equipamento.objects.filter(nome=equipamento_info.get('name'),
+                                                                 empresa=integracao.empresa).first()
+                        if not equipamento:
+                            erros.append(f"Equipamento não encontrado: {equipamento_info.get('name')}")
+                            continue
+
+                        porta = Porta.objects.filter(nome=porta_info.get('name'), equipamento=equipamento).first()
+                        if not porta:
+                            erros.append(
+                                f"Porta não encontrada: {porta_info.get('name')} no equipamento {equipamento.nome}")
+                            continue
+
+                        # Criar ou atualizar o endereço IP
+                        endereco_ip, created = EnderecoIP.objects.update_or_create(
+                            ip=ip,
+                            equipamento=equipamento,
+                            porta=porta,
+                            bloco=bloco,
+                            defaults={
+                                'finalidade': ip_info.get('description', ''),
+                                'next_hop': ip_info.get('gateway', ''),
+                                'is_gateway': ip_info.get('is_gateway', False),
+                            }
+                        )
+
+                        if created:
+                            total_criados += 1
+                        else:
+                            total_atualizados += 1
+
+                    except Exception as e:
+                        erros.append(f"Erro ao processar o IP {ip}: {str(e)}")
+
+            self.atualizar_ultima_sincronizacao(integracao)
+
+            mensagem = f"✅ {total_criados} IPs criados, {total_atualizados} atualizados."
+            if erros:
+                mensagem += f" ⚠️ {len(erros)} erros durante a sincronização. Veja abaixo:\n"
+                for erro in erros[:10]:  # Mostra no máximo 10 erros no admin
+                    mensagem += f"\n• {erro}"
+                if len(erros) > 10:
+                    mensagem += f"\n... e mais {len(erros) - 10} erros."
+
+            self.message_user(request, mensagem, level='warning' if erros else 'info')
+
+        except Exception as e:
+            self.message_user(request, f"⚠️ Erro geral ao sincronizar endereços de IP: {str(e)}", level='error')
+
+        return redirect(f"/admin/appisp/integracaonetbox/{pk}/change")
+
+    def atualizar_ultima_sincronizacao(self, integracao):
+        integracao.ultima_sincronizacao = now()
+        integracao.save()
+
 
 # Classe personalizada de Admin
 class CustomAdminSite(AdminSite):
@@ -1249,6 +1655,7 @@ admin_site.register(Vlan, VlanAdmin)
 admin_site.register(VlanPorta, VlanPortaAdmin)
 admin_site.register(EmpresaToken, EmpresaTokenAdmin)
 admin_site.register(IntegracaoZabbix, IntegracaoZabbixAdmin)
+admin_site.register(IntegracaoNetbox, IntegracaoNetboxAdmin)
 
 # Em vez de usar admin.site, agora usamos admin_site
 # Para fazer isso funcionar, você precisará alterar as URLs do seu projeto Django para usar o custom_admin
