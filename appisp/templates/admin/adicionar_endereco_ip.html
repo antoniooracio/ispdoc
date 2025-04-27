@@ -1,21 +1,115 @@
 {% extends 'admin/base_site.html' %}
+
 {% block content %}
   <h1>Adicionar Endereço IP</h1>
   <form method="post">
     {% csrf_token %}
     <div class="form-row">
+
+      <!-- Campo Empresa -->
       <div class="form-group col-md-6">
         <label for="id_empresa">Empresa</label>
         {{ form.empresa }}
+        {% if form.empresa.errors %}
+          <div class="alert alert-danger">
+            {% for error in form.empresa.errors %}
+              <p>{{ error }}</p>
+            {% endfor %}
+          </div>
+        {% endif %}
       </div>
+
+      <!-- Campo Bloco de IP -->
       <div class="form-group col-md-6">
         <label for="id_bloco">Bloco de IP</label>
         {{ form.bloco }}
+        {% if form.bloco.errors %}
+          <div class="alert alert-danger">
+            {% for error in form.bloco.errors %}
+              <p>{{ error }}</p>
+            {% endfor %}
+          </div>
+        {% endif %}
       </div>
+
+      <!-- Campo Endereço IP ou Bloco CIDR -->
       <div class="form-group col-md-6">
-        <label for="id_quantidade">Quantidade de IPs</label>
-        {{ form.quantidade }}
+        <label for="id_ip">Endereço IP ou Bloco CIDR</label>
+        {{ form.ip }}
+        {% if form.ip.errors %}
+          <div class="alert alert-danger">
+            {% for error in form.ip.errors %}
+              <p>{{ error }}</p>
+            {% endfor %}
+          </div>
+        {% endif %}
       </div>
+
+      <!-- Campo Equipamento -->
+      <div class="form-group col-md-6">
+        <label for="id_equipamento">Equipamento</label>
+        {{ form.equipamento }}
+        {% if form.equipamento.errors %}
+          <div class="alert alert-danger">
+            {% for error in form.equipamento.errors %}
+              <p>{{ error }}</p>
+            {% endfor %}
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- Campo Porta -->
+      <div class="form-group col-md-6">
+        <label for="id_porta">Porta</label>
+        {{ form.porta }}
+        {% if form.porta.errors %}
+          <div class="alert alert-danger">
+            {% for error in form.porta.errors %}
+              <p>{{ error }}</p>
+            {% endfor %}
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- Campo Finalidade -->
+      <div class="form-group col-md-6">
+        <label for="id_finalidade">Finalidade</label>
+        {{ form.finalidade }}
+        {% if form.finalidade.errors %}
+          <div class="alert alert-danger">
+            {% for error in form.finalidade.errors %}
+              <p>{{ error }}</p>
+            {% endfor %}
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- Campo Next Hop -->
+      <div class="form-group col-md-6">
+        <label for="id_next_hop">Next Hop</label>
+        {{ form.next_hop }}
+        {% if form.next_hop.errors %}
+          <div class="alert alert-danger">
+            {% for error in form.next_hop.errors %}
+              <p>{{ error }}</p>
+            {% endfor %}
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- Campo Is Gateway -->
+      <div class="form-group col-md-6">
+        <label for="id_is_gateway">Is Gateway</label>
+        {{ form.is_gateway }}
+        {% if form.is_gateway.errors %}
+          <div class="alert alert-danger">
+            {% for error in form.is_gateway.errors %}
+              <p>{{ error }}</p>
+            {% endfor %}
+          </div>
+        {% endif %}
+      </div>
+
     </div>
     <button type="submit" class="btn btn-primary">Salvar</button>
   </form>

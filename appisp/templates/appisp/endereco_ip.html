@@ -66,143 +66,181 @@
 
 </style>
 
-<div class="col-12 col-lg-12">
+  <div class="col-12 col-lg-12">
     <div class="card">
-        <div class="card-body">
-            <form method="post" action="{% url 'endereco_ip'  %}" class="form-horizontal">
-                {% csrf_token %}
-                <h3>{% if endereco_ip %}Editar{% else %}Adicionar{% endif %} Endereço IP</h3>
-                </br>
-                <!-- Bloco -->
-                <div class="form-group field-tipo">
-                    <div class="row">
-                        <div class="col-sm-2 text-left">
-                            <label for="id_bloco" class="form-label">Bloco:</label>
-                        </div>
-                        <div class="col-sm-7">
-                            {{ form.bloco }}
-                        </div>
-                    </div>
-                </div>
+      <div class="card-body">
+        <form method="post" action="{% url 'endereco_ip' %}" class="form-horizontal">
+          {% csrf_token %}
+          <h3>{% if endereco_ip %}Editar{% else %}Adicionar{% endif %} Endereço IP</h3>
+          </br>
 
-                <!-- Equipamento -->
-                <div class="form-group field-tipo">
-                    <div class="row">
-                        <div class="col-sm-2 text-left">
-                            <label for="id_equipamento" class="form-label">Equipamento:</label>
-                        </div>
-                        <div class="col-sm-7">
-                            {{ form.equipamento }}
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Porta -->
-                <div class="form-group field-tipo">
-                    <div class="row">
-                        <div class="col-sm-2 text-left">
-                            <label for="id_porta" class="form-label">Porta:</label>
-                        </div>
-                        <div class="col-sm-7">
-                            {{ form.porta }}
-                        </div>
-                    </div>
-                </div>
-
-                <!-- IP -->
-                <div class="form-group field-tipo">
-                    <div class="row">
-                        <div class="col-sm-2 text-left">
-                            <label for="id_ip" class="form-label">IP:</label>
-                        </div>
-                        <div class="col-sm-7">
-                            {{ form.ip }}
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Finalidade -->
-                <div class="form-group field-tipo">
-                    <div class="row">
-                        <div class="col-sm-2 text-left">
-                            <label for="id_finalidade" class="form-label">Finalidade:</label>
-                        </div>
-                        <div class="col-sm-7">
-                            {{ form.finalidade }}
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Next Hop -->
-                <div class="form-group field-tipo">
-                    <div class="row">
-                        <div class="col-sm-2 text-left">
-                            <label for="id_next_hop" class="form-label">Next Hop:</label>
-                        </div>
-                        <div class="col-sm-7">
-                            {{ form.next_hop }}
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Gateway -->
-                <div class="form-group field-tipo">
-                    <div class="row">
-                        <div class="col-sm-2 text-left">
-                            <label class="form-check-label" for="id_is_gateway">É o Gateway</label>
-                        </div>
-                        <div class="col-sm-7">
-                            {{ form.is_gateway }}
-                        </div>
-                    </div>
-                </div>
-
-                <button type="submit" class="btn btn-primary">Adicionar</button>
-                <a href="/admin/" class="btn btn-secondary">Cancelar</a>
-            </form>
-            {% if form.errors %}
-            <div class="alert alert-danger">
-                <strong>Erros no formulário:</strong>
-                <ul>
-                    {% for field, errors in form.errors.items %}
-                    <li><strong>{{ field }}:</strong> {{ errors|join:", " }}</li>
+          <!-- Bloco -->
+          <div class="form-group field-tipo">
+            <div class="row">
+              <div class="col-sm-2 text-left">
+                <label for="id_bloco" class="form-label">Bloco:</label>
+              </div>
+              <div class="col-sm-7">
+                {{ form.bloco }}
+                {% if form.bloco.errors %}
+                  <div class="alert alert-danger">
+                    {% for error in form.bloco.errors %}
+                      <p>{{ error }}</p>
                     {% endfor %}
-                </ul>
+                  </div>
+                {% endif %}
+              </div>
             </div>
-            {% endif %}
-        </div>
-    </div>
+          </div>
 
-
-    <div id="tabela-sub-blocos" style="display: none; visibility: hidden;"></div>
-
-    <div id="tabela-sub-blocos-body" style="display: none; visibility: hidden;"></div>
-
-
-    <div class="col-12 col-lg-12">
-        <div class="card">
-            <div class="card-body">
-                <!-- Mostra a Tabela dos IPs pertencentes ao bloco selecionado -->
-                <!-- <h4>IPs Cadastrados no Bloco</h4> -->
-                <table id="tabela-ips" class="table table-striped" style="display: none;">
-                    <!--  <thead>
-                      <tr>
-                          <th>IP</th>
-                          <th>Equipamento</th>
-                          <th>Porta</th>
-                          <th>Finalidade</th>
-                          <th>Next Hop</th>
-                          <th>Gateway?</th>
-                      </tr>
-                      </thead> -->
-                    <tbody id="tabela-ips-body">
-                    <div id="arvore-hierarquica"></div>
-                    </tbody>
-                </table>
+          <!-- Equipamento -->
+          <div class="form-group field-tipo">
+            <div class="row">
+              <div class="col-sm-2 text-left">
+                <label for="id_equipamento" class="form-label">Equipamento:</label>
+              </div>
+              <div class="col-sm-7">
+                {{ form.equipamento }}
+                {% if form.equipamento.errors %}
+                  <div class="alert alert-danger">
+                    {% for error in form.equipamento.errors %}
+                      <p>{{ error }}</p>
+                    {% endfor %}
+                  </div>
+                {% endif %}
+              </div>
             </div>
-        </div>
+          </div>
+
+          <!-- Porta -->
+          <div class="form-group field-tipo">
+            <div class="row">
+              <div class="col-sm-2 text-left">
+                <label for="id_porta" class="form-label">Porta:</label>
+              </div>
+              <div class="col-sm-7">
+                {{ form.porta }}
+                {% if form.porta.errors %}
+                  <div class="alert alert-danger">
+                    {% for error in form.porta.errors %}
+                      <p>{{ error }}</p>
+                    {% endfor %}
+                  </div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+
+          <!-- IP -->
+          <div class="form-group field-tipo">
+            <div class="row">
+              <div class="col-sm-2 text-left">
+                <label for="id_ip" class="form-label">IP:</label>
+              </div>
+              <div class="col-sm-7">
+                {{ form.ip }}
+                {% if form.ip.errors %}
+                  <div class="alert alert-danger">
+                    {% for error in form.ip.errors %}
+                      <p>{{ error }}</p>
+                    {% endfor %}
+                  </div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+
+          <!-- Finalidade -->
+          <div class="form-group field-tipo">
+            <div class="row">
+              <div class="col-sm-2 text-left">
+                <label for="id_finalidade" class="form-label">Finalidade:</label>
+              </div>
+              <div class="col-sm-7">
+                {{ form.finalidade }}
+                {% if form.finalidade.errors %}
+                  <div class="alert alert-danger">
+                    {% for error in form.finalidade.errors %}
+                      <p>{{ error }}</p>
+                    {% endfor %}
+                  </div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+
+          <!-- Next Hop -->
+          <div class="form-group field-tipo">
+            <div class="row">
+              <div class="col-sm-2 text-left">
+                <label for="id_next_hop" class="form-label">Next Hop:</label>
+              </div>
+              <div class="col-sm-7">
+                {{ form.next_hop }}
+                {% if form.next_hop.errors %}
+                  <div class="alert alert-danger">
+                    {% for error in form.next_hop.errors %}
+                      <p>{{ error }}</p>
+                    {% endfor %}
+                  </div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+
+          <!-- Gateway -->
+          <div class="form-group field-tipo">
+            <div class="row">
+              <div class="col-sm-2 text-left">
+                <label class="form-check-label" for="id_is_gateway">É o Gateway</label>
+              </div>
+              <div class="col-sm-7">
+                {{ form.is_gateway }}
+                {% if form.is_gateway.errors %}
+                  <div class="alert alert-danger">
+                    {% for error in form.is_gateway.errors %}
+                      <p>{{ error }}</p>
+                    {% endfor %}
+                  </div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary">Adicionar</button>
+          <a href="/admin/" class="btn btn-secondary">Cancelar</a>
+        </form>
+
+        <!-- Exibindo Erros Gerais do Formulário -->
+        {% if form.errors %}
+          <div class="alert alert-danger">
+            <strong>Erros no formulário:</strong>
+            <ul>
+              {% for field, errors in form.errors.items %}
+                <li><strong>{{ field }}:</strong> {{ errors|join:", " }}</li>
+              {% endfor %}
+            </ul>
+          </div>
+        {% endif %}
+      </div>
     </div>
-</div>
+  </div>
+
+  <!-- Tabela de IPs -->
+  <div id="tabela-sub-blocos" style="display: none; visibility: hidden;"></div>
+  <div id="tabela-sub-blocos-body" style="display: none; visibility: hidden;"></div>
+
+  <div class="col-12 col-lg-12">
+    <div class="card">
+      <div class="card-body">
+        <table id="tabela-ips" class="table table-striped" style="display: none;">
+          <tbody id="tabela-ips-body">
+            <div id="arvore-hierarquica"></div>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
 
 <!-- Script para filtrar as portas pelo Equipamento selecionado-->
 <script>
