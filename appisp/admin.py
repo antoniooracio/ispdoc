@@ -6,6 +6,7 @@ from django.contrib import admin, messages
 from django import forms
 from django.urls import path
 from django.urls import reverse
+from django.utils.safestring import mark_safe
 from django.utils.timezone import now
 from django.utils.translation import gettext_lazy as _
 from django.contrib.auth.models import Group, User
@@ -13,7 +14,8 @@ from django.contrib.auth.admin import GroupAdmin, UserAdmin
 from django.contrib.admin import AdminSite
 from django.shortcuts import render, get_object_or_404, redirect
 from django.http import HttpResponseRedirect
-from .forms import PortaForm, RackForm, RackEquipamentoForm, EnderecoIPForm, MaquinaVirtualForm, EquipamentoForm
+from .forms import PortaForm, RackForm, RackEquipamentoForm, EnderecoIPForm, MaquinaVirtualForm, EquipamentoForm, \
+    EnderecoIPForm
 from .views import mapa, mapa_racks
 from django.contrib.admin import SimpleListFilter
 from .models import Empresa, Pop, Fabricante, Modelo, Equipamento, Porta, BlocoIP, EnderecoIP, Rack, RackEquipamento, \
@@ -21,6 +23,7 @@ from .models import Empresa, Pop, Fabricante, Modelo, Equipamento, Porta, BlocoI
 import ipaddress
 from django.utils.html import format_html
 from django.contrib import admin
+from ipaddress import ip_network
 
 
 
@@ -482,6 +485,7 @@ class EmpresaFilter(SimpleListFilter):
         return queryset
 
 
+# Melhora o Formulario de Lista de Blocos
 class BlocoIPForm(forms.ModelForm):
     class Meta:
         model = BlocoIP
@@ -512,16 +516,176 @@ class BlocoIPForm(forms.ModelForm):
             self.fields['parent'].queryset = BlocoIP.objects.filter(empresa=self.instance.empresa)  # Filtro para parent
 
 
+@admin.action(description='Subdividir blocos selecionados')
+def subdividir_blocos(modeladmin, request, queryset):
+    """
+    Subdivide os blocos selecionados em dois sub-blocos.
+    """
+    total_subdivisoes = 0
+
+    for bloco in queryset:
+        # Verifica se o bloco já tem filhos (já foi subdividido)
+        if bloco.sub_blocos.exists():
+            modeladmin.message_user(request, f"O bloco {bloco.bloco_cidr} já foi subdividido.", level=messages.WARNING)
+            continue  # Pula
+
+        try:
+            rede = ip_network(bloco.bloco_cidr, strict=False)
+            prefixo_atual = rede.prefixlen
+
+            # Impede divisão de /32 (IPv4) e /128 (IPv6)
+            if (rede.version == 4 and prefixo_atual >= 32) or (rede.version == 6 and prefixo_atual >= 128):
+                modeladmin.message_user(request, f"O bloco {bloco.bloco_cidr} não pode ser subdividido (prefixo máximo).", level=messages.WARNING)
+                continue
+
+            novo_prefixo = prefixo_atual + 1  # Sempre divide ao meio
+
+            subnets = list(rede.subnets(new_prefix=novo_prefixo))  # Gera duas sub-redes
+
+            for subrede in subnets:
+                BlocoIP.objects.create(
+                    empresa=bloco.empresa,
+                    bloco_cidr=str(subrede),
+                    parent=bloco,
+                    tipo_ip=bloco.tipo_ip
+                )
+                total_subdivisoes += 1
+
+        except Exception as e:
+            modeladmin.message_user(request, f"Erro ao subdividir bloco {bloco.bloco_cidr}: {e}", level=messages.ERROR)
+
+    if total_subdivisoes > 0:
+        modeladmin.message_user(request, f"{total_subdivisoes} sub-blocos criados com sucesso.", level=messages.SUCCESS)
+    else:
+        modeladmin.message_user(request, "Nenhum bloco foi subdividido.", level=messages.WARNING)
+
+# Lista os Blocos Pai e filhos
+class BlocoCIDRListFilter(SimpleListFilter):
+    title = 'Bloco CIDR'
+    parameter_name = 'bloco_cidr'
+
+    def lookups(self, request, model_admin):
+        blocos = model_admin.get_queryset(request)
+        return [(b.bloco_cidr, b.bloco_cidr) for b in blocos]
+
+    def queryset(self, request, queryset):
+        if self.value():
+            try:
+                rede_busca = ip_network(self.value(), strict=False)
+                bloco_pai = queryset.filter(bloco_cidr=str(rede_busca)).first()
+
+                if bloco_pai:
+                    blocos_ids = [bloco_pai.id]
+
+                    def coletar_descendentes(bloco):
+                        for sub_bloco in bloco.sub_blocos.all():
+                            blocos_ids.append(sub_bloco.id)
+                            coletar_descendentes(sub_bloco)
+
+                    coletar_descendentes(bloco_pai)
+
+                    return queryset.filter(id__in=blocos_ids)
+            except ValueError:
+                pass
+
+        return queryset
+
+
 @admin.register(BlocoIP)
 class BlocoIPAdmin(admin.ModelAdmin):
     list_display = (
-    'empresa', 'equipamento', 'bloco_cidr', 'tipo_ip', 'next_hop', 'descricao', 'gateway', 'parent', 'criado_em')
+        'bloco_indented', 'empresa', 'bloco_cidr', 'sub_blocos_count',
+        'utilizacao_barra', 'tipo_ip', 'parent', 'next_hop', 'gateway', 'subdividir_link'
+    )
+    readonly_fields = ('utilizacao_barra',)
     search_fields = ('bloco_cidr', 'empresa__nome', 'equipamento__nome')
-    list_filter = ('tipo_ip', 'empresa', 'equipamento', 'parent')
+    list_filter = (BlocoCIDRListFilter, 'tipo_ip', 'empresa', 'equipamento', 'parent')
     form = BlocoIPForm
+    actions = [subdividir_blocos]
+
+    @admin.display(description='Bloco CIDR')
+    def bloco_indented(self, obj):
+        indent = '*' * obj.nivel()  # Um asterisco por nível
+        return format_html(f'{indent} {obj.bloco_cidr}')
+
+    @admin.display(description='Qtd S-bloco')
+    def sub_blocos_count(self, obj):
+        def contar_descendentes(bloco):
+            count = bloco.sub_blocos.count()
+            for sub_bloco in bloco.sub_blocos.all():
+                count += contar_descendentes(sub_bloco)
+            return count
+
+        return contar_descendentes(obj)
+
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path('<int:bloco_id>/subdividir/', self.admin_site.admin_view(self.subdividir_view),
+                 name='appisp_blocoip_subdividir'),
+        ]
+        return custom_urls + urls
+
+    def subdividir_view(self, request, bloco_id):
+        bloco = get_object_or_404(BlocoIP, id=bloco_id)
+
+        try:
+            rede = ip_network(bloco.bloco_cidr, strict=False)
+            prefixo_atual = rede.prefixlen
+
+            if (rede.version == 4 and prefixo_atual >= 32) or (rede.version == 6 and prefixo_atual >= 128):
+                self.message_user(request, f"O bloco {bloco.bloco_cidr} não pode ser subdividido.",
+                                  level=messages.WARNING)
+                return redirect('admin:appisp_blocoip_changelist')
+
+            if bloco.sub_blocos.exists():
+                self.message_user(request, f"O bloco {bloco.bloco_cidr} já foi subdividido.", level=messages.WARNING)
+                return redirect('admin:appisp_blocoip_changelist')
+
+            novo_prefixo = prefixo_atual + 1
+            subnets = list(rede.subnets(new_prefix=novo_prefixo))
+
+            for subrede in subnets:
+                BlocoIP.objects.create(
+                    empresa=bloco.empresa,
+                    bloco_cidr=str(subrede),
+                    parent=bloco,
+                    tipo_ip=bloco.tipo_ip
+                )
+
+            self.message_user(request,
+                              f"O bloco {bloco.bloco_cidr} foi subdividido com sucesso em {len(subnets)} sub-blocos.",
+                              level=messages.SUCCESS)
+
+        except Exception as e:
+            self.message_user(request, f"Erro ao subdividir: {e}", level=messages.ERROR)
+
+        return redirect('admin:appisp_blocoip_changelist')
+
+    def subdividir_link(self, obj):
+        if obj.sub_blocos.exists():
+            return format_html('<span style="color: gray;">Já subdividido</span>')
+
+        try:
+            rede = ip_network(obj.bloco_cidr, strict=False)
+            prefixo_atual = rede.prefixlen
+        except Exception:
+            return format_html('<span style="color: red;">CIDR inválido</span>')
+
+        if (rede.version == 4 and prefixo_atual >= 32) or (rede.version == 6 and prefixo_atual >= 128):
+            return format_html('<span style="color: gray;">Não pode dividir</span>')
+
+        url = reverse('admin:appisp_blocoip_subdividir', args=[obj.id])
+        return format_html(
+            '<a class="btn btn-outline-warning btn-sm" '
+            'style="padding:2px 8px; border-radius:5px; text-decoration:none;" href="{}">Subdividir</a>',
+            url
+        )
+
+    subdividir_link.short_description = "Ações"
+    subdividir_link.allow_tags = True
 
     def gateway(self, obj):
-        """Mostra o IP configurado como Gateway"""
         gw = obj.enderecos.filter(is_gateway=True).first()
         return gw.ip if gw else "Nenhum"
 
@@ -529,14 +693,16 @@ class BlocoIPAdmin(admin.ModelAdmin):
 
     def get_list_filter(self, request):
         if request.user.is_superuser:
-            return ('empresa', 'equipamento', 'bloco_cidr', 'parent', 'tipo_ip')
-        return (EmpresaUsuarioFilter, EquipamentoEmpresaFilter, 'bloco_cidr', 'tipo_ip')
+            return ('empresa', 'equipamento', BlocoCIDRListFilter, 'parent', 'tipo_ip')
+        return (EmpresaUsuarioFilter, EquipamentoEmpresaFilter, BlocoCIDRListFilter, 'tipo_ip')
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
-        if request.user.is_superuser:
-            return qs
-        return qs.filter(empresa__usuarios=request.user)
+
+        if not request.user.is_superuser:
+            qs = qs.filter(empresa__usuarios=request.user)
+
+        return qs
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         if not request.user.is_superuser:
@@ -556,6 +722,8 @@ class EnderecoIPAdmin(admin.ModelAdmin):
     list_filter = (EnderecoIPEmpresaFilter, EquipamentoEmpresaFilter, BlocoEmpresaFilter, "is_gateway")
     search_fields = ("ip", "equipamento__nome", "porta__nome")
 
+    form = EnderecoIPForm
+
     change_list_template = "admin/endereco_ip_changelist.html"  # Template personalizado
 
     def response_add(self, request, obj, post_url_continue=None):
@@ -574,47 +742,29 @@ class EnderecoIPAdmin(admin.ModelAdmin):
         return qs.filter(equipamento__empresa__usuarios=request.user)
 
     def get_form(self, request, obj=None, **kwargs):
-        """
-        Personaliza o formulário para filtrar os campos de BlocoIP e Equipamento de acordo com o usuário logado
-        """
+        """Personaliza o formulário para filtrar os campos de BlocoIP e Equipamento de acordo com o usuário logado"""
         form_class = super().get_form(request, obj, **kwargs)
 
-        # Filtro para o campo 'bloco' baseado no usuário logado
         if not request.user.is_superuser:
             form_class.base_fields["bloco"].queryset = BlocoIP.objects.filter(empresa__usuarios=request.user)
-
-        # Filtro para o campo 'equipamento' baseado no usuário logado
-        if not request.user.is_superuser:
             form_class.base_fields["equipamento"].queryset = Equipamento.objects.filter(empresa__usuarios=request.user)
-
-            # Filtro para o campo 'equipamento' baseado no usuário logado
-            if not request.user.is_superuser:
-                form_class.base_fields["porta"].queryset = Porta.objects.filter(
-                    empresa__usuarios=request.user)
+            form_class.base_fields["porta"].queryset = Porta.objects.filter(empresa__usuarios=request.user)
 
         return form_class
 
-    actions = ["sugerir_proximo_ip"]
+    actions = ["sugerir_proximo_ip", "sugerir_proximo_ip_lote"]
 
-    def sugerir_proximo_ip(self, request, queryset):
-        """Sugere e preenche o próximo IP disponível para cada registro"""
-        for endereco in queryset:
-            if not endereco.ip:
-                endereco.ip = endereco.bloco.sugerir_proximo_ip()
-                endereco.save()
+    def sugerir_ips_lote(self, request):
+        """Tela personalizada para sugerir IPs em lote"""
+        if request.method == "POST":
+            quantidade = request.POST.get("quantidade")
+            if quantidade:
+                self.message_user(request, f"IPs sugeridos com sucesso para {quantidade} registros.")
+                return HttpResponseRedirect("../")
+            else:
+                self.message_user(request, "Digite uma quantidade válida.", level=messages.ERROR)
 
-        self.message_user(request, "IP sugerido e salvo automaticamente.")
-
-    sugerir_proximo_ip.short_description = "Sugerir próximo IP disponível"
-
-    # Adicionamos a URL personalizada para o botão de adicionar IPs em lote
-    def get_urls(self):
-        urls = super().get_urls()
-        custom_urls = [
-            path("adicionar-endereco-ip/", self.admin_site.admin_view(self.adicionar_endereco_ip),
-                 name="adicionar_endereco_ip"),
-        ]
-        return custom_urls + urls
+        return render(request, "admin/sugerir_ips_lote.html")
 
     def adicionar_endereco_ip(self, request):
         """Tela personalizada para adicionar IPs"""
@@ -630,7 +780,7 @@ class EnderecoIPAdmin(admin.ModelAdmin):
                 for i in range(quantidade):
                     endereco = f"{bloco}.{i}"  # Exemplo de lógica para IPs sequenciais
                     ip = EnderecoIP(ip=endereco, bloco=bloco, equipamento=None)
-                    ip.save()
+                    ip.save()  # Salva o IP gerado
                     ips_criados.append(endereco)
 
                 self.message_user(

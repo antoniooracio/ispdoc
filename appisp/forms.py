@@ -6,6 +6,45 @@ from django import forms
 from django.contrib.auth.models import User
 from .models import Porta, Empresa, Equipamento, Rack, RackEquipamento, MaquinaVirtual, EnderecoIP, BlocoIP, Vlan
 
+
+from django import forms
+from ipaddress import ip_address, ip_network
+from .models import EnderecoIP, BlocoIP
+
+class EnderecoIPForm(forms.ModelForm):
+    class Meta:
+        model = EnderecoIP
+        fields = "__all__"
+
+    def clean(self):
+        cleaned_data = super().clean()
+        ip = cleaned_data.get("ip")
+        bloco = cleaned_data.get("bloco")
+
+        if bloco and ip:
+            # Primeiro, verifica se o bloco tem subdivisões
+            sub_blocos = bloco.sub_blocos.all()
+
+            if sub_blocos.exists():
+                # Se tem subdivisões, o IP não pode ser cadastrado diretamente no bloco pai
+                ip_obj = ip_address(ip)
+
+                # Agora procuramos em qual sub-bloco o IP se encaixa
+                for sub_bloco in sub_blocos:
+                    rede = ip_network(sub_bloco.bloco_cidr, strict=False)
+                    if ip_obj in rede:
+                        raise forms.ValidationError(
+                            f"Este bloco {bloco.bloco_cidr} foi subdividido. "
+                            f"Cadastre o IP no sub-bloco correto: {sub_bloco.bloco_cidr}"
+                        )
+
+                raise forms.ValidationError(
+                    f"Este bloco {bloco.bloco_cidr} foi subdividido, mas o IP informado não pertence a nenhum sub-bloco!"
+                )
+
+        return cleaned_data
+
+
 class PasswordWithToggle(forms.PasswordInput):
     template_name = 'widgets/password_with_toggle.html'
 
