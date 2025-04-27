@@ -1,9 +1,11 @@
 from django.db import models
-from ipaddress import ip_network
+from ipaddress import ip_network, ip_address
 from django.core.exceptions import ValidationError
 from django.contrib.auth.models import User  # Importe o modelo de usuário
 import ipaddress
 import uuid
+
+from django.utils.html import format_html
 
 
 # Modelo de Empresa
@@ -303,7 +305,7 @@ class BlocoIP(models.Model):
 
     empresa = models.ForeignKey('Empresa', on_delete=models.CASCADE, related_name='blocos_ip')
     tipo_ip = models.CharField(max_length=4, choices=TIPO_CHOICES, default='IPv4')  # Indica se é IPv4 ou IPv6
-    bloco_cidr = models.CharField(max_length=43)  # IPv6 precisa de mais espaço
+    bloco_cidr = models.CharField(max_length=50)  # IPv6 precisa de mais espaço
     descricao = models.CharField(max_length=255, blank=True, null=True)
     parent = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='sub_blocos')
     equipamento = models.ForeignKey('Equipamento', on_delete=models.CASCADE, related_name='blocos', null=True,
@@ -314,6 +316,15 @@ class BlocoIP(models.Model):
     class Meta:
         verbose_name_plural = "Blocos de IP"
         ordering = ['bloco_cidr']
+
+    def nivel(self):
+        """Quantidade de níveis até a raiz (parent=None)"""
+        nivel = 0
+        parent = self.parent
+        while parent:
+            nivel += 1
+            parent = parent.parent
+        return nivel
 
     def clean(self):
         """Validações para garantir que o bloco é correto e não se sobrepõe a outros blocos"""
@@ -369,6 +380,18 @@ class BlocoIP(models.Model):
 
         return None  # Se não houver IP disponível
 
+    def network(self):
+        return ip_network(self.bloco_cidr, strict=False)
+
+    def subnet(self, new_prefix):
+        """Divide este bloco em sub-blocos com o prefixo fornecido."""
+        network = self.network()
+        return list(network.subnets(new_prefix=new_prefix))
+
+    def total_ips(self):
+        """Quantidade de IPs disponíveis no bloco."""
+        return self.network().num_addresses
+
     def save(self, *args, **kwargs):
         if self.equipamento_id is None:
             self.equipamento = None  # Garante que não há valor inválido
@@ -378,10 +401,65 @@ class BlocoIP(models.Model):
     def __str__(self):
         return f"{self.bloco_cidr} - {self.empresa.nome} ({self.equipamento.nome if self.equipamento else 'Sem equipamento'})"
 
+    def utilizacao_percentual(self):
+        """Retorna a porcentagem de utilização do bloco, considerando os IPs de rede e broadcast como utilizados"""
+        total = self.total_ips()
+        bloco_rede = ipaddress.ip_network(self.bloco_cidr, strict=False)
+
+        # Para blocos /30 e abaixo, considerar os IPs de rede e broadcast como usados
+        if bloco_rede.prefixlen <= 30:
+            total -= 2  # Subtrai os 2 IPs (rede e broadcast)
+
+        # Contabiliza os IPs ocupados
+        usados = self.enderecos.count()
+
+        if total == 0:
+            return 0
+        return (usados / total) * 100
+
+    from django.utils.html import format_html
+
+    def utilizacao_barra(self):
+        """Retorna uma barra de progresso com degradê dinâmico baseado no percentual."""
+        percentual = self.utilizacao_percentual()
+        percentual_str = f"{percentual:.1f}%"
+
+        # Definindo o degradê baseado no percentual
+        if percentual <= 50:
+            # Degradê simples verde -> amarelo
+            gradiente = "linear-gradient(90deg, limegreen, yellow)"
+        elif percentual <= 75:
+            # Degradê verde -> amarelo -> vermelho claro
+            gradiente = "linear-gradient(90deg, limegreen, yellow, orangered)"
+        else:
+            # Degradê verde -> amarelo -> vermelho escuro
+            gradiente = "linear-gradient(90deg, limegreen, yellow, darkred)"
+
+        return format_html(
+            '''
+            <div style="position: relative; background-color: #0d0d2b; border-radius: 30px; overflow: hidden; height: 18px; width: 100%; box-shadow: inset 0 0 5px #000;">
+                <div style="height: 100%; width: {}%; 
+                            background: {}; 
+                            transition: width 0.5s;">
+                </div>
+                <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+                            display: flex; align-items: center; justify-content: center;
+                            color: white; font-weight: bold; font-size: 14px;">
+                    {}
+                </div>
+            </div>
+            ''',
+            percentual,
+            gradiente,
+            percentual_str
+        )
+
+    utilizacao_barra.short_description = "Utilização"
+    utilizacao_barra.allow_tags = True
 
 # Classe para cadastro de IP individual
 class EnderecoIP(models.Model):
-    bloco = models.ForeignKey(BlocoIP, on_delete=models.CASCADE, related_name='enderecos')
+    bloco = models.ForeignKey('BlocoIP', on_delete=models.CASCADE, related_name='enderecos')
     ip = models.GenericIPAddressField(blank=True, null=True)  # Permite sugestão automática
     equipamento = models.ForeignKey('Equipamento', on_delete=models.CASCADE, related_name='ips')
     porta = models.ForeignKey('Porta', on_delete=models.CASCADE, related_name='ips')
@@ -400,41 +478,67 @@ class EnderecoIP(models.Model):
         if not self.bloco:
             raise ValidationError("O bloco de IP é obrigatório.")
 
+        if not self.equipamento:
+            raise ValidationError("O equipamento é obrigatório.")
+
+        if not self.porta:
+            raise ValidationError("A porta é obrigatória.")
+
         if self.porta.equipamento != self.equipamento:
             raise ValidationError("A porta selecionada não pertence ao equipamento escolhido.")
-
-        rede = ipaddress.ip_network(self.bloco.bloco_cidr, strict=False)
 
         if not self.ip:
             return  # Se não há IP informado, não realiza validações que dependem dele
 
-        ip_obj = ipaddress.ip_address(self.ip)
+        ip_obj = ip_address(self.ip)
+        bloco_rede = ip_network(self.bloco.bloco_cidr, strict=False)
 
-        # 1️⃣ Validação: O IP pertence ao bloco?
-        if ip_obj not in rede:
-            raise ValidationError(f"O IP {self.ip} não pertence ao bloco {rede}")
+        # 🌟 NOVO: Se o bloco está subdividido, impedir cadastro direto nele
+        sub_blocos = BlocoIP.objects.filter(parent=self.bloco)  # Assume que seu BlocoIP tem campo 'bloco_pai'
+        if sub_blocos.exists():
+            # Verifica em qual sub-bloco o IP pertence
+            sub_bloco_correto = None
+            for sub_bloco in sub_blocos:
+                rede_sub = ip_network(sub_bloco.bloco_cidr, strict=False)
+                if ip_obj in rede_sub:
+                    sub_bloco_correto = sub_bloco
+                    break
+
+            if sub_bloco_correto:
+                raise ValidationError(
+                    f"Este bloco foi subdividido. Cadastre o IP {self.ip} no bloco {sub_bloco_correto.bloco_cidr}."
+                )
+            else:
+                raise ValidationError(
+                    f"Este bloco foi subdividido. O IP {self.ip} não pertence a nenhum dos sub-blocos disponíveis."
+                )
+
+        # 1️⃣ Validação: O IP pertence ao bloco informado
+        if ip_obj not in bloco_rede:
+            raise ValidationError(f"O IP {self.ip} não pertence ao bloco {bloco_rede}.")
 
         # 2️⃣ Validação: IP já cadastrado no bloco
         if EnderecoIP.objects.filter(bloco=self.bloco, ip=self.ip).exclude(id=self.id).exists():
             raise ValidationError(f"O IP {self.ip} já está cadastrado neste bloco.")
 
-        # 3️⃣ Validação: Equipamento já tem um IP deste bloco
-        #if EnderecoIP.objects.filter(bloco=self.bloco, equipamento=self.equipamento).exclude(id=self.id).exists():
-        #    raise ValidationError(f"O equipamento '{self.equipamento}' já possui um IP deste bloco.")
-
-        # 4️⃣ Validação: IP de rede e broadcast
-        if rede.version == 4 and rede.prefixlen <= 30:  # IPv4
-            if ip_obj in (rede.network_address, rede.broadcast_address):
+        # 3️⃣ Validação: IP de rede e broadcast
+        if bloco_rede.version == 4 and bloco_rede.prefixlen <= 30:
+            if ip_obj in (bloco_rede.network_address, bloco_rede.broadcast_address):
                 raise ValidationError(f"O IP {self.ip} é um endereço de rede ou broadcast e não pode ser usado.")
 
-        if rede.version == 6 and rede.prefixlen <= 126:  # IPv6
-            if ip_obj in (rede.network_address, rede.broadcast_address):
+        if bloco_rede.version == 6 and bloco_rede.prefixlen <= 126:
+            if ip_obj in (bloco_rede.network_address, bloco_rede.broadcast_address):
                 raise ValidationError(f"O IP {self.ip} é um endereço de rede ou broadcast e não pode ser usado.")
 
-        # 5️⃣ Validação: Apenas um gateway por bloco
-        if self.is_gateway and EnderecoIP.objects.filter(bloco=self.bloco, is_gateway=True).exclude(
-                id=self.id).exists():
-            raise ValidationError(f"Já existe um gateway para o bloco {self.bloco.bloco_cidr}. Apenas um é permitido.")
+        # 4️⃣ Validação: Apenas um gateway por bloco
+        if self.is_gateway:
+            if EnderecoIP.objects.filter(bloco=self.bloco, is_gateway=True).exclude(id=self.id).exists():
+                raise ValidationError(f"Já existe um gateway para o bloco {self.bloco.bloco_cidr}. Apenas um é permitido.")
+
+            if not self.next_hop:
+                raise ValidationError("O campo 'next_hop' é obrigatório para o gateway.")
+
+        super().clean()
 
     def save(self, *args, **kwargs):
         """Sugere um IP caso não tenha sido fornecido"""
@@ -442,9 +546,10 @@ class EnderecoIP(models.Model):
             proximo_ip = self.bloco.sugerir_proximo_ip()
             if not proximo_ip:
                 raise ValidationError("Não há IPs disponíveis neste bloco.")
-            self.ip = proximo_ip  # Atribui automaticamente o próximo IP disponível
+            self.ip = proximo_ip
 
-        super().save(*args, **kwargs)  # Salva após sugerir um IP
+        self.full_clean()  # Validações completas antes de salvar
+        super().save(*args, **kwargs)
 
     def __str__(self):
         gateway_status = " (Gateway)" if self.is_gateway else ""
