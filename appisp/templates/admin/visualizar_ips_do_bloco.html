@@ -1,0 +1,71 @@
+{% extends 'admin/base_site.html' %}
+
+{% block content %}
+
+
+<form class="col-md-12">
+    <div class="form-group field-tipo">
+        <div class="alert alert-primary" role="alert">
+            <h3>IPs do Bloco: <a href="/admin/appisp/blocoip" class="alert-link">{{ bloco.bloco_cidr }}</a>.</h3>
+        </div>
+    </div>
+        <table border="1" cellpadding="5" cellspacing="0">
+            <tr>
+                <th>Endereço IP</th>
+                <th>Tipo</th>
+                <th>Equipamento</th>
+                <th>Porta</th>
+                <th>Finalidade</th>
+                <th>Next_Hop</th>
+                <th>Gateway</th>
+            </tr>
+            {% for ip in lista_ips %}
+            <tr style="background-color:
+                          {% if ip.tipo == 'IP de Rede' or ip.tipo == 'IP de Broadcast' %}
+                            #00BFFF
+                          {% elif ip.tipo == 'Cadastrado' %}
+                            #ADD8E6
+                          {% else %}
+                            #DCDCDC
+                          {% endif %}
+                        ; color:#000000">
+                <td>{{ ip.ip }}</td>
+                <td>
+                    {% if ip.tipo == "Livre" %}
+                        <a href="{% url 'admin:appisp_enderecoip_add' %}" >
+                            <i class="fas fa-plus"></i>
+                        </a>
+                    {% else %}
+                        {% if ip.tipo == 'IP de Rede' or ip.tipo == 'IP de Broadcast' %}
+                            {{ ip.tipo }}
+                          {% elif ip.tipo == 'Cadastrado' %}
+                            🚫
+                          {% else %}
+                            {{ ip.tipo }}
+                          {% endif %}
+
+                    {% endif %}
+                </td>
+                <td>{{ ip.equipamento }}</td>
+                <td>{{ ip.porta }}</td>
+                <td>{{ ip.finalidade }}</td>
+                <td>
+                    {% if ip.next_hop %}
+                        {{ ip.next_hop }}
+                    {% else %}
+
+                    {% endif %}
+                </td>
+                <td>
+                    {% if ip.is_gateway %}
+                        ✅
+                    {% else %}
+
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+</form>
+
+{% endblock %}

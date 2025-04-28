@@ -1,3 +1,5 @@
+from ipaddress import ip_network
+
 import requests
 from django import forms
 from django.contrib.admin.views.decorators import staff_member_required
@@ -825,11 +827,45 @@ def get_sub_blocos(request, bloco_id):
     return JsonResponse({'sub_blocos': list(sub_blocos)})
 
 
+def visualizar_ips_do_bloco(request, bloco_id):
+    bloco = get_object_or_404(BlocoIP, id=bloco_id)
+    rede = ip_network(bloco.bloco_cidr, strict=False)
+    enderecos_existentes = EnderecoIP.objects.filter(bloco=bloco).values_list('ip', flat=True)
+    lista_ips = []
+
+    for ip in rede:
+        info = {'ip': str(ip)}
+        if ip == rede.network_address:
+            info['tipo'] = 'IP de rede'
+        elif ip == rede.broadcast_address:
+            info['tipo'] = 'IP de broadcast'
+        elif str(ip) in enderecos_existentes:
+            endereco = EnderecoIP.objects.get(bloco=bloco, ip=str(ip))
+            info['tipo'] = 'Cadastrado'
+            info['equipamento'] = endereco.equipamento.nome
+            info['porta'] = endereco.porta
+            info['finalidade'] = endereco.finalidade
+            info['next_hop'] = endereco.next_hop
+            info['is_gateway'] = endereco.is_gateway
+        else:
+            info['tipo'] = 'Livre'
+        lista_ips.append(info)
+
+    # 👇 Aqui criamos o dicionário "context"
+    context = {
+        'bloco': bloco,
+        'lista_ips': lista_ips,
+        'pode_adicionar_ip': not bloco.sub_blocos.exists(),
+    }
+
+    # 👇 Passa esse context para o render
+    return render(request, 'admin/visualizar_ips_modal.html', context)
+
 
 def listar_ips_por_bloco(request, bloco_id):
     """Retorna os IPs cadastrados dentro de um bloco específico."""
     ips = EnderecoIP.objects.filter(bloco_id=bloco_id).values("id", "ip", "equipamento__nome", "porta__nome",
-                                                              "next_hop", "is_gateway", 'finalidade')
+                                                              "next_hop", "is_gateway", 'finalidade' )
     return JsonResponse({"ips": list(ips)})
 
 def dados_hierarquicos(request, bloco_id):

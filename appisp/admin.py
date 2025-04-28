@@ -24,7 +24,7 @@ import ipaddress
 from django.utils.html import format_html
 from django.contrib import admin
 from ipaddress import ip_network
-
+from django.utils.safestring import mark_safe
 
 
 class PopEmpresaFilter(SimpleListFilter):
@@ -595,13 +595,67 @@ class BlocoCIDRListFilter(SimpleListFilter):
 class BlocoIPAdmin(admin.ModelAdmin):
     list_display = (
         'bloco_indented', 'empresa', 'bloco_cidr', 'sub_blocos_count',
-        'utilizacao_barra', 'tipo_ip', 'parent', 'next_hop', 'gateway', 'subdividir_link'
+        'utilizacao_barra', 'tipo_ip', 'parent', 'gateway', 'acoes_dropdown'
     )
     readonly_fields = ('utilizacao_barra',)
     search_fields = ('bloco_cidr', 'empresa__nome', 'equipamento__nome')
     list_filter = (BlocoCIDRListFilter, 'tipo_ip', 'empresa', 'equipamento', 'parent')
     form = BlocoIPForm
     actions = [subdividir_blocos]
+
+    @admin.display(description="Ações")
+    def acoes_dropdown(self, obj):
+        from django.utils.safestring import mark_safe
+        from ipaddress import ip_network
+        from django.urls import reverse
+        from django.utils.html import format_html
+
+        acoes = []
+
+        # Subdividir, se aplicável
+        if not obj.sub_blocos.exists():
+            try:
+                rede = ip_network(obj.bloco_cidr, strict=False)
+                prefixo_atual = rede.prefixlen
+                if not ((rede.version == 4 and prefixo_atual >= 32) or (rede.version == 6 and prefixo_atual >= 128)):
+                    subdividir_url = reverse('admin:appisp_blocoip_subdividir', args=[obj.id])
+                    acoes.append(
+                        f'<a href="{subdividir_url}" style="display:block; padding:8px 12px; text-decoration:none; color:#333;">Subdividir</a>')
+            except Exception:
+                pass
+
+        # Visualizar IPs, se aplicável
+        if not obj.sub_blocos.exists():
+            visualizar_url = reverse('admin:appisp_blocoip_visualizar_ips', args=[obj.id])
+            acoes.append(
+                f'<a href="{visualizar_url}" style="display:block; padding:8px 12px; text-decoration:none; background-color: #fff; color:#333;">IPs</a>')
+
+        # Se não tiver ações
+        if not acoes:
+            return format_html('<span style="color: gray;"></span>')
+
+        # Dropdown estilo Admin
+        return format_html('''
+            <div style="position: relative; display: inline-block;">
+                <button type="button" class="btn btn-outline-success btn-sm" style="
+                " onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'block' ? 'none' : 'block';">
+                    Ações ▼
+                </button>
+                <div style="
+                    display: none;
+                    position: absolute;
+                    background-color: #fff;
+                    min-width: 100px;
+                    left: -20px;
+                    border: 1px solid #ccc;
+                    border-radius: 4px;
+                    box-shadow: 0px 2px 5px rgba(0,0,0,0.2);
+                    z-index: 1;
+                ">
+                    {}
+                </div>
+            </div>
+        ''', mark_safe(''.join(acoes)))
 
     @admin.display(description='Bloco CIDR')
     def bloco_indented(self, obj):
@@ -623,6 +677,8 @@ class BlocoIPAdmin(admin.ModelAdmin):
         custom_urls = [
             path('<int:bloco_id>/subdividir/', self.admin_site.admin_view(self.subdividir_view),
                  name='appisp_blocoip_subdividir'),
+            path('<int:bloco_id>/visualizar_ips/', self.admin_site.admin_view(self.visualizar_ips),
+                 name='appisp_blocoip_visualizar_ips'),
         ]
         return custom_urls + urls
 
@@ -677,17 +733,17 @@ class BlocoIPAdmin(admin.ModelAdmin):
 
         url = reverse('admin:appisp_blocoip_subdividir', args=[obj.id])
         return format_html(
-            '<a class="btn btn-outline-warning btn-sm" '
+            '<a class="btn btn-outline-primary btn-sm" '
             'style="padding:2px 8px; border-radius:5px; text-decoration:none;" href="{}">Subdividir</a>',
             url
         )
 
-    subdividir_link.short_description = "Ações"
+    subdividir_link.short_description = "Dividir"
     subdividir_link.allow_tags = True
 
     def gateway(self, obj):
         gw = obj.enderecos.filter(is_gateway=True).first()
-        return gw.ip if gw else "Nenhum"
+        return gw.ip if gw else "-"
 
     gateway.short_description = "Gateway"
 
@@ -714,6 +770,46 @@ class BlocoIPAdmin(admin.ModelAdmin):
                 kwargs["queryset"] = BlocoIP.objects.filter(empresa__usuarios=request.user)
 
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
+    def visualizar_ips(self, request, bloco_id):
+        bloco = get_object_or_404(BlocoIP, id=bloco_id)
+        rede = ip_network(bloco.bloco_cidr, strict=False)
+        enderecos_existentes = EnderecoIP.objects.filter(bloco=bloco).values_list('ip', flat=True)
+        ip_info = []
+
+        for ip in rede:
+            info = {'ip': str(ip)}
+            if ip == rede.network_address:
+                info['tipo'] = 'IP de rede'
+            elif ip == rede.broadcast_address:
+                info['tipo'] = 'IP de broadcast'
+            elif str(ip) in enderecos_existentes:
+                endereco = EnderecoIP.objects.get(bloco=bloco, ip=str(ip))
+                info['tipo'] = 'Cadastrado'
+                info['equipamento'] = endereco.equipamento.nome
+                info['porta'] = endereco.porta
+                info['finalidade'] = endereco.finalidade
+                info['next_hop'] = endereco.next_hop
+                info['is_gateway'] = endereco.is_gateway
+            else:
+                info['tipo'] = 'Livre'
+            ip_info.append(info)
+
+        context = {
+            'bloco': bloco,
+            'lista_ips': ip_info,
+        }
+        return render(request, 'admin/visualizar_ips_do_bloco.html', context)
+
+    def visualizar_ips_link(self, obj):
+        if obj.sub_blocos.exists():
+            return None  # Não mostra nada
+
+        url = reverse('admin:appisp_blocoip_visualizar_ips', args=[obj.id])
+        return format_html('<a class="btn btn-outline-secondary btn-sm"'
+                           'style="padding:2px 8px; border-radius:5px; text-decoration:none;" href="{}">IPs</a>', url)
+
+    visualizar_ips_link.short_description = "IPs"
 
 
 @admin.register(EnderecoIP)
