@@ -1,4 +1,6 @@
 import json
+
+from django.template.response import TemplateResponse
 from django.utils import timezone
 import requests
 import re
@@ -13,9 +15,9 @@ from django.contrib.auth.models import Group, User
 from django.contrib.auth.admin import GroupAdmin, UserAdmin
 from django.contrib.admin import AdminSite
 from django.shortcuts import render, get_object_or_404, redirect
-from django.http import HttpResponseRedirect
+from django.http import HttpResponseRedirect, JsonResponse
 from .forms import PortaForm, RackForm, RackEquipamentoForm, EnderecoIPForm, MaquinaVirtualForm, EquipamentoForm, \
-    EnderecoIPForm
+    EnderecoIPForm, CadastrarEnderecosForm
 from .views import mapa, mapa_racks
 from django.contrib.admin import SimpleListFilter
 from .models import Empresa, Pop, Fabricante, Modelo, Equipamento, Porta, BlocoIP, EnderecoIP, Rack, RackEquipamento, \
@@ -24,7 +26,7 @@ import ipaddress
 from django.utils.html import format_html
 from django.contrib import admin
 from ipaddress import ip_network
-from django.utils.safestring import mark_safe
+from django.core.exceptions import ValidationError
 
 
 class PopEmpresaFilter(SimpleListFilter):
@@ -559,6 +561,20 @@ def subdividir_blocos(modeladmin, request, queryset):
     else:
         modeladmin.message_user(request, "Nenhum bloco foi subdividido.", level=messages.WARNING)
 
+from django.http import HttpResponseRedirect
+from django.urls import reverse
+
+@admin.action(description="Cadastrar Endereços IP no Bloco")
+def cadastrar_enderecos(self, request, queryset):
+    if queryset.count() != 1:
+        self.message_user(request, "Por favor, selecione apenas um bloco para cadastrar endereços.", level=messages.WARNING)
+        return
+
+    bloco = queryset.first()
+    url = reverse('admin:appisp_blocoip_cadastrar_enderecos', args=[bloco.id])
+    return HttpResponseRedirect(url)
+
+
 # Lista os Blocos Pai e filhos
 class BlocoCIDRListFilter(SimpleListFilter):
     title = 'Bloco CIDR'
@@ -591,6 +607,12 @@ class BlocoCIDRListFilter(SimpleListFilter):
         return queryset
 
 
+def carregar_portas(request):
+    equipamento_id = request.GET.get('equipamento')
+    portas = Porta.objects.filter(equipamento_id=equipamento_id).values('id', 'nome')
+    return JsonResponse(list(portas), safe=False)
+
+
 @admin.register(BlocoIP)
 class BlocoIPAdmin(admin.ModelAdmin):
     list_display = (
@@ -601,7 +623,7 @@ class BlocoIPAdmin(admin.ModelAdmin):
     search_fields = ('bloco_cidr', 'empresa__nome', 'equipamento__nome')
     list_filter = (BlocoCIDRListFilter, 'tipo_ip', 'empresa', 'equipamento', 'parent')
     form = BlocoIPForm
-    actions = [subdividir_blocos]
+    actions = [subdividir_blocos, cadastrar_enderecos]
 
     @admin.display(description="Ações")
     def acoes_dropdown(self, obj):
@@ -679,8 +701,81 @@ class BlocoIPAdmin(admin.ModelAdmin):
                  name='appisp_blocoip_subdividir'),
             path('<int:bloco_id>/visualizar_ips/', self.admin_site.admin_view(self.visualizar_ips),
                  name='appisp_blocoip_visualizar_ips'),
+            path(
+                '<int:bloco_id>/cadastrar_enderecos/',
+                self.admin_site.admin_view(self.cadastrar_enderecos_view),
+                name='appisp_blocoip_cadastrar_enderecos',
+            ),
+            path('ajax/carregar-portas/', self.admin_site.admin_view(self.carregar_portas_view),
+                 name='appisp_blocoip_carregar_portas'),
         ]
         return custom_urls + urls
+
+    def carregar_portas_view(self, request):
+        equipamento_id = request.GET.get('equipamento')
+        portas = Porta.objects.filter(equipamento_id=equipamento_id).values('id', 'nome')
+        return JsonResponse(list(portas), safe=False)
+
+    def cadastrar_enderecos_view(self, request, bloco_id):
+        bloco = get_object_or_404(BlocoIP, id=bloco_id)
+
+        # Verifique se o bloco tem filhos (subdividido)
+        if bloco.sub_blocos.exists():
+            self.message_user(request, 'Este bloco foi subdividido. Cadastre os IPs nos blocos filhos.',
+                              level=messages.ERROR)
+            return redirect('admin:appisp_blocoip_changelist')  # Redireciona de volta à lista de blocos
+
+        EnderecoForm = CadastrarEnderecosForm
+
+        if request.method == 'POST':
+            form = EnderecoForm(request.POST, request=request)
+            if form.is_valid():
+                equipamento = form.cleaned_data['equipamento']
+                porta = form.cleaned_data['porta']
+                finalidade = form.cleaned_data.get('finalidade')
+                next_hop = form.cleaned_data.get('next_hop')
+                is_gateway = form.cleaned_data.get('is_gateway', False)
+
+                rede = ip_network(bloco.bloco_cidr, strict=False)
+                enderecos_existentes = EnderecoIP.objects.filter(bloco=bloco).values_list('ip', flat=True)
+
+                created = 0
+                for ip in rede:
+                    if str(ip) in enderecos_existentes:
+                        continue
+                    if ip == rede.network_address or ip == rede.broadcast_address:
+                        continue  # pula endereço de rede e broadcast
+
+                    endereco = EnderecoIP(
+                        bloco=bloco,
+                        ip=str(ip),
+                        equipamento=equipamento,
+                        porta=porta,
+                        finalidade=finalidade,
+                        next_hop=next_hop,
+                        is_gateway=is_gateway
+                    )
+                    try:
+                        endereco.full_clean()  # Valida antes de salvar
+                        endereco.save()
+                        created += 1
+                    except ValidationError as e:
+                        # Pula IP inválido (não quebra o processo)
+                        continue
+
+                self.message_user(request, f'{created} endereços IP foram cadastrados com sucesso.',
+                                  level=messages.SUCCESS)
+                return redirect('admin:appisp_blocoip_changelist')
+
+        else:
+            form = EnderecoForm(request=request)
+
+        context = dict(
+            self.admin_site.each_context(request),
+            form=form,
+            bloco=bloco,
+        )
+        return TemplateResponse(request, "admin/cadastrar_enderecos.html", context)
 
     def subdividir_view(self, request, bloco_id):
         bloco = get_object_or_404(BlocoIP, id=bloco_id)

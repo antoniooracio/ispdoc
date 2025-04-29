@@ -1,12 +1,10 @@
 import ipaddress
 from django.utils.safestring import mark_safe
-
+from django.core.exceptions import ValidationError
 from dal import autocomplete
 from django import forms
 from django.contrib.auth.models import User
 from .models import Porta, Empresa, Equipamento, Rack, RackEquipamento, MaquinaVirtual, EnderecoIP, BlocoIP, Vlan
-
-
 from django import forms
 from ipaddress import ip_address, ip_network
 from .models import EnderecoIP, BlocoIP
@@ -58,35 +56,66 @@ class VlanForm(forms.ModelForm):
         fields = ['empresa', 'equipamento', 'numero', 'nome', 'tipo', 'status']
 
 
-class EnderecoIPForm(forms.ModelForm):
-    class Meta:
-        model = EnderecoIP
-        fields = ['bloco', 'equipamento', 'porta', 'ip', 'finalidade', 'next_hop', 'is_gateway']
+class CadastrarEnderecosForm(forms.Form):
+    equipamento = forms.ModelChoiceField(queryset=Equipamento.objects.none(), required=True)
+    porta = forms.ModelChoiceField(queryset=Porta.objects.none(), required=True)
+    finalidade = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={'rows': 3, 'class': 'form-control'})
+    )
 
-    def __init__(self, *args, user=None, **kwargs):
+    def __init__(self, *args, **kwargs):
+        self.request = kwargs.pop('request', None)
         super().__init__(*args, **kwargs)
 
-        if user:
-            if user.is_superuser:
-                self.fields['bloco'].queryset = BlocoIP.objects.all().order_by('bloco_cidr')
-                self.fields['equipamento'].queryset = Equipamento.objects.all().order_by('nome')
-            else:
-                empresas_usuario = Empresa.objects.filter(usuarios=user)
-                self.fields['bloco'].queryset = BlocoIP.objects.filter(empresa__in=empresas_usuario).order_by(
-                    'bloco_cidr')
-                self.fields['equipamento'].queryset = Equipamento.objects.filter(empresa__in=empresas_usuario).order_by(
-                    'nome')
+        empresa = self.get_empresa_do_usuario()
+        if empresa:
+            self.fields['equipamento'].queryset = Equipamento.objects.filter(empresa=empresa)
+        else:
+            self.fields['equipamento'].queryset = Equipamento.objects.none()
+
+        if 'equipamento' in self.data:
+            try:
+                equipamento_id = int(self.data.get('equipamento'))
+                self.fields['porta'].queryset = Porta.objects.filter(equipamento_id=equipamento_id)
+            except (ValueError, TypeError):
+                pass
+        elif self.initial.get('equipamento'):
+            equipamento_id = self.initial.get('equipamento').id
+            self.fields['porta'].queryset = Porta.objects.filter(equipamento_id=equipamento_id)
+
+    def get_empresa_do_usuario(self):
+        empresa = None
+        if self.request and self.request.user.is_authenticated:
+            empresa = self.request.user.empresas.first()  # Assumindo que usuário tenha apenas uma empresa
+        return empresa
 
     def clean(self):
         cleaned_data = super().clean()
+        bloco = cleaned_data.get('bloco')  # Aqui precisa ver se você tem um campo 'bloco' mesmo
 
-        if cleaned_data.get('ip') and cleaned_data.get('bloco'):
-            ip_obj = ipaddress.ip_address(cleaned_data['ip'])
-            rede = ipaddress.ip_network(cleaned_data['bloco'].bloco_cidr, strict=False)
-            if ip_obj not in rede:
-                raise forms.ValidationError(f"O IP {cleaned_data['ip']} não pertence ao bloco {rede}")
+        # Validação para impedir cadastro em bloco subdividido
+        if bloco and bloco.subdividido:
+            raise ValidationError('Não é permitido cadastrar IP em blocos subdivididos.')
 
         return cleaned_data
+
+    def as_custom(self):
+        fields = []
+        for field in self:
+            fields.append(f"""
+            <div class="form-group field-{field.name}">
+                <div class="row">
+                    <div class="col-sm-3 text-left">
+                        <label for="{field.id_for_label}">{field.label}</label>
+                    </div>
+                    <div class="col-sm-7">
+                        {field.as_widget()}
+                    </div>
+                </div>
+            </div>
+            """)
+        return ''.join(fields)
 
 
 class LoteForm(forms.Form):

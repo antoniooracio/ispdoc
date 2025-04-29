@@ -1,0 +1,72 @@
+{% extends "admin/base_site.html" %}
+
+{% block content %}
+
+
+    <form method="post">
+        {% csrf_token %}
+
+        <div class="alert alert-primary" role="alert">
+            <h4>Cadastrar Endereços IP no Bloco: <a href="/admin/appisp/blocoip" class="alert-link">{{ bloco.bloco_cidr }}</a>.</h4>
+        </div>
+
+        <div class="form-group field-equipamento">
+            <div class="row">
+                <div class="col-sm-3 text-left">
+                    <label for="{{ form.equipamento.id_for_label }}">Equipamento</label>
+                </div>
+                <div class="col-sm-7">
+                    {{ form.equipamento }}
+                </div>
+            </div>
+        </div>
+
+        <div class="form-group field-porta">
+            <div class="row">
+                <div class="col-sm-3 text-left">
+                    <label for="{{ form.porta.id_for_label }}">Porta</label>
+                </div>
+                <div class="col-sm-7">
+                    {{ form.porta }}
+                </div>
+            </div>
+        </div>
+
+        <div class="form-group field-finalidade">
+            <div class="row">
+                <div class="col-sm-3 text-left">
+                    <label for="{{ form.finalidade.id_for_label }}">Finalidade</label>
+                </div>
+                <div class="col-sm-7">
+                    {{ form.finalidade }}
+                </div>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <button type="submit" class="btn btn-primary">Cadastrar Endereços</button>
+            <a href="{% url 'admin:appisp_blocoip_changelist' %}" class="btn btn-secondary">Cancelar</a>
+        </div>
+    </form>
+
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    $("#id_equipamento").change(function () {
+        var equipamentoId = $(this).val();
+        $.ajax({
+            url: "/admin/appisp/blocoip/ajax/carregar-portas/",
+            data: {
+                'equipamento': equipamentoId
+            },
+            success: function (data) {
+                $("#id_porta").html('');
+                $.each(data, function (key, value) {
+                    $("#id_porta").append('<option value="' + value.id + '">' + value.nome + '</option>');
+                });
+            }
+        });
+    });
+</script>
+
+{% endblock %}
