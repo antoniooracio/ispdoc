@@ -242,7 +242,6 @@ class VlanAdmin(admin.ModelAdmin):
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
 
-
 @admin.register(VlanPorta)
 class VlanPortaAdmin(admin.ModelAdmin):
     list_display = ('vlan', 'porta', 'get_equipamento', 'tipo', 'vlan_nativa')
@@ -291,7 +290,6 @@ class VlanPortaAdmin(admin.ModelAdmin):
 
     def get_equipamento(self, obj):
         return obj.porta.equipamento.nome  # Obtém o nome do equipamento associado à porta
-
 
 
 @admin.register(MaquinaVirtual)
