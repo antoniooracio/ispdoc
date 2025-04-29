@@ -12,33 +12,30 @@ from .models import EnderecoIP, BlocoIP
 class EnderecoIPForm(forms.ModelForm):
     class Meta:
         model = EnderecoIP
-        fields = "__all__"
+        fields = ['bloco', 'equipamento', 'porta', 'ip', 'finalidade', 'next_hop', 'is_gateway']
+
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        if user:
+            if user.is_superuser:
+                self.fields['bloco'].queryset = BlocoIP.objects.all().order_by('bloco_cidr')
+                self.fields['equipamento'].queryset = Equipamento.objects.all().order_by('nome')
+            else:
+                empresas_usuario = Empresa.objects.filter(usuarios=user)
+                self.fields['bloco'].queryset = BlocoIP.objects.filter(empresa__in=empresas_usuario).order_by(
+                    'bloco_cidr')
+                self.fields['equipamento'].queryset = Equipamento.objects.filter(empresa__in=empresas_usuario).order_by(
+                    'nome')
 
     def clean(self):
         cleaned_data = super().clean()
-        ip = cleaned_data.get("ip")
-        bloco = cleaned_data.get("bloco")
 
-        if bloco and ip:
-            # Primeiro, verifica se o bloco tem subdivisões
-            sub_blocos = bloco.sub_blocos.all()
-
-            if sub_blocos.exists():
-                # Se tem subdivisões, o IP não pode ser cadastrado diretamente no bloco pai
-                ip_obj = ip_address(ip)
-
-                # Agora procuramos em qual sub-bloco o IP se encaixa
-                for sub_bloco in sub_blocos:
-                    rede = ip_network(sub_bloco.bloco_cidr, strict=False)
-                    if ip_obj in rede:
-                        raise forms.ValidationError(
-                            f"Este bloco {bloco.bloco_cidr} foi subdividido. "
-                            f"Cadastre o IP no sub-bloco correto: {sub_bloco.bloco_cidr}"
-                        )
-
-                raise forms.ValidationError(
-                    f"Este bloco {bloco.bloco_cidr} foi subdividido, mas o IP informado não pertence a nenhum sub-bloco!"
-                )
+        if cleaned_data.get('ip') and cleaned_data.get('bloco'):
+            ip_obj = ipaddress.ip_address(cleaned_data['ip'])
+            rede = ipaddress.ip_network(cleaned_data['bloco'].bloco_cidr, strict=False)
+            if ip_obj not in rede:
+                raise forms.ValidationError(f"O IP {cleaned_data['ip']} não pertence ao bloco {rede}")
 
         return cleaned_data
 
@@ -65,12 +62,12 @@ class CadastrarEnderecosForm(forms.Form):
     )
 
     def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
         self.request = kwargs.pop('request', None)
         super().__init__(*args, **kwargs)
 
-        empresa = self.get_empresa_do_usuario()
-        if empresa:
-            self.fields['equipamento'].queryset = Equipamento.objects.filter(empresa=empresa)
+        if user and user.is_authenticated:
+            self.fields['equipamento'].queryset = Equipamento.objects.filter(empresa__in=user.empresas.all())
         else:
             self.fields['equipamento'].queryset = Equipamento.objects.none()
 

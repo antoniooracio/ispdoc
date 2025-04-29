@@ -728,7 +728,7 @@ class BlocoIPAdmin(admin.ModelAdmin):
         EnderecoForm = CadastrarEnderecosForm
 
         if request.method == 'POST':
-            form = EnderecoForm(request.POST, request=request)
+            form = EnderecoForm(request.POST, request=request, user=request.user)
             if form.is_valid():
                 equipamento = form.cleaned_data['equipamento']
                 porta = form.cleaned_data['porta']
@@ -768,7 +768,7 @@ class BlocoIPAdmin(admin.ModelAdmin):
                 return redirect('admin:appisp_blocoip_changelist')
 
         else:
-            form = EnderecoForm(request=request)
+            form = EnderecoForm(request=request, user=request.user)
 
         context = dict(
             self.admin_site.each_context(request),
