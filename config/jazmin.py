@@ -112,6 +112,7 @@ JAZZMIN_SETTINGS = {
         "appisp.Porta": "fa-classic fa-solid fa-ethernet fa-fw",
         "appisp.Equipamento": "fa-classic fa-solid fa-desktop fa-fw",
         "appisp.Fabricante": "fa-classic fa-solid fa-industry fa-fw",
+        "appisp.IntegracaoNetbox": "fa-classic fa-solid fa-server fa-fw",
         "appisp.IntegracaoZabbix": "fa-classic fa-solid fa-server fa-fw",
         "appisp.MaquinaVirtual": "fa-classic fa-solid fa-microchip fa-fw",
         "appisp.Pop": "fa-classic fa-solid fa-tower-observation fa-fw",
