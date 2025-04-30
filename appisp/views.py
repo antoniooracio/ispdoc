@@ -37,6 +37,7 @@ def get_equipamento(request, equipamento_id):
             'senha': equipamento.senha,
             'porta': equipamento.porta,
             'protocolo': equipamento.protocolo,
+            'pop': equipamento.pop.nome,
             'status': equipamento.status,
             'observacao': equipamento.observacao,
         }

@@ -659,7 +659,7 @@ class BlocoIPAdmin(admin.ModelAdmin):
             <div style="position: relative; display: inline-block;">
                 <button type="button" class="btn btn-outline-success btn-sm" style="
                 " onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'block' ? 'none' : 'block';">
-                    Ações ▼
+                    ▼
                 </button>
                 <div style="
                     display: none;

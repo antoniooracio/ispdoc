@@ -427,6 +427,13 @@
             </div>
 
             <div class="form-group row">
+                <label for="input-pop" class="col-sm-2 col-form-label">Pop</label>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" id="input-pop" readonly>
+                </div>
+            </div>
+
+            <div class="form-group row">
                 <label for="input-observacao" class="col-sm-2 col-form-label">Observação</label>
                 <div class="col-sm-10">
                     <textarea class="form-control" rows="5" id="input-observacao" readonly></textarea>
@@ -1353,6 +1360,7 @@ document.querySelector('.modal-conexao-body').innerHTML = `
                         document.getElementById('input-senha').value = data.senha || '';
                         document.getElementById('input-porta').value = data.porta || '';
                         document.getElementById('input-protocolo').value = data.protocolo || '';
+                        document.getElementById('input-pop').value = data.pop || '';
                         document.getElementById('input-observacao').value = data.observacao || ''
 
                         // Exibe o modal

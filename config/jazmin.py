@@ -111,6 +111,7 @@ JAZZMIN_SETTINGS = {
         "appisp.EnderecoIP": "fa-classic fa-solid fa-globe fa-fw",
         "appisp.Porta": "fa-classic fa-solid fa-ethernet fa-fw",
         "appisp.Equipamento": "fa-classic fa-solid fa-desktop fa-fw",
+        "appisp.Modelo": "fa-classic fa-solid fa-briefcase fa-fw",
         "appisp.Fabricante": "fa-classic fa-solid fa-industry fa-fw",
         "appisp.IntegracaoNetbox": "fa-classic fa-solid fa-server fa-fw",
         "appisp.IntegracaoZabbix": "fa-classic fa-solid fa-server fa-fw",
