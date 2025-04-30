@@ -457,6 +457,7 @@ class BlocoIP(models.Model):
     utilizacao_barra.short_description = "Utilização"
     utilizacao_barra.allow_tags = True
 
+
 # Classe para cadastro de IP individual
 class EnderecoIP(models.Model):
     bloco = models.ForeignKey('BlocoIP', on_delete=models.CASCADE, related_name='enderecos')

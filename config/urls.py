@@ -63,7 +63,6 @@ urlpatterns = [
     path('alertas_vlans/', alertas_vlans, name='alertas_vlans'),
     path('ajax/portas_por_equipamento/<int:equipamento_id>/', get_portas_por_equipamento,
          name='portas_por_equipamento'),
-
     path('testar-conexao/<int:pk>/', testar_conexao, name='testar_conexao'),
 
     path("ajax/ips_por_bloco/<int:bloco_id>/", listar_ips_por_bloco, name="listar_ips_por_bloco"),

@@ -270,6 +270,7 @@ class PortaForm(forms.ModelForm):
 
         return cleaned_data
 
+
 class RackForm(forms.ModelForm):
     class Meta:
         model = Rack

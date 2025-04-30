@@ -26,6 +26,7 @@ from rest_framework.permissions import BasePermission
 import json
 from rest_framework.response import Response
 
+
 def get_equipamento(request, equipamento_id):
     try:
         equipamento = Equipamento.objects.get(id=equipamento_id)

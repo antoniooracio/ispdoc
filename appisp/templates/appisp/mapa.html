@@ -1248,100 +1248,100 @@ function getCSRFToken() {
         salvarPosicoes();
     }
 
-function mostrarInformacoesConexao(d) {
-    const equipamentoFonte = nodes.find(node => node.id === d.source);
-    const equipamentoDestino = nodes.find(node => node.id === d.target);
+        function mostrarInformacoesConexao(d) {
+            const equipamentoFonte = nodes.find(node => node.id === d.source);
+            const equipamentoDestino = nodes.find(node => node.id === d.target);
 
-    const portaFonte = d.porta_origem || 'N/A';
-    const portaDestino = d.porta_destino || 'N/A';
-    const portaObs = d.Obs || 'N/A';
-    const portaId = d.porta_origem_id;
+            const portaFonte = d.porta_origem || 'N/A';
+            const portaDestino = d.porta_destino || 'N/A';
+            const portaObs = d.Obs || 'N/A';
+            const portaId = d.porta_origem_id;
 
-document.querySelector('.modal-conexao-header').innerHTML = `
-    <div class="d-flex align-items-center">
-        <i class="bi bi-plug-fill me-2 text-warning"></i>
-        <h3 class="modal-title fw-bold text-warning mb-0">Conexão ${d.tipo}</h3>
-    </div>
-`;
-
-document.querySelector('.modal-conexao-body').innerHTML = `
-    <div class="px-3 py-2">
-        <div class="mb-2 row">
-            <label class="col-sm-2 col-form-label"><strong>Velocidade:</strong></label>
-            <div class="col-sm-9">
-                <input type="text" class="form-control" value="${d.speed}" readonly>
+        document.querySelector('.modal-conexao-header').innerHTML = `
+            <div class="d-flex align-items-center">
+                <i class="bi bi-plug-fill me-2 text-warning"></i>
+                <h3 class="modal-title fw-bold text-warning mb-0">Conexão ${d.tipo}</h3>
             </div>
-        </div>
-        <div class="mb-2 row">
-            <label class="col-sm-2 col-form-label"><strong>Fonte:</strong></label>
-            <div class="col-sm-9">
-                <input type="text" class="form-control" value="${equipamentoFonte.nome} (${portaFonte})" readonly>
-            </div>
-        </div>
-        <div class="mb-2 row">
-            <label class="col-sm-2 col-form-label"><strong>Destino:</strong></label>
-            <div class="col-sm-9">
-                <input type="text" class="form-control" value="${equipamentoDestino.nome} (${portaDestino})" readonly>
-            </div>
-        </div>
-        <div class="mb-2 row">
-            <label class="col-sm-2 col-form-label"><strong>Obs.:</strong></label>
-            <div class="col-sm-9 border rounded bg-light p-2" style="min-height: 80px;">
-                ${portaObs}
-            </div>
-        </div>
-    </div>`;
+        `;
+
+        document.querySelector('.modal-conexao-body').innerHTML = `
+            <div class="px-3 py-2">
+                <div class="mb-2 row">
+                    <label class="col-sm-2 col-form-label"><strong>Velocidade:</strong></label>
+                    <div class="col-sm-9">
+                        <input type="text" class="form-control" value="${d.speed}" readonly>
+                    </div>
+                </div>
+                <div class="mb-2 row">
+                    <label class="col-sm-2 col-form-label"><strong>Fonte:</strong></label>
+                    <div class="col-sm-9">
+                        <input type="text" class="form-control" value="${equipamentoFonte.nome} (${portaFonte})" readonly>
+                    </div>
+                </div>
+                <div class="mb-2 row">
+                    <label class="col-sm-2 col-form-label"><strong>Destino:</strong></label>
+                    <div class="col-sm-9">
+                        <input type="text" class="form-control" value="${equipamentoDestino.nome} (${portaDestino})" readonly>
+                    </div>
+                </div>
+                <div class="mb-2 row">
+                    <label class="col-sm-2 col-form-label"><strong>Obs.:</strong></label>
+                    <div class="col-sm-9 border rounded bg-light p-2" style="min-height: 80px;">
+                        ${portaObs}
+                    </div>
+                </div>
+            </div>`;
 
 
-    document.getElementById('modalConexao').classList.add('show');
-    document.getElementById('modalOverlayConexao').style.display = 'block';
+            document.getElementById('modalConexao').classList.add('show');
+            document.getElementById('modalOverlayConexao').style.display = 'block';
 
-    // Configura o botão de excluir
-    const excluirBtn = document.getElementById('excluirConexaoBtn');
-    if (excluirBtn) {
-        excluirBtn.replaceWith(excluirBtn.cloneNode(true));
-        const novoExcluirBtn = document.getElementById('excluirConexaoBtn');
+            // Configura o botão de excluir
+            const excluirBtn = document.getElementById('excluirConexaoBtn');
+            if (excluirBtn) {
+                excluirBtn.replaceWith(excluirBtn.cloneNode(true));
+                const novoExcluirBtn = document.getElementById('excluirConexaoBtn');
 
-        novoExcluirBtn.onclick = function () {
+                novoExcluirBtn.onclick = function () {
 
-            if (!portaId) {
-                alert("Erro: ID da porta de origem não está disponível.");
-                return;
-            }
-
-            if (confirm('Tem certeza que deseja excluir esta conexão?')) {
-                fetch('/api/desconectar-portas/', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ porta_id: portaId })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        alert('Conexão removida com sucesso!');
-                        location.reload();
-                    } else {
-                        alert('Erro ao desconectar: ' + (data.error || 'Erro desconhecido.'));
+                    if (!portaId) {
+                        alert("Erro: ID da porta de origem não está disponível.");
+                        return;
                     }
-                })
-                .catch(() => {
-                    alert('Erro na requisição.');
-                });
-            }
-        };
-    }
 
-    // Configura o botão de fechar modal
-    const fecharBtn = document.getElementById('fecharConexaoBtn');
-    if (fecharBtn) {
-        fecharBtn.onclick = function () {
-            document.getElementById('modalConexao').classList.remove('show');
-            document.getElementById('modalOverlayConexao').style.display = 'none';
-        };
-    }
-}
+                    if (confirm('Tem certeza que deseja excluir esta conexão?')) {
+                        fetch('/api/desconectar-portas/', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ porta_id: portaId })
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                alert('Conexão removida com sucesso!');
+                                location.reload();
+                            } else {
+                                alert('Erro ao desconectar: ' + (data.error || 'Erro desconhecido.'));
+                            }
+                        })
+                        .catch(() => {
+                            alert('Erro na requisição.');
+                        });
+                    }
+                };
+            }
+
+            // Configura o botão de fechar modal
+            const fecharBtn = document.getElementById('fecharConexaoBtn');
+            if (fecharBtn) {
+                fecharBtn.onclick = function () {
+                    document.getElementById('modalConexao').classList.remove('show');
+                    document.getElementById('modalOverlayConexao').style.display = 'none';
+                };
+            }
+        }
 
 
         // Função para abrir o modal e buscar as informações do equipamento no backend

@@ -28,7 +28,6 @@ from django.contrib import admin
 from ipaddress import ip_network
 from django.core.exceptions import ValidationError
 
-
 class PopEmpresaFilter(SimpleListFilter):
     title = "Pop"
     parameter_name = "pop"
@@ -45,6 +44,7 @@ class PopEmpresaFilter(SimpleListFilter):
         if self.value():
             return queryset.filter(pop_id=self.value())
         return queryset
+
 
 class RackEmpresaFilter(SimpleListFilter):
     title = "Rack"
