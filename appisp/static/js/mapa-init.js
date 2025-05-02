@@ -1,615 +1,53 @@
-{% extends "admin/base_site.html" %}
-{% block content %}
-{% csrf_token %}
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mapa de Rede</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
-    <script src="https://cdn.ckeditor.com/ckeditor5/39.0.1/classic/ckeditor.js"></script>
 
-    <style>
-
-        element.style {
-            width: 90%;
-        }
-
-        .btn {
-            display: inline-block;
-            padding: 8px 16px;
-            font-size: 16px;
-            font-weight: bold;
-            text-align: center;
-            text-decoration: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-
-        .btn-primary {
-            background-color: #007bff;
-            color: #fff;
-            border: 1px solid #007bff;
-        }
-
-            .btn-primary:hover {
-                background-color: #0056b3;
-                border-color: #004085;
-            }
-
-        #mapa {
-            width: 100%;
-            height: 1024px;
-            border: 1px solid #ccc;
-            background-color: #ecf0f0;
-        }
-
-        .equipamento {
-            cursor: pointer;
-            transition: transform 0.2s;
-        }
-
-            .equipamento:hover {
-                cursor: pointer;
-                stroke: #007bff;
-                stroke-width: 4px;
-            }
-
-        .porta {
-            fill: #007bff;
-            cursor: pointer;
-        }
-
-            .porta:hover {
-                fill: #0056b3;
-            }
-
-        /* Estilo para o modal */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 40%;
-            left: 50%;
-            transform: translate(-30%, -40%);
-            background-color: #454d55;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            width: 550px;
-            height: auto;
-            z-index: 1000;
-        }
-
-            .modal.show {
-                display: block;
-            }
-
-        .modal-header {
-            font-size: 18px;
-            font-weight: bold;
-            margin-bottom: 10px;
-        }
-
-        .modal-body {
-            margin-bottom: 20px;
-        }
-
-        .modal-footer {
-            text-align: right;
-        }
-
-        .close-modal {
-            background-color: #ff4d4d;
-            color: white;
-            border: none;
-            padding: 5px 10px;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-
-            .close-modal:hover {
-                background-color: #cc0000;
-            }
-
-        /* Estilo de fundo para o efeito de overlay */
-        .modal-overlay {
-            position: fixed;
-            background-color: #454d55;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: rgba(0, 0, 0, 0.5);
-            z-index: 999;
-            display: none; /* Inicialmente oculto */
-        }
-
-        /* Estilo do modal de conexão */
-        .modal-conexao {
-            display: none;
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%); /* Centraliza o modal */
-            background-color: #454d55;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            z-index: 1000;
-        }
-
-            /* Tornar o modal visível */
-            .modal-conexao.show {
-                display: block;
-            }
-
-        /* Cabeçalho do modal */
-        .modal-conexao-header {
-            font-size: 18px;
-            font-weight: bold;
-            margin-bottom: 10px;
-        }
-
-        select {
-            padding: 5px;
-            font-size: 14px;
-            background-color: #343a40;
-            color: #fff;
-        }
-
-        /* Corpo do modal */
-        .modal-conexao-body {
-            margin-bottom: 20px;
-        }
-
-        .modal-body .form-group {
-            margin-bottom: 15px;
-        }
-        /* Rodapé do modal */
-        .modal-conexao-footer {
-            text-align: right;
-        }
-
-        /* Estilo do botão de fechar */
-        .close-conexao-modal {
-            background-color: #ff4d4d;
-            color: white;
-            border: none;
-            padding: 5px 10px;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-
-            .close-conexao-modal:hover {
-                background-color: #cc0000;
-            }
-
-        /* Estilo de fundo para o efeito de overlay */
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: rgba(0, 0, 0, 0.5);
-            z-index: 999;
-            display: none; /* Inicialmente oculto */
-        }
-        .dark-mode .modal-content{
-            padding: 30px;
-        }
-        .dark-mode select{
-            background-color: #fff;
-            color: #000;
-            border-color: #fff;
-        }
-
-        @media (max-width: 2800px) {
-            .modal {
-                width: 650px;
-            }
-
-            .modal-conexao {
-                width: 650px;
-            }
-        }
-
-        @media (max-width: 1400px) {
-            .modal {
-                width: 650px;
-            }
-
-            .modal-conexao {
-                width: 650px;
-            }
-        }
-
-        @media (max-width: 1200px) {
-            .modal {
-                width: 550px;
-            }
-
-            .modal-conexao {
-                width: 550px;
-            }
-        }
-
-        @media (max-width: 900px) {
-            .modal {
-                width: calc(60% - 30px);
-            }
-
-            .modal-conexao {
-                width: calc(60% - 30px);
-            }
-        }
-
-        @media (max-width: 600px) {
-            .modal {
-                width: 80%;
-            }
-
-            .modal-conexao {
-                width: 80%;
-            }
-        }
-
-        .ck.ck-toolbar {
-            background-color: #212529 !important; /* Fundo escuro para combinar com Bootstrap Dark */
-            color: #ffffff !important; /* Texto branco */
-            border-bottom: 1px solid #6c757d !important;
-        }
-
-        .ck.ck-toolbar .ck-button {
-            color: #ffffff !important; /* Ícones e textos brancos */
-        }
-
-        .ck.ck-toolbar .ck-button:hover {
-            background-color: #495057 !important; /* Fundo ao passar o mouse */
-        }
-        .ck-editor__editable {
-            min-height: 150px !important; /* Altura mínima */
-            max-height: 300px !important; /* Evita que cresça demais */
-            overflow-y: auto !important; /* Adiciona rolagem se necessário */
-            background-color: #fff !important; /* Fundo escuro para combinar com Bootstrap Dark */
-            color: #000 !important; /* Texto branco */
-            border: 1px solid #6c757d !important; /* Borda para separar do fundo */
-        }
-
-        .ck.ck-toolbar {
-            background-color: #212529 !important; /* Fundo da barra de ferramentas */
-            border-bottom: 1px solid #6c757d !important;
-        }
-
-        .ck.ck-editor__editable:focus {
-            outline: none !important; /* Remove o contorno azul ao clicar */
-        }
-    </style>
-</head>
-<body>
-
-<a href="/admin/" class="btn btn-primary" style="width: -webkit-fill-available;">FECHAR O MAPA</a>
-<!-- Exibe select da Empresa e Botão de Fechar o mapa-->
-<div style="display: flex; align-items: center; gap: 10px; margin: 10px;">
-    <select id="empresa-selector">
-        <option value="">Selecione uma Empresa</option>
-        {% for empresa in empresas %}
-        <option value="{{ empresa.id }}">{{ empresa.nome }}</option>
-        {% endfor %}
-    </select>
-
-</div>
-<div style="display: flex; align-items: center; gap: 10px; margin: 10px; ">
-    <label for="zoom-slider">Zoom:</label>
-    <input type="range" id="zoom-slider" min="0.5" max="3" step="0.1" value="1" style="width: 200px;">
-</div>
-<div style="display: flex; align-items: center; gap: 20px; margin-bottom: 10px;">
-    <!-- Switch -->
-    <div style="display: flex; flex-direction: column; align-items: center;">
-        <svg width="30" height="30">
-            <rect width="30" height="30" fill="blue"></rect>
-        </svg>
-        <span>Switch</span>
-    </div>
-
-    <!-- Servidor -->
-    <div style="display: flex; flex-direction: column; align-items: center;">
-        <svg width="40" height="30">
-            <rect width="40" height="20" x="0" y="5" fill="gray"></rect>
-            <line x1="5" y1="10" x2="35" y2="10" stroke="black"/>
-            <line x1="5" y1="20" x2="35" y2="20" stroke="black"/>
-        </svg>
-        <span>Servidor</span>
-    </div>
-
-    <!-- OLT -->
-    <div style="display: flex; flex-direction: column; align-items: center;">
-        <svg width="40" height="20">
-            <rect width="35" height="15" x="2.5" y="2.5" fill="purple"></rect>
-            <circle cx="10" cy="15" r="2" fill="yellow"></circle>
-            <circle cx="20" cy="15" r="2" fill="yellow"></circle>
-            <circle cx="30" cy="15" r="2" fill="yellow"></circle>
-        </svg>
-        <span>OLT</span>
-    </div>
-</div>
-<div style="display: flex; align-items: center; gap: 20px; margin: 10px;">
-    <!-- Roteador / AP -->
-    <div style="display: flex; flex-direction: column; align-items: center;">
-        <svg width="30" height="30">
-            <!-- Círculo -->
-            <circle cx="15" cy="15" r="15" fill="green"></circle>
-
-            <!-- Linha diagonal 1 (parte do "X") -->
-            <line x1="8" y1="8" x2="22" y2="22" stroke="white" stroke-width="2"></line>
-
-            <!-- Linha diagonal 2 (parte do "X") -->
-            <line x1="8" y1="22" x2="22" y2="8" stroke="white" stroke-width="2"></line>
-        </svg>
-        <span>Roteador/AP</span>
-    </div>
-
-    <!-- Passivo -->
-    <div style="display: flex; flex-direction: column; align-items: center;">
-        <svg width="30" height="30">
-            <path d="M 0,30 L 30,30 L 15,0 Z" fill="orange"></path>
-        </svg>
-        <span>Passivo</span>
-    </div>
-
-    <!-- Transporte -->
-    <div style="display: flex; flex-direction: column; align-items: center;">
-        <svg width="40" height="30">
-            <path d="M5 15 A10 10 0 0 1 20 15 A10 10 0 0 1 35 15 A10 10 0 0 1 30 25 A10 10 0 0 1 10 25 A10 10 0 0 1 5 15 Z"
-                  fill="#00F5FF"></path>
-        </svg>
-        <span>Transporte</span>
-    </div>
-</div>
-<!-- Botão de voltar para a página inicial -->
-
-<!-- Renderiza o mapa na tela-->
-<div id="mapa">
-    <!-- <img src="/IDX.png" alt="Fundo do Mapa" style="width: 100%; height: 100%; object-fit: cover;"> -->
-</div>
-
-<!-- Modal de Detalhes do Equipamento -->
-<div class="modal-overlay" id="modalOverlay"></div>
-<div class="modal" id="modalEquipamento">
-    <div class="modal-header">
-        Equipamento {nome}
-    </div>
-    <div class="modal-body">
-        <form>
-            <div class="form-group row">
-                <label for="input-ip" class="col-sm-2 col-form-label">IP</label>
-                <div class="col-sm-10">
-                    <input type="text" class="form-control" id="input-ip" readonly>
-                </div>
-            </div>
-
-            <div class="form-group row">
-                <label for="input-usuario" class="col-sm-2 col-form-label">Usuário</label>
-                <div class="col-sm-10">
-                    <input type="text" class="form-control" id="input-usuario" readonly>
-                </div>
-            </div>
-
-            <div class="form-group row">
-                <label for="input-senha" class="col-sm-2 col-form-label">Senha</label>
-                <div class="input-group-prepend">
-                    <button type="button"
-                            class="btn"
-                            onclick="toggleModalPassword('input-senha', this)"
-                            title="Mostrar/Ocultar Senha">
-                        👁
-                    </button>
-                </div>
-                <div class="col-sm-8">
-                    <div class="input-group">
-
-                        <input type="password" class="form-control" id="input-senha" readonly>
-                    </div>
-                </div>
-            </div>
-
-            <div class="form-group row">
-                <label for="input-porta" class="col-sm-2 col-form-label">Porta</label>
-                <div class="col-sm-10">
-                    <input type="text" class="form-control" id="input-porta" readonly>
-                </div>
-            </div>
-
-            <div class="form-group row">
-                <label for="input-protocolo" class="col-sm-2 col-form-label">Protocolo</label>
-                <div class="col-sm-10">
-                    <input type="text" class="form-control" id="input-protocolo" readonly>
-                </div>
-            </div>
-
-            <div class="form-group row">
-                <label for="input-pop" class="col-sm-2 col-form-label">Pop</label>
-                <div class="col-sm-10">
-                    <input type="text" class="form-control" id="input-pop" readonly>
-                </div>
-            </div>
-
-            <div class="form-group row">
-                <label for="input-observacao" class="col-sm-2 col-form-label">Observação</label>
-                <div class="col-sm-10">
-                    <textarea class="form-control" rows="5" id="input-observacao" readonly></textarea>
-                </div>
-            </div>
-        </form>
-
-    </div>
-    <div class="modal-footer">
-        <button type="button" class="btn btn-danger" id="closeModal">Fechar</button>
-    </div>
-</div>
-
-<!-- Modal de Detalhes de Conexão -->
-<div class="modal-overlay" id="modalOverlayConexao"></div>
-<div class="modal-conexao" id="modalConexao">
-    <div class="modal-header">
-        <div class="modal-conexao-header">
-            Conexão: {tipo}
-        </div>
-    </div>
-
-    <div class="modal-conexao-body px-3 py-2">
-        <div class="mb-2 row">
-            <label class="col-sm-3 col-form-label"><strong>Tipo:</strong></label>
-            <div class="col-sm-9 col-form-label">{tipo}</div>
-        </div>
-        <div class="mb-2 row">
-            <label class="col-sm-3 col-form-label"><strong>Velocidade:</strong></label>
-            <div class="col-sm-9 col-form-label">{velocidade}</div>
-        </div>
-        <div class="mb-2 row">
-            <label class="col-sm-3 col-form-label"><strong>Fonte:</strong></label>
-            <div class="col-sm-9 col-form-label">{fonte}</div>
-        </div>
-        <div class="mb-2 row">
-            <label class="col-sm-3 col-form-label"><strong>Destino:</strong></label>
-            <div class="col-sm-9 col-form-label">{destino}</div>
-        </div>
-    </div>
-
-    <div class="modal-conexao-footer">
-        <div class="modal-footer">
-            <button type="button" class="btn btn-outline-warning" id="excluirConexaoBtn">Excluir Conexão</button>
-
-            <button type="button" class="btn btn-danger" id="fecharConexaoBtn">Fechar</button>
-        </div>
-    </div>
-</div>
-
-<!-- Modal de DropDown List para portas-->
-<div class="col-12 col-lg-12">
-    <div class="card">
-        <div class="card-body">
-            <form method="post" class="form-horizontal" style="pading:20px;">
-                <div id="portaModal" class="modal" style="display:none;">
-                    <div class="modal-content">
-
-                        <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
-
-                        <h3>Conexão de portas</h3></br>
-
-
-                        <div class="form-group field-tipo">
-                            <div class="row">
-                                <div class="col-sm-4 text-left">
-                                    <label for="porta-dropdown">Porta de Origem</label>
-                                </div>
-                                <div class="col-sm-8">
-                                    <select id="porta-dropdown">
-                                        <option value="">Selecione uma porta</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="form-group field-tipo">
-                            <div class="row">
-                                <div class="col-sm-4 text-left">
-                                    <label for="equipamento-dropdown">Equipamento Destino</label>
-                                </div>
-                                <div class="col-sm-8">
-                                    <select id="equipamento-dropdown">
-                                        <option value="">Selecione um equipamento</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="form-group field-tipo">
-                            <div class="row">
-                                <div class="col-sm-4 text-left">
-                                    <label for="porta-destino-dropdown" class="form-label">Porta de Destino</label>
-                                </div>
-                                <div class="col-sm-8">
-                                    <select id="porta-destino-dropdown">
-                                        <option value="">Selecione uma porta</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="form-group field-tipo">
-                            <div class="row">
-                                <div class="col-sm-4 text-left">
-                                    <label for="observacao" class="form-label">Observação</label>
-                                </div>
-                                <div class="col-sm-8">
-                                    <textarea id="observacao" class="form-control" rows="5" style="width: 100%;"
-                                              placeholder="Digite uma observação ..."></textarea>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="form">
-                            <button id="conectar" type="button" class="btn btn-primary">Conectar Portas</button>
-                            <!-- Botão para fechar o modal -->
-                            <button id="closeModalConexao" type="button" class="btn btn-danger close-modal-button">
-                                Fechar
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<script>
-    let editorObservacao;  // Variável global
-
-    ClassicEditor
-        .create(document.querySelector('#observacao'), {
-            toolbar: ['bold', 'italic', 'link', 'bulletedList', 'numberedList', 'undo', 'redo']
-        })
-        .then(editor => {
-            editorObservacao = editor;
-
-            const editable = editor.ui.view.editable.element;
-            editable.style.minHeight = '150px';
-            editable.style.maxHeight = '300px';
-            editable.style.overflowY = 'auto';
-            editable.style.backgroundColor = '#ffffff'; // fundo branco
-            editable.style.color = '#000000'; // texto preto
-            editable.style.border = '1px solid #6c757d';
-        })
-        .catch(error => {
-            console.error('Erro ao inicializar o editor:', error);
-        });
-</script>
-
-<script src="https://d3js.org/d3.v7.min.js"></script>
-
-<script>
-    const userIsAdmin = {{ userIsAdmin|yesno:"true,false" }};
-    console.log(userIsAdmin);  // Verifique se está correto
-
-    const nodes = {{ nodes|safe }};
-    const links = {{ links|safe }};
+document.addEventListener("DOMContentLoaded", function () {
+    // ============================ //
+    // 1. INICIALIZAÇÃO CKEDITOR   //
+    // ============================ //
+    let editorObservacao;
+
+ClassicEditor
+    .create(document.querySelector('#observacao'), {
+        toolbar: ['bold', 'italic', 'link', 'bulletedList', 'numberedList', 'undo', 'redo']
+    })
+    .then(editor => {
+        editorObservacao = editor;
+
+        const editable = editor.ui.view.editable.element;
+        editable.style.minHeight = '150px';
+        editable.style.maxHeight = '300px';
+        editable.style.overflowY = 'auto';
+        editable.style.backgroundColor = '#ffffff';
+        editable.style.color = '#000000';
+        editable.style.border = '1px solid #6c757d';
+    })
+    .catch(error => {
+        console.error('Erro ao inicializar o editor:', error);
+    });
+
+    // ============================ //
+    // 2. SCRIPT PRINCIPAL DO MAPA //
+    // ============================ //
+    const userIsAdmin = window.userIsAdmin;
+    const userIsSenha = window.userIsSenha;
+
+    const nodes = window.nodes || [];
+    const links = window.links || [];
     const mapa = d3.select('#mapa');
 
     let zoomTransform = d3.zoomIdentity; // Variável global para armazenar o estado do zoom
 
-    function atualizarMapa() {
-        fetch('/api/get_map_data/')  // Substitua pela URL correta no seu Django
-            .then(response => response.json())
-            .then(data => {
-                nodes.length = 0;  // Esvazia o array existente
-                links.length = 0;
+    async function atualizarMapa() {
+        try {
+            const response = await fetch('/api/get_map_data/');
+            const data = await response.json();
 
-                nodes.push(...data.nodes);  // Adiciona os novos dados
-                links.push(...data.links);
-
-                renderMapa();  // Re-renderiza o mapa com os dados atualizados
-            })
-            .catch(error => console.error('Erro ao atualizar o mapa:', error));
+            nodes.length = 0;
+            links.length = 0;
+            nodes.push(...data.nodes);
+            links.push(...data.links);
+        } catch (error) {
+            console.error('Erro ao atualizar o mapa:', error);
+        }
     }
 
 // Função para carregar as posições salvas
@@ -794,6 +232,7 @@ function renderMapa() {
         })
         .attr('fill', 'none')
         .on('click', function (event, d) {
+            console.log("🔌 Conexão clicada:", d);
             mostrarInformacoesConexao(d);
         });
 
@@ -819,8 +258,11 @@ function excluirConexao(portaId) {
 
             // Pequeno delay para garantir que o modal feche antes do reload
             setTimeout(() => {
-                atualizarMapa();
-                renderMapa();
+            atualizarMapa();
+            renderMapa();
+            // Fecha o modal após sucesso
+            document.getElementById('modalConexao').classList.remove('show');
+            document.getElementById('modalOverlayConexao').style.display = 'none';
             }, 100);
         } else {
             alert('Erro ao excluir: ' + (data.error || 'Erro desconhecido.'));
@@ -1112,7 +554,10 @@ function conectarPortas(portaOrigemId, portaDestinoId, observacao) {
             alert(data.message);
             // Fechar o modal após a conexão ser bem-sucedida
             atualizarMapa();
-            renderMapa()
+            renderMapa();
+            // Fecha o modal após sucesso
+            document.getElementById('modalConexao').classList.remove('show');
+            document.getElementById('modalOverlayConexao').style.display = 'none';
             const portaModal = document.getElementById('portaModal');
             portaModal.style.display = "none"; // Fecha o modal
         } else {
@@ -1256,7 +701,7 @@ function getCSRFToken() {
             const portaFonte = d.porta_origem || 'N/A';
             const portaDestino = d.porta_destino || 'N/A';
             const portaObs = d.Obs || 'N/A';
-            const portaId = d.porta_origem_id;
+            const portaId = d.porta_origem_id || 'NA';
 
         document.querySelector('.modal-conexao-header').innerHTML = `
             <div class="d-flex align-items-center">
@@ -1384,7 +829,10 @@ function getCSRFToken() {
         }
 
     // Executa a função quando a empresa é alterada
-    document.getElementById('empresa-selector').addEventListener('change', renderMapa);
+    document.getElementById('empresa-selector').addEventListener('change', async () => {
+        await atualizarMapa();  // Aguarda a atualização dos dados
+        renderMapa();           // Só renderiza depois dos dados atualizados
+    });
 
 
     // Atualizar o mapa a cada 30 segundos
@@ -1404,10 +852,11 @@ function getCSRFToken() {
             svg.call(d3.zoom().transform, zoomTransform);
         }, 100);
     }, 30000);
-</script>
 
-<script>
-    const userIsSenha = {{ user_is_senha|yesno:"true,false" }};
+    // ============================ //
+    // 3. TOGGLE SENHA             //
+    // ============================ //
+    // const userIsSenha = window.userIsSenha;
 
     function toggleModalPassword(inputId, btn) {
         if (!userIsSenha) {
@@ -1423,8 +872,4 @@ function getCSRFToken() {
             btn.textContent = "👁";
         }
     }
-</script>
-
-</body>
-
-{% endblock %}
+});

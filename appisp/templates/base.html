@@ -4,24 +4,45 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Django Admin{% endblock %}</title>
-    {% block extrahead %}
-    {% endblock %}
+
+    <!-- AdminLTE CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/css/adminlte.min.css">
+
+    <!-- FontAwesome para ícones -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+    {% block extrahead %}{% endblock %}
 </head>
-<body>
-    <header>
-        <nav>
-            <!-- Aqui vai o conteúdo do menu de navegação global, como o menu customizado -->
+<body class="hold-transition sidebar-mini layout-fixed">
+<div class="wrapper">
+
+    <!-- Sidebar -->
+    <aside class="main-sidebar sidebar-dark-primary elevation-4">
+        <a href="/" class="brand-link">
+            <span class="brand-text font-weight-light">Meu Admin</span>
+        </a>
+
+        <div class="sidebar">
             {% block nav-global %}
             {% endblock %}
-        </nav>
-    </header>
+        </div>
+    </aside>
 
-    <main>
-        {% block content %}
-        {% endblock %}
-    </main>
+    <!-- Content Wrapper. Contains page content -->
+    <div class="content-wrapper">
+        <section class="content pt-3">
+            <div class="container-fluid">
+                {% block content %}
+                {% endblock %}
+            </div>
+        </section>
+    </div>
 
-    {% block extra_scripts %}
-    {% endblock %}
+</div>
+
+<!-- JS do AdminLTE -->
+<script src="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/js/adminlte.min.js"></script>
+
+{% block extra_scripts %}{% endblock %}
 </body>
 </html>

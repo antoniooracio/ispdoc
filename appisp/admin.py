@@ -700,6 +700,7 @@ class BlocoIPAdmin(admin.ModelAdmin):
             path('<int:bloco_id>/visualizar_ips/', self.admin_site.admin_view(self.visualizar_ips),
                  name='appisp_blocoip_visualizar_ips'),
             path(
+
                 '<int:bloco_id>/cadastrar_enderecos/',
                 self.admin_site.admin_view(self.cadastrar_enderecos_view),
                 name='appisp_blocoip_cadastrar_enderecos',

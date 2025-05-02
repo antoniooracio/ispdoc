@@ -9,6 +9,7 @@ import platform
 from django.contrib import messages
 from django.db import transaction
 from django.http import JsonResponse
+from django.template.response import TemplateResponse
 from django.urls import reverse
 from rest_framework.authentication import TokenAuthentication
 from django.db.models import Prefetch
@@ -497,6 +498,7 @@ def atualizar_posicao(request, equipamento_id):
         return JsonResponse({"status": "sucesso", "x": x_novo, "y": y_novo})
 
 
+
 # View Mapa
 @login_required(login_url='/admin/login/')
 def mapa(request):
@@ -557,6 +559,7 @@ def mapa(request):
     context = {
         'userIsAdmin': user_is_admin,
         'user_is_senha': user_is_senha,
+        'userIsSenha': user_is_senha,
         'empresas': empresas,
         'empresa_id': empresa_id,
         'nodes': nodes,  # Passando nodes (equipamentos) para o JS
@@ -706,7 +709,9 @@ def get_map_data(request):
             "source": porta.equipamento.id,
             "target": porta.conexao.equipamento.id,
             "porta_origem": porta.nome,
+            "porta_origem_id": porta.id,
             "porta_destino": porta.conexao.nome,
+            "porta_destino_id": porta.conexao.id,
             "tipo": porta.tipo,
             "speed": porta.speed,
             "Obs": porta.observacao,
