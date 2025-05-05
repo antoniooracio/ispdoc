@@ -78,6 +78,9 @@ class Modelo(models.Model):
     airflow = models.CharField(max_length=255, blank=True, null=True)
     descricao = models.TextField(blank=True, null=True)
 
+    imagem_frontal = models.ImageField(upload_to='modelos/', blank=True, null=True)
+    imagem_traseira = models.ImageField(upload_to='modelos/', blank=True, null=True)
+
     class Meta:
         verbose_name_plural = "Equipamentos modelo"
         ordering = ['modelo']
