@@ -21,7 +21,7 @@ from .forms import PortaForm, RackForm, RackEquipamentoForm, EnderecoIPForm, Maq
 from .views import mapa, mapa_racks
 from django.contrib.admin import SimpleListFilter
 from .models import Empresa, Pop, Fabricante, Modelo, Equipamento, Porta, BlocoIP, EnderecoIP, Rack, RackEquipamento, \
-    MaquinaVirtual, Disco, Rede, Vlan, VlanPorta, EmpresaToken, IntegracaoZabbix, IntegracaoNetbox
+    MaquinaVirtual, Disco, Rede, Vlan, VlanPorta, EmpresaToken, IntegracaoZabbix, IntegracaoNetbox, Interface
 import ipaddress
 from django.utils.html import format_html
 from django.contrib import admin
@@ -1142,11 +1142,20 @@ class FabricanteAdmin(admin.ModelAdmin):
     search_fields = ('nome',)
 
 
+# Adicionando uma TAB no modelo para adicionar as Interfaces no modelo
+class InterfaceInline(admin.TabularInline):
+    model = Interface
+    extra = 0  # número de formulários vazios para adicionar
+    fields = ('nome', 'tipo', 'poe', 'mgmt_only', 'descricao')
+    show_change_link = True
+
+# Model para modelo de equipamentos
 @admin.register(Modelo)
 class ModeloAdmin(admin.ModelAdmin):
     list_display = ('modelo', 'fabricante')
     search_fields = ('modelo',)
     list_filter = ('fabricante',)
+    inlines = [InterfaceInline]
 
 
 @admin.register(Equipamento)
@@ -1200,6 +1209,67 @@ class EquipamentoAdmin(admin.ModelAdmin):
         if '_popup' in request.GET:
             self.change_form_template = 'admin/popup_add_form.html'  # crie esse arquivo
         return super().add_view(request, form_url, extra_context)
+
+    change_form_template = "admin/equipamento_change_form.html"
+
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path(
+                '<int:equipamento_id>/cadastrar-portas/',
+                self.admin_site.admin_view(self.cadastrar_portas_view),
+                name='cadastrar-portas',
+            ),
+        ]
+        return custom_urls + urls
+
+    def cadastrar_portas_view(self, request, equipamento_id):
+        equipamento = get_object_or_404(Equipamento, pk=equipamento_id)
+        modelo = equipamento.modelo
+
+        if not modelo:
+            messages.error(request, "Este equipamento não tem modelo definido.")
+            return redirect("admin:appisp_equipamento_change", equipamento_id)
+
+        interfaces = modelo.interfaces.all()
+
+        # Mapeamentos entre tipo da Interface e tipo/speed da Porta
+        tipo_map = {
+            '1000base-t': ('Eletrico', '1G'),
+            '100base-tx': ('Eletrico', '100M'),
+            '10gbase-t': ('Eletrico', '10G'),
+            '10gbase-x-sfpp': ('Fibra', '10G'),
+            '25gbase-x-sfp28': ('Fibra', '25G'),
+            '40gbase-x-qsfpp': ('Fibra', '40G'),
+            '100gbase-x-qsfp28': ('Fibra', '100G'),
+            'ieee802.11ac': ('Radio', '1G'),
+            'ieee802.11n': ('Radio', '100M'),
+            'virtual': ('Transporte', '1G'),
+            'lag': ('Transporte', '1G'),
+        }
+
+        criadas = 0
+        for interface in interfaces:
+            if not Porta.objects.filter(equipamento=equipamento, nome=interface.nome).exists():
+                tipo_interface = interface.tipo.lower() if interface.tipo else ''
+                tipo_porta, speed_porta = tipo_map.get(tipo_interface, ('Fibra', '1G'))  # padrão
+
+                Porta.objects.create(
+                    equipamento=equipamento,
+                    empresa=equipamento.empresa,
+                    nome=interface.nome,
+                    tipo=tipo_porta,
+                    speed=speed_porta,
+                    observacao=interface.descricao or ""
+                )
+                criadas += 1
+
+        if criadas:
+            messages.success(request, f"{criadas} portas criadas com sucesso!")
+        else:
+            messages.info(request, "Nenhuma porta foi criada. Todas já existem.")
+
+        return redirect("admin:appisp_equipamento_change", equipamento_id)
 
 
 @admin.register(EmpresaToken)
