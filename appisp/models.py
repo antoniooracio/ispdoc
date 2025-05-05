@@ -70,7 +70,13 @@ class Fabricante(models.Model):
 # Modelo de Modelo (associado ao Fabricante)
 class Modelo(models.Model):
     modelo = models.CharField(max_length=255)
+    slug = models.SlugField(max_length=255, blank=True, null=True)
     fabricante = models.ForeignKey(Fabricante, on_delete=models.CASCADE)
+    part_number = models.CharField(max_length=255, blank=True, null=True)
+    altura = models.IntegerField(blank=True, null=True)
+    is_full_depth = models.BooleanField(default=False)
+    airflow = models.CharField(max_length=255, blank=True, null=True)
+    descricao = models.TextField(blank=True, null=True)
 
     class Meta:
         verbose_name_plural = "Equipamentos modelo"
