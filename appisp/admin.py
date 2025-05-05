@@ -1158,11 +1158,28 @@ class ModeloAdmin(admin.ModelAdmin):
     inlines = [InterfaceInline]
 
 
+# TAB para portas dentro do equipmaneto
+class PortaInline(admin.TabularInline):
+    model = Porta
+    fields = ('nome', 'tipo', 'speed', 'observacao', 'conexao')  # campos a exibir
+    readonly_fields = ('nome', 'tipo', 'speed', 'observacao', 'conexao')
+    can_delete = False
+    extra = 0
+    show_change_link = False
+
+    def has_add_permission(self, request, obj):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+
 @admin.register(Equipamento)
 class EquipamentoAdmin(admin.ModelAdmin):
     form = EquipamentoForm
     list_display = ('nome', 'ip', 'status', 'pop', 'empresa', 'fabricante', 'tipo')
     search_fields = ('nome', 'ip', 'pop__nome', 'empresa__nome', 'fabricante__nome', 'modelo__modelo', 'tipo')
+    inlines = [PortaInline]
 
     change_list_template = "admin/mapa_rede_changelist.html"  # Personalizamos o template
 
