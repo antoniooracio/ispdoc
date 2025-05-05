@@ -1161,8 +1161,8 @@ class ModeloAdmin(admin.ModelAdmin):
 # TAB para portas dentro do equipmaneto
 class PortaInline(admin.TabularInline):
     model = Porta
-    fields = ('nome', 'tipo', 'speed', 'observacao', 'conexao')  # campos a exibir
-    readonly_fields = ('nome', 'tipo', 'speed', 'observacao', 'conexao')
+    fields = ('nome', 'tipo', 'speed', 'conexao')  # campos a exibir
+    readonly_fields = ('nome', 'tipo', 'speed', 'conexao')
     can_delete = False
     extra = 0
     show_change_link = False
