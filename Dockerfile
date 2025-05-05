@@ -8,6 +8,13 @@ COPY requirements.txt .
 # Instalar netcat (openbsd version)
 RUN apt-get update && apt-get install -y netcat-openbsd
 RUN apt-get update && apt-get install -y iputils-ping
+RUN apt-get update && apt-get install -y \
+    git \
+    build-essential \
+    libpq-dev \
+    && apt-get clean
+RUN apt update && apt install -y git-lfs
+RUN git lfs install
 
 # Instala as dependências do Python
 RUN pip install --no-cache-dir -r requirements.txt

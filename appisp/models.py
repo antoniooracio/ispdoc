@@ -132,6 +132,22 @@ class Equipamento(models.Model):
         return f"{self.nome} ({self.ip})"
 
 
+# Modelo para importação do NetBox, depois vou usar em porta
+class Interface(models.Model):
+    modelo = models.ForeignKey('Modelo', on_delete=models.CASCADE, related_name='interfaces')
+    nome = models.CharField(max_length=100)
+    tipo = models.CharField(max_length=100)
+    poe = models.BooleanField(default=False)
+    mgmt_only = models.BooleanField(default=False)
+    descricao = models.CharField(max_length=255, blank=True, null=True)
+
+    class Meta:
+        unique_together = ('modelo', 'nome')
+
+    def __str__(self):
+        return f"{self.modelo} - {self.nome}"
+
+
 # Modelo de Porta
 class Porta(models.Model):
     SPEED_CHOICES = [

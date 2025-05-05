@@ -29,6 +29,8 @@ from appisp.views import (EquipamentoAutocomplete, PortaAutocomplete, mapa, atua
                           )
 from appisp.models import Porta
 from django.contrib.auth.decorators import login_required
+from django.conf import settings
+from django.conf.urls.static import static
 
 @login_required
 def get_portas_por_equipamento(request, equipamento_id):
@@ -77,4 +79,4 @@ urlpatterns = [
     path('api/atualizar_status/<int:equipamento_id>/', atualizar_status_equipamento, name="atualizar_status_equipamento"),
     path('api/get_map_data/', get_map_data, name="atualizar_mapa"),
     path('api/equipamento/<int:equipamento_id>/', get_equipamento, name='get_equipamento'),
-]
+] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
