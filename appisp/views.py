@@ -566,7 +566,7 @@ def mapa(request):
         'links': links,  # Passando links (conexões) para o JS
     }
 
-    return render(request, 'appisp/mapa.html', context)
+    return render(request, 'admin/mapa.html', context)
 
 
 # Rota para retornar os dados em formato JSON

@@ -1196,6 +1196,11 @@ class EquipamentoAdmin(admin.ModelAdmin):
                 kwargs["queryset"] = Pop.objects.filter(empresa__usuarios=request.user)
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
+    def add_view(self, request, form_url='', extra_context=None):
+        if '_popup' in request.GET:
+            self.change_form_template = 'admin/popup_add_form.html'  # crie esse arquivo
+        return super().add_view(request, form_url, extra_context)
+
 
 @admin.register(EmpresaToken)
 class EmpresaTokenAdmin(admin.ModelAdmin):

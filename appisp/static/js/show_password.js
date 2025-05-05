@@ -54,3 +54,15 @@ function generatePassword(id) {
 // Disponibiliza no escopo global para funcionar com onclick inline
 window.togglePassword = togglePassword;
 window.generatePassword = generatePassword;
+
+// Alias para compatibilidade com HTML antigo
+window.toggleModalPassword = togglePassword;
+
+document.addEventListener("DOMContentLoaded", function () {
+    const btn = document.getElementById("btn-toggle-senha");
+    if (btn) {
+        btn.addEventListener("click", function () {
+            togglePassword("input-senha", btn);
+        });
+    }
+});

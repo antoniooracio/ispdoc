@@ -1,6 +1,5 @@
-{% extends "admin/base_site.html" %}
+{% extends "admin/base.html" %}
 {% load static %}
-
 
 
 {% block title %}Mapa de Rede{% endblock %}
@@ -37,7 +36,7 @@
 
             #mapa {
                 width: 100%;
-                height: 1024px;
+                height: 75vh;
                 border: 1px solid #ccc;
                 background-color: #ecf0f0;
             }
@@ -286,6 +285,7 @@
 {% endblock %}
 
 {% block extrahead %}
+
     <script src="https://cdn.ckeditor.com/ckeditor5/39.0.1/classic/ckeditor.js"></script>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script>
@@ -295,12 +295,18 @@
         window.links = {{ links|safe }};
     </script>
     <script src="{% static 'js/mapa-init.js' %}"></script>
+    <script src="{% static 'js/show_password.js' %}"></script>
+
 {% endblock %}
 
 
 {% block content_wrapper %}
     {% block content %}
-        <a href="/admin/appisp/equipamento/add/?_to_field=id&_popup=1" class="btn btn-primary" style="width: -webkit-fill-available;">Equipamento</a>
+        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+        <button class="btn btn-primary"
+                onclick="abrirPopupEquipamento('/admin/appisp/equipamento/add/?_to_field=id&_popup=1')">
+            Adicionar Equipamento
+        </button>
         <a href="javascript:history.back()" class="btn btn-primary">FECHAR O MAPA</a>
         <!-- Exibe select da Empresa e Botão de Fechar o mapa-->
         <div style="display: flex; align-items: center; gap: 10px; margin: 10px;">
@@ -411,7 +417,7 @@
                         <div class="input-group-prepend">
                             <button type="button"
                                     class="btn"
-                                    onclick="toggleModalPassword('input-senha', this)"
+                                    onclick="togglePassword('input-senha', this)"
                                     title="Mostrar/Ocultar Senha">
                                 👁
                             </button>

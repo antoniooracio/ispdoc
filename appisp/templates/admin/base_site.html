@@ -1,4 +1,4 @@
-{% extends "admin/base_site.html" %}
+
 
 {% block sidebar %}
     {{ block.super }} <!-- Isso garante que o menu lateral padrão seja renderizado -->
@@ -7,54 +7,55 @@
 {% block nav-global %}
 <p style="color: red;">DEBUG SITE NAME: {{ site_title }}</p>
 {{ block.super }}
-<pre>{{ available_apps|length }} apps carregados</pre>
-<!-- Menu lateral padrão com os apps e modelos registrados -->
-{% if available_apps %}
-    <ul class="nav-sidebar">
-        {% for app in available_apps %}
-            <li class="nav-item app-{{ app.app_label }}">
-                <strong>{{ app.name }}</strong>
-                <ul class="nav nav-treeview">
-                    {% for model in app.models %}
-                        <li class="nav-item">
-                            <a href="{{ model.admin_url }}" class="nav-link">
-                                {{ model.name }}
-                            </a>
-                        </li>
-                    {% endfor %}
-                </ul>
+    <pre>{{ available_apps|length }} apps carregados</pre>
+    <!-- Menu lateral padrão com os apps e modelos registrados -->
+    {% if available_apps %}
+        <ul class="nav-sidebar">
+            {% for app in available_apps %}
+                <li class="nav-item app-{{ app.app_label }}">
+                    <strong>{{ app.name }}</strong>
+                    <ul class="nav nav-treeview">
+                        {% for model in app.models %}
+                            <li class="nav-item">
+                                <a href="{{ model.admin_url }}" class="nav-link">
+                                    {{ model.name }}
+                                </a>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p class="text-muted">Nenhum app disponível.</p>
+    {% endif %}
+
+    <!-- Seus links personalizados ainda podem ser incluídos se quiser -->
+    <ul class="nav-global">
+        {% for link in custom_menu_links %}
+            <li>
+                <a href="{{ link.url }}" class="nav-link">
+                    {% if link.icon %}
+                        <i class="{{ link.icon }}"></i>
+                    {% endif %}
+                    {{ link.name }}
+                </a>
             </li>
         {% endfor %}
     </ul>
-{% else %}
-    <p class="text-muted">Nenhum app disponível.</p>
-{% endif %}
-
-<!-- Seus links personalizados ainda podem ser incluídos se quiser -->
-<ul class="nav-global">
-    {% for link in custom_menu_links %}
-        <li>
-            <a href="{{ link.url }}" class="nav-link">
-                {% if link.icon %}
-                    <i class="{{ link.icon }}"></i>
-                {% endif %}
-                {{ link.name }}
-            </a>
-        </li>
-    {% endfor %}
-</ul>
 {% endblock %}
 
 {% block extrahead %}
 {{ block.super }}
-<!-- CSS do Select2 -->
-<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/css/select2.min.css" rel="stylesheet" />
+<!-- CSS do Select2
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/css/select2.min.css" rel="stylesheet" /> -->
 {% endblock %}
 
 {% block extra_scripts %}
 {{ block.super }}
-<!-- JS do Select2 -->
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/js/select2.min.js"></script>
+<!-- JS do Select2
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/js/select2.min.js"></script> -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/css/select2.min.css" rel="stylesheet" />
 <script>
     document.addEventListener("DOMContentLoaded", function () {
         const dropdowns = document.querySelectorAll(".changelist-filter select");

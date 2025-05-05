@@ -50,6 +50,27 @@ ClassicEditor
         }
     }
 
+function abrirPopupEquipamento(url) {
+    const largura = 800;
+    const altura = 600;
+    const left = window.screenX + (window.innerWidth - largura) / 2;
+    const top = window.screenY + (window.innerHeight - altura) / 2;
+
+    const popup = window.open(
+        url,
+        "_popup",
+        `width=${largura},height=${altura},top=${top},left=${left},resizable=yes,scrollbars=yes`
+    );
+
+    if (popup) {
+        popup.focus();
+    } else {
+        alert("Por favor, permita popups para este site.");
+    }
+}
+// Garante que fique global
+window.abrirPopupEquipamento = abrirPopupEquipamento;
+
 // Função para carregar as posições salvas
 function carregarPosicoes() {
     const posicoesSalvas = localStorage.getItem('posicoesEquipamentos');
