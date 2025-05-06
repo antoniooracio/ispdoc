@@ -17,7 +17,7 @@ from django.contrib.admin import AdminSite
 from django.shortcuts import render, get_object_or_404, redirect
 from django.http import HttpResponseRedirect, JsonResponse
 from .forms import PortaForm, RackForm, RackEquipamentoForm, EnderecoIPForm, MaquinaVirtualForm, EquipamentoForm, \
-    EnderecoIPForm, CadastrarEnderecosForm
+    EnderecoIPForm, CadastrarEnderecosForm, ModeloForm
 from .views import mapa, mapa_racks
 from django.contrib.admin import SimpleListFilter
 from .models import Empresa, Pop, Fabricante, Modelo, Equipamento, Porta, BlocoIP, EnderecoIP, Rack, RackEquipamento, \
@@ -353,6 +353,21 @@ class MaquinaVirtualAdmin(admin.ModelAdmin):
         return (EmpresaUsuarioFilter, EquipamentoEmpresaFilter)  # Usuário comum vê apenas os dados acessíveis
 
 
+# Adicionando uma TAB no Rack para mostrar os equipamentos
+class RackEquipamentoInline(admin.TabularInline):
+    model = RackEquipamento
+    fields = ('equipamento', 'us_inicio', 'us_fim', 'lado')
+    readonly_fields = ('equipamento', 'us_inicio', 'us_fim', 'lado')
+    can_delete = False
+    extra = 0
+    show_change_link = False
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
 @admin.register(Rack)
 class RackAdmin(admin.ModelAdmin):
     form = RackForm  # Usa o formulário com validação
@@ -360,6 +375,7 @@ class RackAdmin(admin.ModelAdmin):
     list_filter = ('empresa', 'pop')
     search_fields = ('nome', 'pop__nome', 'empresa__nome')
     ordering = ('empresa', 'pop', 'nome')
+    inlines = [RackEquipamentoInline]
 
     def get_queryset(self, request):
         """ Lista apenas os racks das empresas do usuário """
@@ -1156,6 +1172,7 @@ class ModeloAdmin(admin.ModelAdmin):
     search_fields = ('modelo',)
     list_filter = ('fabricante',)
     inlines = [InterfaceInline]
+    form = ModeloForm
 
 
 # TAB para portas dentro do equipmaneto

@@ -4,10 +4,11 @@ from django.core.exceptions import ValidationError
 from dal import autocomplete
 from django import forms
 from django.contrib.auth.models import User
-from .models import Porta, Empresa, Equipamento, Rack, RackEquipamento, MaquinaVirtual, EnderecoIP, BlocoIP, Vlan
+from .models import Porta, Empresa, Equipamento, Rack, RackEquipamento, MaquinaVirtual, EnderecoIP, BlocoIP, Vlan, \
+    Modelo
 from django import forms
 from ipaddress import ip_address, ip_network
-from .models import EnderecoIP, BlocoIP
+from .models import EnderecoIP, BlocoIP, Modelo
 
 class EnderecoIPForm(forms.ModelForm):
     class Meta:
@@ -317,3 +318,22 @@ class RackEquipamentoForm(forms.ModelForm):
             raise forms.ValidationError(f"Os Us {us_inicio}-{us_fim} já estão ocupados no lado {lado}.")
 
         return cleaned_data
+
+
+class ModeloForm(forms.ModelForm):
+    class Meta:
+        model = Modelo
+        fields = '__all__'
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        if self.instance and self.instance.pk:
+            if self.instance.imagem_frontal:
+                self.fields['imagem_frontal'].help_text = mark_safe(
+                    f'<img src="{self.instance.imagem_frontal.url}" style="max-width: 95%; height: auto; border: 1px solid #ccc; margin-top: 10px;" />'
+                )
+            if self.instance.imagem_traseira:
+                self.fields['imagem_traseira'].help_text = mark_safe(
+                    f'<img src="{self.instance.imagem_traseira.url}" style="max-width: 95%; height: auto; border: 1px solid #ccc; margin-top: 10px;" />'
+                )
