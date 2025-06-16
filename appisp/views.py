@@ -26,6 +26,7 @@ from .forms import PortaForm, EnderecoIPForm
 from rest_framework.permissions import BasePermission
 import json
 from rest_framework.response import Response
+from .serializers import EquipamentoSerializer
 
 
 def get_equipamento(request, equipamento_id):
@@ -173,10 +174,11 @@ def atualizar_status_equipamento(request, equipamento_id):
 @api_view(['GET'])
 @authentication_classes([TokenAuthentication])  # Garantir que somente o TokenAuthentication será usado
 def listar_equipamentosApi(request):
+    # Seu código para pegar o token está correto
     token = request.headers.get("Authorization")
-
     if not token:
-        return JsonResponse({"error": "Token não fornecido"}, status=401)
+        # É uma boa prática usar a Response do DRF para tudo
+        return Response({"error": "Token nao fornecido"}, status=401)
 
     if token.startswith("Token "):
         token = token.split("Token ")[1]
@@ -184,11 +186,18 @@ def listar_equipamentosApi(request):
     try:
         empresa_token = EmpresaToken.objects.get(token=token)
 
-        equipamentos = Equipamento.objects.filter(empresa=empresa_token.empresa).values("id", "nome", "ip", "status")
+        # CORRECAO 1: Removemos o .values() para pegar os objetos completos do modelo
+        equipamentos = Equipamento.objects.filter(empresa=empresa_token.empresa)
 
-        return JsonResponse(list(equipamentos), safe=False)
+        # CORRECAO 2: Usamos o serializer para converter os objetos em dados JSON
+        # 'many=True' é necessário porque estamos serializando uma LISTA de equipamentos
+        serializer = EquipamentoSerializer(equipamentos, many=True)
+
+        # CORRECAO 3: Retornamos os dados processados pelo serializer
+        return Response(serializer.data)
+
     except EmpresaToken.DoesNotExist:
-        return JsonResponse({"error": "Token inválido"}, status=403)
+        return Response({"error": "Token invalido"}, status=403)
 
 
 def get_equipamentos(request):
