@@ -97,19 +97,19 @@ class EnderecoIPEmpresaFilter(SimpleListFilter):
 class EquipamentoEmpresaFilter(SimpleListFilter):
     """Filtro personalizado para exibir apenas equipamentos das empresas do usuário"""
     title = "Equipamento"
-    parameter_name = "equipamento"
+    parameter_name = "equip_id"
 
     def lookups(self, request, model_admin):
         if request.user.is_superuser:
-            equipamentos = Equipamento.objects.all()
+            qs = Equipamento.objects.all()
         else:
-            equipamentos = Equipamento.objects.filter(empresa__usuarios=request.user)
+            qs = Equipamento.objects.filter(empresa__usuarios=request.user)
 
-        return [(equip.id, equip.nome) for equip in equipamentos]
+        return [(equip.id, equip.nome) for equip in qs.only('id', 'nome')]
 
     def queryset(self, request, queryset):
         if self.value():
-            return queryset.filter(equipamento_id=self.value())  # Usar equipamento_id diretamente
+            return queryset.filter(id=self.value())  # Usar id diretamente
         return queryset
 
 
@@ -1220,7 +1220,7 @@ class EquipamentoAdmin(admin.ModelAdmin):
         if request.user.is_superuser:
             return ('protocolo', 'pop', 'empresa', 'fabricante', 'modelo', 'tipo')
 
-        return ('protocolo', EmpresaUsuarioFilter, PopUsuarioFilter, 'fabricante', 'modelo', 'tipo')
+        return ('protocolo', EmpresaUsuarioFilter, PopUsuarioFilter, EquipamentoEmpresaFilter, 'fabricante', 'modelo', 'tipo')
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
