@@ -165,8 +165,11 @@ class EmpresaUsuarioFilter(SimpleListFilter):
         return [(empresa.id, empresa.nome) for empresa in empresas]
 
     def queryset(self, request, queryset):
-        if self.value():
-            return queryset.filter(equipamento__empresa_id=self.value())  # Filtrar corretamente pela empresa
+        if hasattr(queryset.model, 'empresa_id'):
+            return queryset.filter(empresa_id=self.value())
+        elif hasattr(queryset.model, 'equipamento'):
+            return queryset.filter(equipamento__empresa_id=self.value())
+
         return queryset
 
 
