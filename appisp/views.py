@@ -26,7 +26,31 @@ from .forms import PortaForm, EnderecoIPForm
 from rest_framework.permissions import BasePermission
 import json
 from rest_framework.response import Response
-from .serializers import EquipamentoSerializer
+from .serializers import EquipamentoSerializer, BlocoIPSerializer
+
+
+@api_view(['GET'])
+@authentication_classes([EmpresaTokenAuthentication]) # Usando sua autenticação!
+def listar_blocos_ip_api(request):
+    """
+    API endpoint que retorna uma lista de todos os blocos de IP (em formato CIDR)
+    associados à empresa do token fornecido.
+    """
+    # A autenticação já garante que o token é válido e associa a empresa ao request.
+    # Se o token for inválido, o EmpresaTokenAuthentication já retornará um erro 403.
+    empresa = request.auth.empresa # O request.auth é populado pela sua classe de autenticação
+
+    # Filtramos os blocos de IP que pertencem à empresa e que são "pais" (não são sub-blocos)
+    # Você pode ajustar essa lógica se quiser scanear sub-blocos também.
+    blocos = BlocoIP.objects.filter(empresa=empresa, parent=None)
+
+    # Usamos o serializer para converter os objetos em dados JSON
+    serializer = BlocoIPSerializer(blocos, many=True)
+
+    # Extrai apenas a string CIDR para retornar uma lista simples, como ["10.0.0.0/24", "192.168.1.0/24"]
+    lista_cidrs = [item['bloco_cidr'] for item in serializer.data]
+
+    return Response(lista_cidrs)
 
 
 def get_equipamento(request, equipamento_id):
@@ -126,6 +150,7 @@ class TokenRequiredPermission(BasePermission):
             return True
         except EmpresaToken.DoesNotExist:
             return False
+
 
 
 class DisableSessionAuthenticationMiddleware:

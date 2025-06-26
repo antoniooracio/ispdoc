@@ -1,6 +1,13 @@
 from rest_framework import serializers
 # Importando os modelos corretos que voce enviou
-from .models import Equipamento, Empresa
+from .models import Equipamento, Empresa, BlocoIP
+
+class BlocoIPSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BlocoIP
+        fields = ['bloco_cidr']
+
+
 
 # --- Serializer para o modelo Empresa ---
 # Este serializer define quais campos da sua Empresa serao expostos na API.
