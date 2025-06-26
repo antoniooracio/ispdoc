@@ -11,6 +11,7 @@ from django.db import transaction
 from django.http import JsonResponse
 from django.template.response import TemplateResponse
 from django.urls import reverse
+from rest_framework import status
 from rest_framework.authentication import TokenAuthentication
 from django.db.models import Prefetch
 from concurrent.futures import ThreadPoolExecutor
@@ -30,25 +31,40 @@ from .serializers import EquipamentoSerializer, BlocoIPSerializer
 
 
 @api_view(['GET'])
-@authentication_classes([EmpresaTokenAuthentication])
+# Removendo a classe de autenticação para fazermos o processo manualmente,
+# igual à sua API antiga.
+# @authentication_classes([EmpresaTokenAuthentication])
 def listar_blocos_ip_api(request):
     """
-    API endpoint que retorna uma lista de todos os blocos de IP (em formato CIDR)
-    associados à empresa do token fornecido.
+    API que retorna uma lista de blocos de IP (CIDR) associados à empresa do token.
+    Esta versão foi adaptada para validar o token manualmente, sem o prefixo 'Token '.
     """
-    # ADICIONA ESTA VERIFICAÇÃO!
-    if not request.auth:
-        # Se a autenticação falhou e não retornou um objeto, retorna um erro explícito.
-        return Response({"error": "Token de autenticação inválido ou não fornecido."}, status=403)
+    # 1. Pega o token diretamente do cabeçalho
+    token = request.headers.get("Authorization")
+    if not token:
+        return Response({"error": "Token de autenticação não fornecido."}, status=status.HTTP_401_UNAUTHORIZED)
 
-    # O resto do seu código continua igual
-    empresa = request.auth.empresa
+    # Lógica para remover o prefixo "Token ", caso ele exista (para flexibilidade)
+    if token.startswith("Token "):
+        token = token.split("Token ")[1]
 
-    blocos = BlocoIP.objects.filter(empresa=empresa, parent=None)
-    serializer = BlocoIPSerializer(blocos, many=True)
-    lista_cidrs = [item['bloco_cidr'] for item in serializer.data]
+    try:
+        # 2. Busca a empresa associada ao token
+        empresa_token = EmpresaToken.objects.get(token=token)
+        empresa = empresa_token.empresa
 
-    return Response(lista_cidrs)
+        # 3. Filtra os blocos de IP daquela empresa
+        blocos = BlocoIP.objects.filter(empresa=empresa, parent=None)
+
+        # 4. Serializa e retorna os dados
+        serializer = BlocoIPSerializer(blocos, many=True)
+        lista_cidrs = [item['bloco_cidr'] for item in serializer.data]
+
+        return Response(lista_cidrs)
+
+    except EmpresaToken.DoesNotExist:
+        # Se o token não for encontrado no banco de dados, retorna erro 403
+        return Response({"error": "Token inválido."}, status=status.HTTP_403_FORBIDDEN)
 
 
 def get_equipamento(request, equipamento_id):
