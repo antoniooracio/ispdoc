@@ -26,7 +26,7 @@ from appisp.views import (EquipamentoAutocomplete, PortaAutocomplete, mapa, atua
                           alertas_vlans, lista_empresas_json, lista_vlans_json, estrutura_bloco, estrutura_bloco, get_portas,
                           verificar_status_equipamentos, listar_equipamentosApi, atualizar_status_equipamento, get_map_data,
                           get_equipamento, api_portas, conectar_portas, desconectar_portas, testar_conexao, listar_blocos_ip_api,
-                          EmpresaDadosAPIView
+                          obter_dados_empresa
                           )
 from appisp.models import Porta
 from django.contrib.auth.decorators import login_required
@@ -59,7 +59,7 @@ urlpatterns = [
     path('api/conectar-portas/', conectar_portas, name='conectar-portas'),
     path('api/desconectar-portas/', desconectar_portas, name='desconectar-portas'),
     path('api/blocos-ip/', listar_blocos_ip_api, name='api_listar_blocos_ip'),
-    path('api/empresa/', EmpresaDadosAPIView, name='api-dados-empresa'),
+    path('api/empresa/', obter_dados_empresa, name='api-obter-empresa'),
     path('endereco_ip/', adicionar_endereco_ip, name='endereco_ip'),
     path('equipamento/<int:equipamento_id>/vlans/', visualizar_vlans_por_equipamento, name='vlans_por_equipamento'),
     path('mapa_vlans/', mapa_vlans, name='mapa_vlans'),

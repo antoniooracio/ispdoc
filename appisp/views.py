@@ -211,50 +211,24 @@ def atualizar_status_equipamento(request, equipamento_id):
         return JsonResponse({"error": "Equipamento não encontrado"}, status=404)
 
 
-class EmpresaDadosAPIView(APIView):
+@api_view(['GET'])  # <- Mudamos para GET
+@authentication_classes([EmpresaTokenAuthentication])
+def obter_dados_empresa(request):
     """
-    API View para retornar os dados de uma empresa específica,
-    validada pelo token de autorização fornecido no cabeçalho.
+    Endpoint para OBTER os dados da empresa.
+    A empresa é identificada pelo token fornecido no cabeçalho.
     """
+    # A MÁGICA ACONTECE AQUI:
+    # A classe de autenticação já fez todos o trabalho. Se o código chegou
+    # até aqui, o token é válido e a empresa foi encontrada.
 
-    def get(self, request, *args, **kwargs):
-        # 1. Pega o token do cabeçalho 'Authorization'
-        auth_header = request.headers.get("Authorization")
+    # A empresa está convenientemente disponível em `request.auth.empresa`
+    empresa_identificada = request.auth.empresa
 
-        # 2. Valida se o cabeçalho foi fornecido
-        if not auth_header:
-            return Response(
-                {"detail": "Cabeçalho de autorização não fornecido."},
-                status=status.HTTP_401_UNAUTHORIZED
-            )
+    # Agora, apenas serializamos e retornamos os dados.
+    serializer = EmpresaSerializer(empresa_identificada)
 
-        # 3. Extrai o token real (removendo o prefixo "Token ", se houver)
-        #    Esta lógica é idêntica à sua função de exemplo.
-        token_str = auth_header
-        if ' ' in auth_header:
-            # Pega a segunda parte, que é o token
-            token_str = auth_header.split(' ')[1]
-
-        # 4. Busca o token no banco de dados para encontrar a empresa associada
-        try:
-            # Procura pelo token no modelo EmpresaToken
-            empresa_token = EmpresaToken.objects.select_related('empresa').get(token=token_str)
-
-            # Pega o objeto da empresa associada ao token
-            empresa = empresa_token.empresa
-
-        except EmpresaToken.DoesNotExist:
-            return Response(
-                {"detail": "Token inválido."},
-                status=status.HTTP_403_FORBIDDEN
-            )
-
-        # 5. Serializa os dados da empresa encontrada
-        #    Não usamos 'many=True' porque é apenas um objeto
-        serializer = EmpresaSerializer(empresa)
-
-        # 6. Retorna a resposta com os dados e status 200 OK
-        return Response(serializer.data, status=status.HTTP_200_OK)
+    return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 @api_view(['GET'])
