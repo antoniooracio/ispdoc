@@ -20,6 +20,8 @@ from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404
 from rest_framework.decorators import api_view, authentication_classes
+from rest_framework.views import APIView
+
 from .authentication import EmpresaTokenAuthentication
 from .models import Porta, Empresa, Pop, Rack, Equipamento, BlocoIP, EnderecoIP, VlanPorta, Vlan, EmpresaToken, \
                     IntegracaoZabbix
@@ -27,7 +29,7 @@ from .forms import PortaForm, EnderecoIPForm
 from rest_framework.permissions import BasePermission
 import json
 from rest_framework.response import Response
-from .serializers import EquipamentoSerializer, BlocoIPSerializer
+from .serializers import EquipamentoSerializer, BlocoIPSerializer, EmpresaSerializer
 
 
 @api_view(['GET'])
@@ -166,7 +168,6 @@ class TokenRequiredPermission(BasePermission):
             return False
 
 
-
 class DisableSessionAuthenticationMiddleware:
     """
     Middleware para desabilitar a autenticação de sessão em algumas rotas
@@ -208,6 +209,52 @@ def atualizar_status_equipamento(request, equipamento_id):
         return JsonResponse({"error": "Token inválido"}, status=403)
     except Equipamento.DoesNotExist:
         return JsonResponse({"error": "Equipamento não encontrado"}, status=404)
+
+
+class EmpresaDadosAPIView(APIView):
+    """
+    API View para retornar os dados de uma empresa específica,
+    validada pelo token de autorização fornecido no cabeçalho.
+    """
+
+    def get(self, request, *args, **kwargs):
+        # 1. Pega o token do cabeçalho 'Authorization'
+        auth_header = request.headers.get("Authorization")
+
+        # 2. Valida se o cabeçalho foi fornecido
+        if not auth_header:
+            return Response(
+                {"detail": "Cabeçalho de autorização não fornecido."},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+
+        # 3. Extrai o token real (removendo o prefixo "Token ", se houver)
+        #    Esta lógica é idêntica à sua função de exemplo.
+        token_str = auth_header
+        if ' ' in auth_header:
+            # Pega a segunda parte, que é o token
+            token_str = auth_header.split(' ')[1]
+
+        # 4. Busca o token no banco de dados para encontrar a empresa associada
+        try:
+            # Procura pelo token no modelo EmpresaToken
+            empresa_token = EmpresaToken.objects.select_related('empresa').get(token=token_str)
+
+            # Pega o objeto da empresa associada ao token
+            empresa = empresa_token.empresa
+
+        except EmpresaToken.DoesNotExist:
+            return Response(
+                {"detail": "Token inválido."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        # 5. Serializa os dados da empresa encontrada
+        #    Não usamos 'many=True' porque é apenas um objeto
+        serializer = EmpresaSerializer(empresa)
+
+        # 6. Retorna a resposta com os dados e status 200 OK
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 @api_view(['GET'])
@@ -544,7 +591,6 @@ def atualizar_posicao(request, equipamento_id):
         equipamento.save()
 
         return JsonResponse({"status": "sucesso", "x": x_novo, "y": y_novo})
-
 
 
 # View Mapa
