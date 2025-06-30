@@ -211,24 +211,40 @@ def atualizar_status_equipamento(request, equipamento_id):
         return JsonResponse({"error": "Equipamento não encontrado"}, status=404)
 
 
-@api_view(['GET'])  # <- Mudamos para GET
-@authentication_classes([EmpresaTokenAuthentication])
+@api_view(['GET'])
 def obter_dados_empresa(request):
     """
     Endpoint para OBTER os dados da empresa.
-    A empresa é identificada pelo token fornecido no cabeçalho.
+    Esta versão foi adaptada para validar o token manualmente,
+    garantindo compatibilidade com o sistema existente.
     """
-    # A MÁGICA ACONTECE AQUI:
-    # A classe de autenticação já fez todos o trabalho. Se o código chegou
-    # até aqui, o token é válido e a empresa foi encontrada.
+    # Passo 1: Obter o token diretamente do cabeçalho
+    token = request.headers.get("Authorization")
 
-    # A empresa está convenientemente disponível em `request.auth.empresa`
-    empresa_identificada = request.auth.empresa
+    # Se o token não for fornecido, retorna um erro claro.
+    if not token:
+        return Response({"error": "Token não fornecido"}, status=status.HTTP_401_UNAUTHORIZED)
 
-    # Agora, apenas serializamos e retornamos os dados.
-    serializer = EmpresaSerializer(empresa_identificada)
+    # Remove o prefixo "Token " se ele existir, para flexibilidade.
+    if token.startswith("Token "):
+        token = token.split("Token ")[1]
 
-    return Response(serializer.data, status=status.HTTP_200_OK)
+    try:
+        # Passo 2: Encontra o objeto do token no banco de dados.
+        empresa_token = EmpresaToken.objects.get(token=token)
+
+        # Passo 3: Obtém a empresa associada a esse token.
+        empresa_identificada = empresa_token.empresa
+
+        # Passo 4: Usa o serializer para converter os dados da empresa em JSON.
+        serializer = EmpresaSerializer(empresa_identificada)
+
+        # Retorna os dados com sucesso.
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    except EmpresaToken.DoesNotExist:
+        # Se o token não for encontrado, retorna um erro 403 (Proibido).
+        return Response({"error": "Token inválido"}, status=status.HTTP_403_FORBIDDEN)
 
 
 @api_view(['GET'])
