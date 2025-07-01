@@ -337,6 +337,7 @@ class BlocoIP(models.Model):
                                     blank=True)
     next_hop = models.GenericIPAddressField(blank=True, null=True)  # Roteamento do bloco
     criado_em = models.DateTimeField(auto_now_add=True)
+    monitorar = models.BooleanField(default=False)
 
     class Meta:
         verbose_name_plural = "Blocos de IP"

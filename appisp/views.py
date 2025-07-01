@@ -60,7 +60,7 @@ def listar_blocos_ip_api(request):
 
         # 4. Serializa e retorna os dados
         serializer = BlocoIPSerializer(blocos, many=True)
-        lista_cidrs = [item['bloco_cidr'] for item in serializer.data]
+        lista_cidrs = [item['bloco_cidr', 'monitorar'] for item in serializer.data]
 
         return Response(lista_cidrs)
 

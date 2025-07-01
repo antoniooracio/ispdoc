@@ -5,7 +5,7 @@ from .models import Equipamento, Empresa, BlocoIP
 class BlocoIPSerializer(serializers.ModelSerializer):
     class Meta:
         model = BlocoIP
-        fields = ['bloco_cidr']
+        fields = ['bloco_cidr', 'monitorar']
 
 
 
