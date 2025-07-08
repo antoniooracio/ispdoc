@@ -288,7 +288,7 @@
 </head>
 <body>
 
-<a href="/admin/" class="btn btn-primary" style="width: -webkit-fill-available;">FECHAR O MAPA</a>
+
 <!-- Exibe select da Empresa e Botão de Fechar o mapa-->
 <div style="display: flex; align-items: center; gap: 10px; margin: 10px;">
     <select id="empresa-selector">
@@ -297,7 +297,7 @@
         <option value="{{ empresa.id }}">{{ empresa.nome }}</option>
         {% endfor %}
     </select>
-
+    <a href="/admin/" class="btn btn-primary" style="width: -webkit-fill-available;">FECHAR O MAPA</a>
 </div>
 <div style="display: flex; align-items: center; gap: 10px; margin: 10px; ">
     <label for="zoom-slider">Zoom:</label>
