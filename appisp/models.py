@@ -115,7 +115,8 @@ class Equipamento(models.Model):
         max_length=50,
         choices=[('Switch', 'Switch'), ('Roteador', 'Roteador'), ('Servidor', 'Servidor'),
                  ('VMWARE', 'VMWARE'), ('AccesPoint', 'AccesPoint'), ('Passivo', 'Passivo'),
-                 ('Olt', 'Olt'), ('Transporte', 'Transporte')],
+                 ('Olt', 'Olt'), ('Transporte', 'Transporte'), ('Impressora', 'Impressora'),
+                 ('Computador', 'Computador'), ('Telefone', 'Telefone')],
         default='Switch'
     )  # Tipo do equipamento (ex: Switch, Roteador)
     status = models.CharField(

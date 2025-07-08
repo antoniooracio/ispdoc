@@ -315,99 +315,80 @@ function excluirConexao(portaId) {
             handleRightClick(event, d);
         });
 
+
+        /**
+     * Desenha um ícone e aplica efeitos visuais com base no status do equipamento.
+     * @param {object} grupo - A seleção D3 do grupo (<g>) onde o ícone será desenhado.
+     * @param {object} d - O objeto de dados do nó, contendo 'tipo' e 'status'.
+     */
+        function desenharIconeComStatus(grupo, d) {
+            // --- 1. Configurações Gerais (ajuste aqui se precisar) ---
+            const tamanhoIcone = 40;     // Tamanho padrão para os ícones em pixels
+            const tamanhoBorda = 4;      // Espessura da borda para status inativo
+            const opacidadeInativo = 0.4; // Nível de transparência do overlay (0 a 1)
+
+            // --- 2. Mapeamento de Tipo para o arquivo do Ícone ---
+            // ⚠️ IMPORTANTE: Crie seus ícones e atualize os caminhos aqui!
+            const mapaDeIcones = {
+                'Transporte': '/img/icones/transporte.png',
+                'Switch': '/img/icones/switch.png',
+                'Passivo': '/img/icones/passivo.png',
+                'Servidor': '/img/icones/servidor.png',
+                'VMWARE': '/img/icones/vmware.png',
+                'Olt': '/img/icones/olt.png',
+                'default': '/img/icones/default.png' // Ícone padrão caso o tipo não seja encontrado
+            };
+
+            // Pega a URL do ícone do mapa, ou usa o padrão se não encontrar
+            const urlIcone = mapaDeIcones[d.tipo] || mapaDeIcones['default'];
+
+            // Calcula a posição para centralizar o ícone no ponto (0,0) do grupo
+            const posX = -tamanhoIcone / 2;
+            const posY = -tamanhoIcone / 2;
+
+            // --- 3. Lógica de Desenho ---
+
+            // Apenas executa se o status NÃO for 'Ativo'
+            if (d.status !== 'Ativo') {
+                // Borda Vermelha (adicionada primeiro, fica no fundo)
+                grupo.append('rect')
+                    .attr('x', posX - tamanhoBorda)
+                    .attr('y', posY - tamanhoBorda)
+                    .attr('width', tamanhoIcone + (tamanhoBorda * 2))
+                    .attr('height', tamanhoIcone + (tamanhoBorda * 2))
+                    .attr('fill', 'red')
+                    .attr('rx', 8) // Canto arredondado para a borda (opcional)
+                    .attr('ry', 8);
+            }
+
+            // Ícone Principal (desenhado para TODOS os status)
+            grupo.append('image')
+                .attr('xlink:href', urlIcone)
+                .attr('width', tamanhoIcone)
+                .attr('height', tamanhoIcone)
+                .attr('x', posX)
+                .attr('y', posY);
+
+            // Apenas executa se o status NÃO for 'Ativo'
+            if (d.status !== 'Ativo') {
+                // Sobreposição Transparente (adicionada por último, fica na frente)
+                grupo.append('rect')
+                    .attr('x', posX)
+                    .attr('y', posY)
+                    .attr('width', tamanhoIcone)
+                    .attr('height', tamanhoIcone)
+                    .attr('fill', 'red')
+                    .attr('opacity', opacidadeInativo);
+            }
+        }
+
     // Renderiza os ícones no mapa
-    equipamentosG.each(function(d) {
+    equipamentosG.each(function (d) {
         const grupo = d3.select(this);
 
-        if (d.tipo === "Transporte") {
-            // Ícone de nuvem
-            grupo.append('path')
-                .attr('d', 'M20 10 A10 10 0 0 1 40 10 A10 10 0 0 1 60 10 A10 10 0 0 1 50 30 A10 10 0 0 1 30 30 A10 10 0 0 1 20 10 Z')
-                .attr('fill', d.status === 'Ativo' ? '#4B0082' : 'red') // Roxo escuro
-                .attr('transform', 'scale(0.9) translate(-30, -20)');
-
-        } else if (d.tipo === "Switch") {
-            // Quadrado
-            grupo.append('rect')
-                .attr('width', 30)
-                .attr('height', 30)
-                .attr('x', -15)
-                .attr('y', -15)
-                .attr('fill', d.status === 'Ativo' ? 'blue' : 'red');
-
-        } else if (d.tipo === "Passivo") {
-            // Triângulo
-            grupo.append('path')
-                .attr('d', 'M -15,15 L 15,15 L 0,-15 Z') // Desenha um triângulo
-                .attr('fill', 'orange');
-
-        } else if (d.tipo === "Servidor") {
-            // Retângulo horizontal com linhas (simulando um rack de servidor)
-            grupo.append('rect')
-                .attr('width', 40)
-                .attr('height', 20)
-                .attr('x', -20)
-                .attr('y', -10)
-                .attr('fill', d.status === 'Ativo' ? 'gray' : 'red');
-
-            // Linhas no servidor para simular baias
-            grupo.append('line').attr('x1', -15).attr('y1', -5).attr('x2', 15).attr('y2', -5).attr('stroke', 'black');
-            grupo.append('line').attr('x1', -15).attr('y1', 5).attr('x2', 15).attr('y2', 5).attr('stroke', 'black');
-
-        } else if (d.tipo === "VMWARE") {
-            // Retângulo horizontal com linhas (simulando um rack de servidor)
-            grupo.append('rect')
-                .attr('width', 40)
-                .attr('height', 20)
-                .attr('x', -20)
-                .attr('y', -10)
-                .attr('fill', d.status === 'Ativo' ? 'gray' : 'red');
-
-            // Linhas no servidor para simular baias
-            grupo.append('line').attr('x1', -15).attr('y1', -5).attr('x2', 15).attr('y2', -5).attr('stroke', 'black');
-            grupo.append('line').attr('x1', -15).attr('y1', 5).attr('x2', 15).attr('y2', 5).attr('stroke', 'black');
-
-        } else if (d.tipo === "Olt") {
-            // Retângulo pequeno representando uma OLT
-            grupo.append('rect')
-                .attr('width', 35)
-                .attr('height', 15)
-                .attr('x', -17.5)
-                .attr('y', -7.5)
-                .attr('fill', d.status === 'Ativo' ? 'purple' : 'red');
-
-            // Círculos representando portas ópticas
-            for (let i = -10; i <= 10; i += 10) {
-                grupo.append('circle')
-                    .attr('cx', i)
-                    .attr('cy', 5)
-                    .attr('r', 2)
-                    .attr('fill', 'yellow');
-            }
-
-            } else {
-                // Círculo para os demais tipos
-                grupo.append('circle')
-                    .attr('r', 20)
-                    .attr('fill', d.status === 'Ativo' ? 'green' : 'red'); // Roxo escuro para ativo
-
-                // Adiciona o "X" dentro do círculo
-                grupo.append('line')
-                    .attr('x1', -10)
-                    .attr('y1', -10)
-                    .attr('x2', 10)
-                    .attr('y2', 10)
-                    .attr('stroke', 'white')
-                    .attr('stroke-width', 3);
-
-                grupo.append('line')
-                    .attr('x1', -10)
-                    .attr('y1', 10)
-                    .attr('x2', 10)
-                    .attr('y2', -10)
-                    .attr('stroke', 'white')
-                    .attr('stroke-width', 3);
-            }
+        // A MÁGICA ACONTECE AQUI:
+        // Chamamos a função genérica que faz o trabalho.
+        desenharIconeComStatus(grupo, d);
     });
 
     equipamentosG.append('text')
@@ -417,7 +398,7 @@ function excluirConexao(portaId) {
         .style('font-size', '12px')
         .style('pointer-events', 'none');
 
-// Função para exibir o modal e carregar as portas livres do equipamento escolhido
+    // Função para exibir o modal e carregar as portas livres do equipamento escolhido
 function handleRightClick(event, equipamentoId) {
     event.preventDefault(); // Prevenir o menu de contexto padrão
 
