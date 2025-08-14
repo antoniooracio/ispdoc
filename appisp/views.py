@@ -655,10 +655,15 @@ def mapa(request):
 
 # Rota para retornar os dados em formato JSON
 def mapa_dados(request) -> JsonResponse:
-    # Busca os equipamentos e prefetch das portas e conexões
-    equipamentos = Equipamento.objects.prefetch_related(
+    # 1. PEGAR O ID DA EMPRESA DA REQUISIÇÃO
+    empresa_id = request.GET.get('empresa_id')
+    if not empresa_id:
+        return JsonResponse({'error': 'ID da empresa não fornecido'}, status=400)
+
+    # 2. FILTRAR OS EQUIPAMENTOS PELA EMPRESA
+    equipamentos = Equipamento.objects.filter(empresa_id=empresa_id).prefetch_related(
         Prefetch('portas', queryset=Porta.objects.select_related('conexao__equipamento'))
-    ).all()
+    )
 
     # Inicializa as listas de nodes e links
     nodes = []
@@ -671,7 +676,6 @@ def mapa_dados(request) -> JsonResponse:
             'id': equipamento.id,
             'nome': equipamento.nome,
             'ip': equipamento.ip,
-            # Remova 'usuario' e 'senha' se forem sensíveis
             'usuario': equipamento.usuario,
             'senha': equipamento.senha,
             'porta': equipamento.porta,
@@ -689,14 +693,24 @@ def mapa_dados(request) -> JsonResponse:
                 links.append({
                     'source': porta.equipamento.id,
                     'target': porta.conexao.equipamento.id,
-                    "nome_origem": porta.nome,
-                    "nome_destino": porta.conexao.nome if porta.conexao else None,
+                    'porta_origem': porta.nome,
+                    'porta_origem_id': porta.id,
+                    'porta_destino': porta.conexao.nome,
+                    'porta_destino_id': porta.conexao.id,
                     'tipo': porta.tipo,
                     'speed': porta.speed,
+                    'Obs': porta.observacao,
                 })
 
+    # 3. ADICIONAR A INFORMAÇÃO SE O USUÁRIO É ADMIN
+    data = {
+        'nodes': nodes,
+        'links': links,
+        'user_is_admin': request.user.is_staff
+    }
+
     # Retorna o JSON com os dados
-    return JsonResponse({'nodes': nodes, 'links': links})
+    return JsonResponse(data)
 
 
 class EquipamentoAutocomplete(autocomplete.Select2QuerySetView):

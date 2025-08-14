@@ -1,30 +1,10 @@
-/* Conteúdo de mapa.css extraído do bloco <style> */
-.btn {
-    display: inline-block;
-    padding: 8px 16px;
-    font-size: 16px;
-    font-weight: bold;
-    text-align: center;
-    text-decoration: none;
-    border-radius: 4px;
-    cursor: pointer;
-}
-
-.btn-primary {
-    background-color: #007bff;
-    color: #fff;
-    border: 1px solid #007bff;
-}
-
-.btn-primary:hover {
-    background-color: #0056b3;
-    border-color: #004085;
-}
-
-#mapa {
+/* === ESTILOS GERAIS E DO MAPA === */
+#map-container {
     width: 100%;
-    height: 1024px;
-    border: 1px solid #ccc;
+    height: calc(100vh - 150px);
+    border: 1px solid #ddd;
+    overflow: hidden;
+    position: relative;
     background-color: #ecf0f0;
 }
 
@@ -47,280 +27,147 @@
     fill: #0056b3;
 }
 
-element.style {
-    width: 90%;
-}
 
-.btn {
-    display: inline-block;
-    padding: 8px 16px;
-    font-size: 16px;
-    font-weight: bold;
-    text-align: center;
-    text-decoration: none;
-    border-radius: 4px;
-    cursor: pointer;
-}
+/* === ESTILOS UNIFICADOS PARA MODAIS === */
 
-.btn-primary {
-    background-color: #007bff;
-    color: #fff;
-    border: 1px solid #007bff;
-}
-
-.btn-primary:hover {
-    background-color: #0056b3;
-    border-color: #004085;
-}
-
-#mapa {
-    width: 100%;
-    height: 75vh;
-    border: 1px solid #ccc;
-    background-color: #ecf0f0;
-}
-
-.equipamento {
-    cursor: pointer;
-    transition: transform 0.2s;
-}
-
-.equipamento:hover {
-    cursor: pointer;
-    stroke: #007bff;
-    stroke-width: 4px;
-}
-
-.porta {
-    fill: #007bff;
-    cursor: pointer;
-}
-
-.porta:hover {
-    fill: #0056b3;
-}
-
-/* Estilo para o modal */
-.modal {
-    display: none;
-    position: fixed;
-    top: 40%;
-    left: 50%;
-    transform: translate(-30%, -40%);
-    background-color: #454d55;
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    width: 550px;
-    height: auto;
-    z-index: 1000;
-}
-
-.modal.show {
-    display: block;
-}
-
-.modal-header {
-    font-size: 18px;
-    font-weight: bold;
-    margin-bottom: 10px;
-}
-
-.modal-body {
-    margin-bottom: 20px;
-}
-
-.modal-footer {
-    text-align: right;
-}
-
-.close-modal {
-    background-color: #ff4d4d;
-    color: white;
-    border: none;
-    padding: 5px 10px;
-    border-radius: 5px;
-    cursor: pointer;
-}
-
-.close-modal:hover {
-    background-color: #cc0000;
-}
-
-/* Estilo de fundo para o efeito de overlay */
+/* Fundo escurecido (overlay) */
 .modal-overlay {
+    display: none; /* Escondido por padrão */
     position: fixed;
-    background-color: #454d55;
     top: 0;
     left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(0, 0, 0, 0.5);
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
     z-index: 999;
-    display: none; /* Inicialmente oculto */
 }
 
-/* Estilo do modal de conexão */
-.modal-conexao {
-    display: none;
+/* Base para todos os modais */
+.modal-custom {
+    display: none; /* Escondido por padrão */
     position: fixed;
     top: 50%;
     left: 50%;
-    transform: translate(-50%, -50%); /* Centraliza o modal */
+    transform: translate(-50%, -50%);
     background-color: #454d55;
-    padding: 20px;
+    color: #eee;
+    padding: 0;
     border-radius: 8px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.5);
     z-index: 1000;
+    width: 90%;
+    max-width: 650px; /* Largura padrão */
 }
 
-/* Tornar o modal visível */
-.modal-conexao.show {
+/* Classe para mostrar o modal (adicionada via JS) */
+.modal-custom.show {
     display: block;
 }
 
-/* Cabeçalho do modal */
-.modal-conexao-header {
+/* Estrutura interna do modal */
+.modal-header, .modal-conexao-header {
+    padding: 15px 20px;
+    border-bottom: 1px solid #555;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     font-size: 18px;
     font-weight: bold;
-    margin-bottom: 10px;
 }
 
-select {
-    padding: 5px;
-    font-size: 14px;
-    background-color: #343a40;
-    color: #fff;
+.modal-body, .modal-conexao-body {
+    padding: 20px;
+    margin-bottom: 0;
+    max-height: 60vh;
+    overflow-y: auto;
 }
 
-/* Corpo do modal */
-.modal-conexao-body {
-    margin-bottom: 20px;
-}
-
-.modal-body .form-group {
-    margin-bottom: 15px;
-}
-
-/* Rodapé do modal */
-.modal-conexao-footer {
+.modal-footer {
+    padding: 15px 20px;
+    border-top: 1px solid #555;
     text-align: right;
 }
 
-/* Estilo do botão de fechar */
-.close-conexao-modal {
-    background-color: #ff4d4d;
-    color: white;
+/* Botão de fechar */
+.close-btn {
+    background: none;
     border: none;
-    padding: 5px 10px;
-    border-radius: 5px;
+    font-size: 1.5rem;
+    color: #ccc;
     cursor: pointer;
+    padding: 0 5px;
+}
+.close-btn:hover {
+    color: #fff;
 }
 
-.close-conexao-modal:hover {
-    background-color: #cc0000;
+/* Formulários dentro do modal */
+.form-group {
+    margin-bottom: 1rem;
 }
 
-/* Estilo de fundo para o efeito de overlay */
-.modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(0, 0, 0, 0.5);
-    z-index: 999;
-    display: none; /* Inicialmente oculto */
+.form-group label {
+    display: block;
+    margin-bottom: .5rem;
 }
 
-.dark-mode .modal-content {
-    padding: 30px;
+.form-control, select {
+    display: block;
+    width: 100%;
+    padding: .375rem .75rem;
+    font-size: 1rem;
+    line-height: 1.5;
+    color: #eee;
+    background-color: #343a40;
+    border: 1px solid #6c757d;
+    border-radius: .25rem;
 }
 
-.dark-mode select {
-    background-color: #fff;
-    color: #000;
-    border-color: #fff;
-}
 
-@media (max-width: 2800px) {
-    .modal {
-        width: 650px;
-    }
-
-    .modal-conexao {
-        width: 650px;
-    }
-}
-
-@media (max-width: 1400px) {
-    .modal {
-        width: 650px;
-    }
-
-    .modal-conexao {
-        width: 650px;
-    }
-}
-
-@media (max-width: 1200px) {
-    .modal {
-        width: 550px;
-    }
-
-    .modal-conexao {
-        width: 550px;
-    }
-}
-
-@media (max-width: 900px) {
-    .modal {
-        width: calc(60% - 30px);
-    }
-
-    .modal-conexao {
-        width: calc(60% - 30px);
-    }
-}
-
-@media (max-width: 600px) {
-    .modal {
-        width: 80%;
-    }
-
-    .modal-conexao {
-        width: 80%;
-    }
-}
-
+/* === ESTILOS PARA O CKEDITOR (PRESERVADOS) === */
 .ck.ck-toolbar {
-    background-color: #212529 !important; /* Fundo escuro para combinar com Bootstrap Dark */
-    color: #ffffff !important; /* Texto branco */
+    background-color: #212529 !important;
+    color: #ffffff !important;
     border-bottom: 1px solid #6c757d !important;
 }
 
 .ck.ck-toolbar .ck-button {
-    color: #ffffff !important; /* Ícones e textos brancos */
+    color: #ffffff !important;
 }
 
 .ck.ck-toolbar .ck-button:hover {
-    background-color: #495057 !important; /* Fundo ao passar o mouse */
+    background-color: #495057 !important;
 }
 
 .ck-editor__editable {
-    min-height: 150px !important; /* Altura mínima */
-    max-height: 300px !important; /* Evita que cresça demais */
-    overflow-y: auto !important; /* Adiciona rolagem se necessário */
-    background-color: #fff !important; /* Fundo escuro para combinar com Bootstrap Dark */
-    color: #000 !important; /* Texto branco */
-    border: 1px solid #6c757d !important; /* Borda para separar do fundo */
-}
-
-.ck.ck-toolbar {
-    background-color: #212529 !important; /* Fundo da barra de ferramentas */
-    border-bottom: 1px solid #6c757d !important;
+    min-height: 150px !important;
+    max-height: 300px !important;
+    overflow-y: auto !important;
+    background-color: #fff !important;
+    color: #000 !important;
+    border: 1px solid #6c757d !important;
 }
 
 .ck.ck-editor__editable:focus {
-    outline: none !important; /* Remove o contorno azul ao clicar */
+    outline: none !important;
+}
+
+
+/* === MEDIA QUERIES PARA RESPONSIVIDADE (PRESERVADOS E AJUSTADOS) === */
+@media (max-width: 1200px) {
+    .modal-custom {
+        max-width: 550px;
+    }
+}
+
+@media (max-width: 900px) {
+    .modal-custom {
+        width: calc(80% - 30px);
+    }
+}
+
+@media (max-width: 600px) {
+    .modal-custom {
+        width: 90%;
+    }
 }

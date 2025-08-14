@@ -1,6 +1,7 @@
 from django.db import models
 from ipaddress import ip_network, ip_address
 from django.core.exceptions import ValidationError
+from django.core.validators import RegexValidator
 from django.contrib.auth.models import User  # Importe o modelo de usuário
 import ipaddress
 import uuid
@@ -101,6 +102,19 @@ class Equipamento(models.Model):
 
     nome = models.CharField(max_length=255)
     ip = models.GenericIPAddressField()
+    mac = models.CharField(
+        max_length=17,
+        unique=True,
+        null=True,
+        blank=True,
+        validators=[
+            RegexValidator(
+                regex=r'^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$',
+                message='O endereço MAC deve estar no formato XX:XX:XX:XX:XX:XX, de 0 a 9 e A a F'
+            )
+        ],
+        verbose_name="Endereço MAC"
+    )
     usuario = models.CharField(max_length=255)
     senha = models.CharField(max_length=255)
     porta = models.PositiveIntegerField()
