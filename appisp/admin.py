@@ -1009,7 +1009,7 @@ class EnderecoIPAdmin(admin.ModelAdmin):
 @admin.register(Porta)
 class PortaAdmin(admin.ModelAdmin):
     form = PortaForm
-    list_display = ('nome', 'equipamento', 'conexao', 'speed', 'tipo')
+    list_display = ('nome', 'equipamento', 'lado', 'conexao', 'mapeamento_traseiro', 'speed', 'tipo')
     search_fields = ('nome', 'equipamento__nome', 'conexao__nome')
     list_filter = (EmpresaUsuarioFilter, EquipamentoEmpresaFilter, 'speed', 'tipo', )
 
@@ -1165,7 +1165,7 @@ class FabricanteAdmin(admin.ModelAdmin):
 class InterfaceInline(admin.TabularInline):
     model = Interface
     extra = 0  # número de formulários vazios para adicionar
-    fields = ('nome', 'tipo', 'poe', 'mgmt_only', 'descricao')
+    fields = ('nome', 'tipo', 'lado', 'poe', 'mgmt_only', 'descricao')
     show_change_link = True
 
 # Model para modelo de equipamentos
@@ -1297,7 +1297,8 @@ class EquipamentoAdmin(admin.ModelAdmin):
                     nome=interface.nome,
                     tipo=tipo_porta,
                     speed=speed_porta,
-                    observacao=interface.descricao or ""
+                    observacao=interface.descricao or "",
+                    lado=interface.lado
                 )
                 criadas += 1
 

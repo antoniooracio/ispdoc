@@ -1,12 +1,11 @@
-from django.db import models
+from django.db import models 
 from ipaddress import ip_network, ip_address
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ValidationError 
 from django.core.validators import RegexValidator
-from django.contrib.auth.models import User  # Importe o modelo de usuário
+from django.utils.html import format_html
+from django.contrib.auth.models import User 
 import ipaddress
 import uuid
-
-from django.utils.html import format_html
 
 
 # Modelo de Empresa
@@ -128,9 +127,9 @@ class Equipamento(models.Model):
     tipo = models.CharField(
         max_length=50,
         choices=[('Switch', 'Switch'), ('Roteador', 'Roteador'), ('Servidor', 'Servidor'),
-                 ('VMWARE', 'VMWARE'), ('AccesPoint', 'AccesPoint'), ('Passivo', 'Passivo'),
-                 ('Olt', 'Olt'), ('Transporte', 'Transporte'), ('Impressora', 'Impressora'),
-                 ('Computador', 'Computador'), ('Telefone', 'Telefone')],
+                 ('VMWARE', 'VMWARE'), ('AccesPoint', 'AccesPoint'), ('Passivo', 'Passivo'), ('Olt', 'Olt'),
+                 ('Transporte', 'Transporte'), ('Impressora', 'Impressora'), ('Computador', 'Computador'),
+                 ('Telefone', 'Telefone'), ('Patch Panel', 'Patch Panel')],
         default='Switch'
     )  # Tipo do equipamento (ex: Switch, Roteador)
     status = models.CharField(
@@ -149,11 +148,14 @@ class Equipamento(models.Model):
 
 # Modelo para importação do NetBox, depois vou usar em porta
 class Interface(models.Model):
+    LADO_CHOICES = [('Frente', 'Frente'), ('Trás', 'Trás')]
+
     modelo = models.ForeignKey('Modelo', on_delete=models.CASCADE, related_name='interfaces')
     nome = models.CharField(max_length=100)
     tipo = models.CharField(max_length=100)
     poe = models.BooleanField(default=False)
     mgmt_only = models.BooleanField(default=False)
+    lado = models.CharField(max_length=10, choices=LADO_CHOICES, default='Frente', verbose_name="Lado")
     descricao = models.CharField(max_length=255, blank=True, null=True)
 
     class Meta:
@@ -181,6 +183,8 @@ class Porta(models.Model):
         ('Transporte', 'Transporte'),
     ]
 
+    LADO_CHOICES = [('Frente', 'Frente'), ('Trás', 'Trás')]
+
     empresa = models.ForeignKey(
         'Empresa', on_delete=models.CASCADE, related_name='portas', null=True, blank=True
     )
@@ -197,6 +201,16 @@ class Porta(models.Model):
     )
     speed = models.CharField(max_length=10, choices=SPEED_CHOICES, default='1G')
     tipo = models.CharField(max_length=10, choices=TIPO_CHOICES, default='Fibra')
+    lado = models.CharField(max_length=10, choices=LADO_CHOICES, default='Frente', verbose_name="Lado")
+    mapeamento_traseiro = models.OneToOneField(
+        'self',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='mapeamento_frontal',
+        verbose_name="Mapeamento Traseiro",
+        help_text="Conecta esta porta frontal a uma porta traseira no mesmo patch panel."
+    )
     observacao = models.TextField(
         help_text="Para Formata o texto, use < /br> quebra de linha, < strong><strong>Negrito</strong>< /strong>, sem espaços"
     )
@@ -208,47 +222,45 @@ class Porta(models.Model):
     def save(self, *args, **kwargs):
         # Armazena o estado anterior da conexão para comparação
         if self.pk:
-            porta_atual = Porta.objects.filter(pk=self.pk).first()
-            conexao_anterior = porta_atual.conexao if porta_atual else None
+            old_instance = Porta.objects.get(pk=self.pk)
+            conexao_anterior = old_instance.conexao
         else:
             conexao_anterior = None
 
         super().save(*args, **kwargs)
 
-        # Armazena a observação da porta atual
-        observacao_atual = self.observacao
-
-        # Se a porta está conectada a outra porta (B)
-        if self.conexao:
-            # Verifica se a observação de A é diferente da de B
-            if self.conexao.observacao != observacao_atual:
-                # Atualiza a observação da porta conectada (B) com a observação da porta A
-                self.conexao.observacao = observacao_atual
-                self.conexao.save(update_fields=['observacao'])  # Atualiza somente a observação da porta conectada
-
-        # Se a porta está conectada a outra porta
-        if self.conexao:
-            if self.conexao.conexao != self:
-                self.conexao.conexao = self
-                self.conexao.save(update_fields=['conexao'])  # Evita chamar save() completamente e recursivamente
-
-            # Atualiza o tipo e speed da porta conectada, se ela existir
-            if self.conexao:  # Verifica se existe uma conexão válida
-                if self.speed != self.conexao.speed or self.tipo != self.conexao.tipo:
-                    self.conexao.speed = self.speed
-                    self.conexao.tipo = self.tipo
-                    self.conexao.save(update_fields=['speed', 'tipo'])
-
-        # Se a conexão foi removida, limpa a conexão inversa
-        if conexao_anterior and conexao_anterior != self.conexao:
-            if conexao_anterior:  # Verifica se a conexão anterior existe antes de tentar acessar
-                conexao_anterior.conexao = None
-                conexao_anterior.save(update_fields=['conexao'])
-
-        # Se a conexão foi removida, limpa a conexão inversa
+        # --- Sincronização de Conexão Externa ---
+        # Se a conexão foi removida, limpa a conexão da porta antiga
         if conexao_anterior and conexao_anterior != self.conexao:
             conexao_anterior.conexao = None
             conexao_anterior.save(update_fields=['conexao'])
+
+        # Se uma nova conexão foi estabelecida, sincroniza as propriedades
+        if self.conexao:
+            # Garante a conexão reversa
+            if self.conexao.conexao != self:
+                self.conexao.conexao = self
+                self.conexao.save(update_fields=['conexao'])
+
+            # Sincroniza outras propriedades
+            if (self.conexao.observacao != self.observacao or
+                    self.conexao.speed != self.speed or
+                    self.conexao.tipo != self.tipo):
+                self.conexao.observacao = self.observacao
+                self.conexao.speed = self.speed
+                self.conexao.tipo = self.tipo
+                self.conexao.save(update_fields=['observacao', 'speed', 'tipo'])
+
+        # --- Sincronização de Mapeamento Interno (Patch Panel) ---
+        if self.mapeamento_traseiro:
+            # Sincroniza as propriedades da porta traseira com a frontal
+            if (self.mapeamento_traseiro.observacao != self.observacao or
+                    self.mapeamento_traseiro.speed != self.speed or
+                    self.mapeamento_traseiro.tipo != self.tipo):
+                self.mapeamento_traseiro.observacao = self.observacao
+                self.mapeamento_traseiro.speed = self.speed
+                self.mapeamento_traseiro.tipo = self.tipo
+                self.mapeamento_traseiro.save(update_fields=['observacao', 'speed', 'tipo'])
 
     def __str__(self):
         return f"{self.nome} ({self.equipamento.nome} - {self.speed} - {self.tipo})"
@@ -458,7 +470,6 @@ class BlocoIP(models.Model):
             return 0
         return (usados / total) * 100
 
-    from django.utils.html import format_html
 
     def utilizacao_barra(self):
         """Retorna uma barra de progresso com degradê dinâmico baseado no percentual."""

@@ -253,21 +253,56 @@ class PortaForm(forms.ModelForm):
             # Filtra os equipamentos de conexão com base na empresa selecionada
             self.fields['equipamento_conexao'].queryset = Equipamento.objects.filter(empresa=empresa_selecionada)
 
-        # Corrigindo o filtro do campo 'conexao' para garantir que ele está pegando as portas do 'equipamento_conexao'
-        #equipamento_conexao = self.initial.get('equipamento') or self.data.get('equipamento')
-        #if equipamento_conexao:
-        #    self.fields['conexao'].queryset = Porta.objects.filter(equipamento=equipamento_conexao)
+        # --- Lógica para Patch Panel ---
+        is_patch_panel_front_port = False
+        if self.instance and self.instance.pk and self.instance.equipamento.tipo == 'Patch Panel' and self.instance.lado == 'Frente':
+            is_patch_panel_front_port = True
+
+        if is_patch_panel_front_port:
+            self.fields['mapeamento_traseiro'].label = "Mapear para porta traseira"
+            # Busca portas traseiras no mesmo equipamento que não estão mapeadas
+            unmapped_rear_ports = Porta.objects.filter(
+                equipamento=self.instance.equipamento,
+                lado='Trás',
+                mapeamento_frontal__isnull=True
+            )
+
+            # Se a porta atual já tem um mapeamento, inclui ele na lista de opções
+            if self.instance.mapeamento_traseiro:
+                current_mapping = Porta.objects.filter(pk=self.instance.mapeamento_traseiro.pk)
+                self.fields['mapeamento_traseiro'].queryset = (unmapped_rear_ports | current_mapping).order_by('nome')
+            else:
+                self.fields['mapeamento_traseiro'].queryset = unmapped_rear_ports.order_by('nome')
+        else:
+            # Se não for uma porta frontal de patch panel, esconde o campo de mapeamento
+            if 'mapeamento_traseiro' in self.fields:
+                del self.fields['mapeamento_traseiro']
 
     def clean(self):
         cleaned_data = super().clean()
         conexao = cleaned_data.get('conexao')
         equipamento = cleaned_data.get('equipamento')
+        mapeamento = cleaned_data.get('mapeamento_traseiro')
+
+        if self.instance.pk and self.instance.equipamento.tipo == 'Patch Panel':
+            if self.instance.lado == 'Frente' and conexao:
+                raise forms.ValidationError(
+                    "Portas frontais de Patch Panel não podem ter conexões externas diretas. Conecte a porta traseira mapeada."
+                )
 
         if conexao and equipamento and conexao.equipamento == equipamento:
             raise forms.ValidationError("A porta de conexão não pode pertencer ao mesmo equipamento.")
 
         if conexao and conexao.pk is None:
             raise forms.ValidationError("A porta de conexão precisa estar salva antes de ser usada.")
+
+        if mapeamento:
+            if mapeamento.equipamento != self.instance.equipamento:
+                raise forms.ValidationError("O mapeamento traseiro deve ser para uma porta no mesmo equipamento.")
+
+        if mapeamento and conexao:
+            raise forms.ValidationError(
+                "Uma porta não pode ter um mapeamento traseiro e uma conexão externa ao mesmo tempo.")
 
         return cleaned_data
 
