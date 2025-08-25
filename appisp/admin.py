@@ -109,7 +109,7 @@ class EquipamentoEmpresaFilter(SimpleListFilter):
 
     def queryset(self, request, queryset):
         if self.value():
-            return queryset.filter(id=self.value())  # Usar id diretamente
+            return queryset.filter(equipamento_id=self.value())  # CORREÇÃO: Filtra pelo ID do equipamento
         return queryset
 
 
@@ -1010,7 +1010,7 @@ class EnderecoIPAdmin(admin.ModelAdmin):
 class PortaAdmin(admin.ModelAdmin):
     form = PortaForm
     list_display = ('nome', 'equipamento', 'lado', 'conexao', 'mapeamento_traseiro', 'speed', 'tipo')
-    search_fields = ('nome', 'equipamento__nome', 'conexao__nome')
+    search_fields = ('nome', 'equipamento__nome', 'conexao__nome', 'conexao__equipamento__nome')
     list_filter = (EmpresaUsuarioFilter, EquipamentoEmpresaFilter, 'speed', 'tipo', )
 
     change_list_template = "admin/porta_changelist.html"  # Personalizamos o template
@@ -1084,18 +1084,23 @@ class PortaAdmin(admin.ModelAdmin):
         return qs.filter(empresa__usuarios=request.user)
 
     def get_fields(self, request, obj=None):
-        """Reordena os campos para exibir 'empresa' primeiro."""
-        fields = super().get_fields(request, obj)
+        """Reordena os campos e controla a visibilidade de 'mapeamento_traseiro'."""
+        fields = list(super().get_fields(request, obj))
 
+        # Na tela de adição, ou se não for uma porta frontal de patch panel, remove o campo de mapeamento.
+        if obj is None or not (obj.equipamento.tipo == 'Patch Panel' and obj.lado == 'Frente'):
+            if 'mapeamento_traseiro' in fields:
+                fields.remove('mapeamento_traseiro')
+
+        # Move 'equipamento_conexao' para antes de 'conexao'
         if 'equipamento_conexao' in fields and 'conexao' in fields:
-            # Move 'equipamento_conexao' para antes de 'conexao'
             fields.remove('equipamento_conexao')
             conexao_index = fields.index('conexao')
-            fields.insert(conexao_index, 'equipamento_conexao')  # Inserir 'equipamento_conexao' antes de 'conexao'
+            fields.insert(conexao_index, 'equipamento_conexao')
 
         if 'empresa' in fields:
             fields.remove('empresa')
-            fields.insert(0, 'empresa')  # Coloca 'empresa' como o primeiro campo
+            fields.insert(0, 'empresa')
         return fields
 
     def get_form(self, request, obj=None, **kwargs):
@@ -1109,17 +1114,6 @@ class PortaAdmin(admin.ModelAdmin):
                 super().__init__(*args, **kwargs)
 
         return CustomPortaForm
-
-    def get_search_results(self, request, queryset, search_term):
-        """Sobrescreve para incluir o campo de 'equipamento_conexao' na busca."""
-        if search_term:
-            queryset = queryset.filter(
-                Q(nome__icontains=search_term) |
-                Q(equipamento__nome__icontains=search_term) |
-                Q(conexao__nome__icontains=search_term) |
-                Q(equipamento_conexao__nome__icontains=search_term)  # Filtro pelo novo campo
-            )
-        return queryset, False
 
 @admin.register(Empresa)
 class EmpresaAdmin(admin.ModelAdmin):

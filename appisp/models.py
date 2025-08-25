@@ -96,7 +96,8 @@ class Equipamento(models.Model):
         ('TELNET', 'Telnet'),
         ('WEB', 'Web'),
         ('Winbox', 'Winbox'),
-        ('Remoto', 'Remoto')
+        ('Remoto', 'Remoto'),
+        ('Anydesk', 'Anydesk')
     ]
 
     nome = models.CharField(max_length=255)
@@ -129,7 +130,7 @@ class Equipamento(models.Model):
         choices=[('Switch', 'Switch'), ('Roteador', 'Roteador'), ('Servidor', 'Servidor'),
                  ('VMWARE', 'VMWARE'), ('AccesPoint', 'AccesPoint'), ('Passivo', 'Passivo'), ('Olt', 'Olt'),
                  ('Transporte', 'Transporte'), ('Impressora', 'Impressora'), ('Computador', 'Computador'),
-                 ('Telefone', 'Telefone'), ('Patch Panel', 'Patch Panel')],
+                 ('Telefone', 'Telefone'), ('Patch Panel', 'Patch Panel'), ('Maquina Virtual', 'Maquina Virtual')],
         default='Switch'
     )  # Tipo do equipamento (ex: Switch, Roteador)
     status = models.CharField(
