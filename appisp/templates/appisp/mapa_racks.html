@@ -64,6 +64,7 @@
             text-align: center;
             font-size: 14px;
             background: white;
+            color: midnightblue;
         }
 
         .rack-slot.ocupado {
@@ -132,6 +133,7 @@
     <div class="container">
 
         <!-- Formulário de filtro -->
+        {% csrf_token %}
         <form id="filtro-form">
 
 
@@ -164,9 +166,93 @@
         <div id="rack-container" class="rack-container"></div>
     </div>
 
+    <!-- Modal para Adicionar Equipamento -->
+    <div id="addEquipamentoModal" class="modal" tabindex="-1" role="dialog" style="display: none; background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Adicionar Equipamento ao Rack</h5>
+                    <button type="button" class="close" id="closeAddEquipModal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form id="addEquipamentoForm">
+                        <input type="hidden" id="rackIdInput" name="rack_id">
+                        <div class="form-group">
+                            <label for="equipamentoSelect">Equipamento:</label>
+                            <select id="equipamentoSelect" name="equipamento_id" class="form-control" required></select>
+                        </div>
+                        <div class="form-group">
+                            <label for="usInicioInput">U Inicial:</label>
+                            <input type="number" id="usInicioInput" name="us_inicio" class="form-control" required min="1">
+                        </div>
+                        <div class="form-group">
+                            <label for="usFimInput">U Final:</label>
+                            <input type="number" id="usFimInput" name="us_fim" class="form-control" required min="1">
+                        </div>
+                        <div class="form-group">
+                            <label for="ladoSelect">Lado:</label>
+                            <select id="ladoSelect" name="lado" class="form-control" required>
+                                <option value="Frente">Frente</option>
+                                <option value="Trás">Trás</option>
+                            </select>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" id="cancelAddEquipBtn">Cancelar</button>
+                    <button type="button" class="btn btn-primary" id="saveEquipamentoBtn">Salvar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para Editar/Remover Equipamento -->
+    <div id="editEquipamentoModal" class="modal" tabindex="-1" role="dialog" style="display: none; background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Editar Alocação: <span id="editEquipamentoNome"></span></h5>
+                    <button type="button" class="close" id="closeEditEquipModal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form id="editEquipamentoForm">
+                        <input type="hidden" id="editRackEquipIdInput" name="rack_equipamento_id">
+                        <div class="form-group">
+                            <label for="editUsInicioInput">U Inicial:</label>
+                            <input type="number" id="editUsInicioInput" name="us_inicio" class="form-control" required min="1">
+                        </div>
+                        <div class="form-group">
+                            <label for="editUsFimInput">U Final:</label>
+                            <input type="number" id="editUsFimInput" name="us_fim" class="form-control" required min="1">
+                        </div>
+                        <div class="form-group">
+                            <label for="editLadoSelect">Lado:</label>
+                            <select id="editLadoSelect" name="lado" class="form-control" required>
+                                <option value="Frente">Frente</option>
+                                <option value="Trás">Trás</option>
+                            </select>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-danger" id="removerEquipamentoBtn">Remover do Rack</button>
+                    <button type="button" class="btn btn-secondary" id="cancelEditEquipBtn">Cancelar</button>
+                    <button type="button" class="btn btn-primary" id="saveEditEquipamentoBtn">Salvar Alterações</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         document.addEventListener("DOMContentLoaded", function () {
-           // carregarRacks();  // Carregar racks na primeira vez
+            // Dispara o carregamento inicial se uma empresa já estiver selecionada
+            if (document.getElementById("empresa").value) {
+                carregarRacks();
+            }
 
             document.getElementById("filtro-form").addEventListener("submit", function (event) {
                 event.preventDefault();
@@ -177,6 +263,30 @@
             document.getElementById("empresa").addEventListener("change", function () {
                 atualizarPops();  // Atualizar POPs conforme a empresa selecionada
             });
+
+            // Event listeners para o novo modal de adicionar equipamento
+            document.getElementById('saveEquipamentoBtn').addEventListener('click', salvarEquipamentoNoRack);
+            document.getElementById('closeAddEquipModal').addEventListener('click', () => {
+                document.getElementById('addEquipamentoModal').style.display = 'none';
+            });
+            document.getElementById('cancelAddEquipBtn').addEventListener('click', () => {
+                document.getElementById('addEquipamentoModal').style.display = 'none';
+            });
+
+            // Event listeners para o novo modal de EDIÇÃO de equipamento
+            document.getElementById('saveEditEquipamentoBtn').addEventListener('click', salvarAlteracoesEquipamento);
+            document.getElementById('removerEquipamentoBtn').addEventListener('click', removerEquipamentoDoRack);
+            document.getElementById('closeEditEquipModal').addEventListener('click', () => {
+                document.getElementById('editEquipamentoModal').style.display = 'none';
+            });
+            document.getElementById('cancelEditEquipBtn').addEventListener('click', () => {
+                document.getElementById('editEquipamentoModal').style.display = 'none';
+            });
+
+            // Event listener para o clique em equipamentos VMWare (delegação de evento)
+            document.getElementById('rack-container').addEventListener('click', function(event) {
+                handleRackContainerClick(event);
+            });
         });
 
         // Função para carregar racks de acordo com os filtros
@@ -184,7 +294,7 @@
             const empresaId = document.getElementById("empresa").value;
             const popId = document.getElementById("pop").value;
 
-                // Se nenhuma empresa for selecionada, limpa a tela e não faz a requisição
+            // Se nenhuma empresa for selecionada, limpa a tela e não faz a requisição
             if (!empresaId) {
                 rackContainer.innerHTML = "<p>Selecione uma empresa para visualizar os racks.</p>";
                 return;
@@ -223,6 +333,14 @@
                 const rackDiv = document.createElement("div");
                 rackDiv.className = "rack";
 
+                // Adiciona o evento de clique com o botão direito (contextmenu)
+                const empresaId = document.getElementById("empresa").value;
+                rackDiv.addEventListener("contextmenu", function (event) {
+                    event.preventDefault(); // Impede o menu de contexto padrão do navegador
+                    abrirModalAdicionarEquipamento(rack.id, empresaId);
+                });
+
+
                 // Calcular a altura proporcional do rack com base no número de U
                 const alturaRack = rack.us * 40;  // 35px por U
                 rackDiv.style.height = `${Math.max(alturaRack, 800)}px`;  // Garante que a altura mínima seja 150px
@@ -238,25 +356,16 @@
 
                 rack.equipamentos.forEach(equip => {
                     for (let i = equip.u_inicio; i <= equip.u_fim; i++) {
-                        let isVmware = equip.tipo === "VMWARE"; // Verifica se é VMWARE
-
-                        if (equip.lado === "Frente") {
-                            let u = usFrente.find(slot => slot.numero === i);
+                        let targetArray = equip.lado === "Frente" ? usFrente : usTras;
+                        let u = targetArray.find(slot => slot.numero === i);
                             if (u) {
                                 u.equipamento = equip.nome;
-                                if (isVmware) {
-                                    u.maquinasVirtuais = equip.maquinas_virtuais; // Associa as máquinas virtuais
-                                }
+                                u.rackEquipamentoId = equip.rack_equipamento_id;
+                                u.usInicio = equip.u_inicio;
+                                u.usFim = equip.u_fim;
+                                u.lado = equip.lado;
+                                u.maquinasVirtuais = equip.tipo === "VMWARE" ? equip.maquinas_virtuais : [];
                             }
-                        } else if (equip.lado === "Trás") {
-                            let u = usTras.find(slot => slot.numero === i);
-                            if (u) {
-                                u.equipamento = equip.nome;
-                                if (isVmware) {
-                                    u.maquinasVirtuais = equip.maquinas_virtuais; // Associa as máquinas virtuais
-                                }
-                            }
-                        }
                     }
                 });
 
@@ -273,7 +382,12 @@
                                     return `
                                         <div class="rack-slot ocupado ${vmwareClass}"
                                              style="height: ${altura}px; line-height: ${altura}px;"
-                                             ${u.maquinasVirtuais.length > 0 ? `onclick="mostrarMaquinasVirtuais('${encodeURIComponent(JSON.stringify(u.maquinasVirtuais))}')"` : ''}>
+                                             data-vms='${JSON.stringify(u.maquinasVirtuais)}'
+                                             data-rack-equip-id="${u.rackEquipamentoId}"
+                                             data-nome="${u.equipamento}"
+                                             data-us-inicio="${u.usInicio}"
+                                             data-us-fim="${u.usFim}"
+                                             data-lado="${u.lado}">
                                             ${u.equipamento}
                                         </div>
                                     `;
@@ -299,7 +413,12 @@
                                     return `
                                         <div class="rack-slot ocupado ${vmwareClass}"
                                              style="height: ${altura}px; line-height: ${altura}px;"
-                                             ${u.maquinasVirtuais.length > 0 ? `onclick="mostrarMaquinasVirtuais('${encodeURIComponent(JSON.stringify(u.maquinasVirtuais))}')"` : ''}>
+                                             data-vms='${JSON.stringify(u.maquinasVirtuais)}'
+                                             data-rack-equip-id="${u.rackEquipamentoId}"
+                                             data-nome="${u.equipamento}"
+                                             data-us-inicio="${u.usInicio}"
+                                             data-us-fim="${u.usFim}"
+                                             data-lado="${u.lado}">
                                             ${u.equipamento}
                                         </div>
                                     `;
@@ -320,12 +439,31 @@
             });
         }
 
+        // Função para lidar com cliques dentro do container de racks (melhoria)
+        function handleRackContainerClick(event) {
+            const target = event.target.closest('.rack-slot.ocupado');
+            if (!target) return; // Sai se não for um slot ocupado
+
+            // Se for um host VMware com VMs, mostra as VMs
+            if (target.classList.contains('vmware') && target.dataset.vms && JSON.parse(target.dataset.vms).length > 0) {
+                 const maquinas = JSON.parse(target.dataset.vms);
+                 mostrarMaquinasVirtuais(maquinas);
+            } else { // Senão, abre o modal de edição
+                const rackEquipId = target.dataset.rackEquipId;
+                if (rackEquipId) { // Garante que é um equipamento clicável
+                    const nome = target.dataset.nome;
+                    const usInicio = target.dataset.usInicio;
+                    const usFim = target.dataset.usFim;
+                    const lado = target.dataset.lado;
+                    abrirModalEditarEquipamento(rackEquipId, nome, usInicio, usFim, lado);
+                }
+            }
+        }
+
         // Função para mostrar as máquinas virtuais associadas ao equipamento
         function mostrarMaquinasVirtuais(maquinas) {
-            const maquinasDecodificadas = JSON.parse(decodeURIComponent(maquinas));  // Decodificar e parsear o JSON
-
-            if (maquinasDecodificadas && maquinasDecodificadas.length > 0) {
-                const maquinasNomes = maquinasDecodificadas.join("\n");  // Exibe as máquinas virtuais como uma lista
+            if (maquinas && maquinas.length > 0) {
+                const maquinasNomes = maquinas.join("\n");
                 alert(`Máquinas Virtuais do Servidor:\n${maquinasNomes}`);
             } else {
                 alert("Nenhuma máquina virtual associada.");
@@ -358,6 +496,144 @@
                     }
                 })
                 .catch(error => console.error("Erro ao carregar POPs:", error));
+        }
+
+        // Função para abrir o modal de adicionar equipamento
+        function abrirModalAdicionarEquipamento(rackId, empresaId) {
+            const modal = document.getElementById('addEquipamentoModal');
+            const rackIdInput = document.getElementById('rackIdInput');
+            const equipamentoSelect = document.getElementById('equipamentoSelect');
+
+            rackIdInput.value = rackId;
+
+            // Buscar equipamentos disponíveis para a empresa
+            fetch(`/api/equipamentos-disponiveis/?empresa_id=${empresaId}`)
+                .then(response => response.json())
+                .then(equipamentos => {
+                    equipamentoSelect.innerHTML = '<option value="">Selecione um equipamento</option>';
+                    if (equipamentos.length > 0) {
+                        equipamentos.forEach(equip => {
+                            const option = document.createElement('option');
+                            option.value = equip.id;
+                            option.textContent = equip.nome;
+                            equipamentoSelect.appendChild(option);
+                        });
+                    } else {
+                        equipamentoSelect.innerHTML = '<option value="">Nenhum equipamento disponível</option>';
+                    }
+                    modal.style.display = 'block';
+                })
+                .catch(error => {
+                    console.error('Erro ao buscar equipamentos:', error);
+                    alert('Não foi possível carregar os equipamentos disponíveis.');
+                });
+        }
+
+        // Função para salvar o equipamento no rack
+        function salvarEquipamentoNoRack() {
+            const rackId = document.getElementById('rackIdInput').value;
+            const equipamentoId = document.getElementById('equipamentoSelect').value;
+            const usInicio = document.getElementById('usInicioInput').value;
+            const usFim = document.getElementById('usFimInput').value;
+            const lado = document.getElementById('ladoSelect').value;
+
+            if (!equipamentoId || !usInicio || !usFim) {
+                alert('Por favor, preencha todos os campos.');
+                return;
+            }
+
+            if (parseInt(usFim) < parseInt(usInicio)) {
+                alert('O U final deve ser maior ou igual ao U inicial.');
+                return;
+            }
+
+            fetch('/api/adicionar-equipamento-rack/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                },
+                body: JSON.stringify({ rack_id: rackId, equipamento_id: equipamentoId, us_inicio: usInicio, us_fim: usFim, lado: lado })
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    alert(result.message);
+                    document.getElementById('addEquipamentoModal').style.display = 'none';
+                    carregarRacks(); // Recarrega a visualização dos racks
+                } else {
+                    // Transforma o dicionário de erros em uma string legível
+                    const errorMsg = Object.entries(result.error).map(([field, errors]) => `${field}: ${errors.join(', ')}`).join('\n');
+                    alert(`Erro ao adicionar equipamento:\n${errorMsg}`);
+                }
+            })
+            .catch(error => alert('Ocorreu um erro de comunicação com o servidor.'));
+        }
+
+        // Função para abrir o modal de EDIÇÃO de equipamento
+        function abrirModalEditarEquipamento(rackEquipId, nome, usInicio, usFim, lado) {
+            const modal = document.getElementById('editEquipamentoModal');
+            document.getElementById('editEquipamentoNome').textContent = nome;
+            document.getElementById('editRackEquipIdInput').value = rackEquipId;
+            document.getElementById('editUsInicioInput').value = usInicio;
+            document.getElementById('editUsFimInput').value = usFim;
+            document.getElementById('editLadoSelect').value = lado;
+            modal.style.display = 'block';
+        }
+
+        // Função para salvar as alterações da alocação
+        function salvarAlteracoesEquipamento() {
+            const rackEquipId = document.getElementById('editRackEquipIdInput').value;
+            const usInicio = document.getElementById('editUsInicioInput').value;
+            const usFim = document.getElementById('editUsFimInput').value;
+            const lado = document.getElementById('editLadoSelect').value;
+
+            if (parseInt(usFim) < parseInt(usInicio)) {
+                alert('O U final deve ser maior ou igual ao U inicial.');
+                return;
+            }
+
+            fetch(`/api/editar-equipamento-rack/${rackEquipId}/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                },
+                body: JSON.stringify({ us_inicio: usInicio, us_fim: usFim, lado: lado })
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    alert(result.message);
+                    document.getElementById('editEquipamentoModal').style.display = 'none';
+                    carregarRacks();
+                } else {
+                    const errorMsg = Object.entries(result.error).map(([field, errors]) => `${field}: ${errors.join(', ')}`).join('\n');
+                    alert(`Erro ao atualizar alocação:\n${errorMsg}`);
+                }
+            })
+            .catch(error => alert('Ocorreu um erro de comunicação com o servidor.'));
+        }
+
+        // Função para remover o equipamento do rack
+        function removerEquipamentoDoRack() {
+            if (!confirm('Tem certeza que deseja remover este equipamento do rack?')) {
+                return;
+            }
+
+            const rackEquipId = document.getElementById('editRackEquipIdInput').value;
+
+            fetch(`/api/remover-equipamento-rack/${rackEquipId}/`, {
+                method: 'POST',
+                headers: { 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value }
+            })
+            .then(response => response.json())
+            .then(result => {
+                alert(result.message);
+                document.getElementById('editEquipamentoModal').style.display = 'none';
+                if (result.success) carregarRacks();
+            })
+            .catch(error => alert('Ocorreu um erro de comunicação com o servidor.'));
         }
 
     </script>

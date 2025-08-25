@@ -21,12 +21,13 @@ from django.views.generic.base import TemplateView
 from django.urls import path, include
 from django.shortcuts import render
 from appisp.views import (EquipamentoAutocomplete, PortaAutocomplete, mapa, atualizar_posicao, mapa_racks,
-                          mapa_racks_dados, get_equipamentos_por_empresa, adicionar_endereco_ip, listar_ips_por_bloco,
-                          get_sub_blocos, visualizar_vlans_por_equipamento, mapa_vlans_json, relatorio_vlans,
-                          alertas_vlans, lista_empresas_json, lista_vlans_json, estrutura_bloco, estrutura_bloco, get_portas,
-                          verificar_status_equipamentos, listar_equipamentosApi, atualizar_status_equipamento, get_map_data,
-                          get_equipamento, api_portas, conectar_portas, desconectar_portas, testar_conexao, listar_blocos_ip_api,
-                          obter_dados_empresa, mapa_dados
+                          mapa_racks_dados, get_equipamentos_por_empresa, adicionar_endereco_ip,
+                          listar_ips_por_bloco, get_sub_blocos, visualizar_vlans_por_equipamento, mapa_vlans_json,
+                          relatorio_vlans, alertas_vlans, lista_empresas_json, lista_vlans_json, estrutura_bloco,
+                          get_portas, verificar_status_equipamentos, listar_equipamentosApi,
+                          atualizar_status_equipamento, get_map_data, get_equipamento, api_portas, conectar_portas,
+                          desconectar_portas, testar_conexao, listar_blocos_ip_api, obter_dados_empresa, mapa_dados, get_equipamentos_para_rack,
+                          adicionar_equipamento_rack, editar_equipamento_rack, remover_equipamento_rack
                           )
 from appisp.models import Porta
 from django.contrib.auth.decorators import login_required
@@ -82,4 +83,9 @@ urlpatterns = [
     path('api/atualizar_status/<int:equipamento_id>/', atualizar_status_equipamento, name="atualizar_status_equipamento"),
     path('api/get_map_data/', get_map_data, name="atualizar_mapa"),
     path('api/equipamento/<int:equipamento_id>/', get_equipamento, name='get_equipamento'),
+    path('api/equipamentos-disponiveis/', get_equipamentos_para_rack, name='get_equipamentos_para_rack'),
+    path('api/adicionar-equipamento-rack/', adicionar_equipamento_rack, name='adicionar_equipamento_rack'),
+    # Rotas para editar e remover equipamento do rack
+    path('api/editar-equipamento-rack/<int:rack_equip_id>/', editar_equipamento_rack, name='editar_equipamento_rack'),
+    path('api/remover-equipamento-rack/<int:rack_equip_id>/', remover_equipamento_rack, name='remover_equipamento_rack'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

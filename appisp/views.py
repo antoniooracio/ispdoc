@@ -1,5 +1,6 @@
 from ipaddress import ip_network
 
+import json
 import requests
 from django import forms
 from django.contrib.admin.views.decorators import staff_member_required
@@ -19,12 +20,12 @@ import subprocess
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404
+from django.views.decorators.http import require_POST
 from rest_framework.decorators import api_view, authentication_classes
 from rest_framework.views import APIView
 
 from .authentication import EmpresaTokenAuthentication
-from .models import Porta, Empresa, Pop, Rack, Equipamento, BlocoIP, EnderecoIP, VlanPorta, Vlan, EmpresaToken, \
-                    IntegracaoZabbix
+from .models import Porta, Empresa, Pop, Rack, Equipamento, BlocoIP, EnderecoIP, VlanPorta, Vlan, EmpresaToken, IntegracaoZabbix, RackEquipamento
 from .forms import PortaForm, EnderecoIPForm
 from rest_framework.permissions import BasePermission
 import json
@@ -535,6 +536,7 @@ def mapa_racks_dados(request) -> JsonResponse:
     for rack in racks:
         equipamentos = [
             {
+                'rack_equipamento_id': equipamento.id,
                 'id': equipamento.equipamento.id,
                 'nome': equipamento.equipamento.nome,
                 'u_inicio': equipamento.us_inicio,
@@ -966,6 +968,91 @@ def visualizar_ips_do_bloco(request, bloco_id):
     # 👇 Passa esse context para o render
     return render(request, 'admin/visualizar_ips_modal.html', context)
 
+
+@login_required
+@require_POST
+def editar_equipamento_rack(request, rack_equip_id):
+    """
+    Atualiza a alocação de um equipamento em um rack.
+    """
+    try:
+        data = json.loads(request.body)
+        rack_equipamento = get_object_or_404(RackEquipamento, id=rack_equip_id)
+
+        rack_equipamento.us_inicio = int(data.get('us_inicio'))
+        rack_equipamento.us_fim = int(data.get('us_fim'))
+        rack_equipamento.lado = data.get('lado')
+
+        # Reutiliza a validação do modelo para garantir consistência
+        rack_equipamento.full_clean()
+        rack_equipamento.save(update_fields=['us_inicio', 'us_fim', 'lado'])
+
+        return JsonResponse({'success': True, 'message': 'Alocação atualizada com sucesso!'})
+    except ValidationError as e:
+        # Converte o erro de validação para um formato JSON amigável
+        return JsonResponse({'success': False, 'error': e.message_dict}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': f'Ocorreu um erro inesperado: {str(e)}'}, status=500)
+
+
+@login_required
+@require_POST
+def remover_equipamento_rack(request, rack_equip_id):
+    """
+    Remove a alocação de um equipamento de um rack.
+    """
+    try:
+        rack_equipamento = get_object_or_404(RackEquipamento, id=rack_equip_id)
+        rack_equipamento.delete()
+        return JsonResponse({'success': True, 'message': 'Equipamento removido do rack com sucesso!'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': f'Ocorreu um erro inesperado: {str(e)}'}, status=500)
+
+
+@login_required
+def get_equipamentos_para_rack(request):
+    """
+    Retorna uma lista de equipamentos de uma empresa que ainda não foram alocados em nenhum rack.
+    """
+    empresa_id = request.GET.get('empresa_id')
+    if not empresa_id:
+        return JsonResponse({'error': 'empresa_id é obrigatório'}, status=400)
+
+    # IDs dos equipamentos que já estão em algum rack
+    equipamentos_alocados_ids = RackEquipamento.objects.values_list('equipamento_id', flat=True)
+
+    # Filtra equipamentos da empresa, excluindo os que já foram alocados
+    equipamentos_disponiveis = Equipamento.objects.filter(
+        empresa_id=empresa_id
+    ).exclude(
+        id__in=equipamentos_alocados_ids
+    ).values('id', 'nome')
+
+    return JsonResponse(list(equipamentos_disponiveis), safe=False)
+
+
+@login_required
+@require_POST
+def adicionar_equipamento_rack(request):
+    """
+    Cria uma nova alocação de equipamento em um rack.
+    """
+    try:
+        data = json.loads(request.body)
+        rack_equipamento = RackEquipamento(
+            rack_id=data.get('rack_id'),
+            equipamento_id=data.get('equipamento_id'),
+            us_inicio=int(data.get('us_inicio')),
+            us_fim=int(data.get('us_fim')),
+            lado=data.get('lado')
+        )
+        rack_equipamento.full_clean()  # Dispara as validações do modelo
+        rack_equipamento.save()
+        return JsonResponse({'success': True, 'message': 'Equipamento adicionado com sucesso!'})
+    except ValidationError as e:
+        return JsonResponse({'success': False, 'error': e.message_dict}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': f'Ocorreu um erro inesperado: {str(e)}'}, status=500)
 
 def listar_ips_por_bloco(request, bloco_id):
     """Retorna os IPs cadastrados dentro de um bloco específico."""
