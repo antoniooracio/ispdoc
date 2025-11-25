@@ -2096,6 +2096,9 @@ class PatrimonioAdmin(admin.ModelAdmin):
     search_fields = ('codigo_patrimonio', 'descricao', 'equipamento__nome', 'empresa__nome', 'nota_fiscal', 'fornecedor')
     autocomplete_fields = ('equipamento', 'localizacao', 'responsavel')
 
+    class Media:
+        js = ('js/patrimonio_dependente.js',)
+
     fieldsets = (
         ('Informações Principais', {
             'fields': ('empresa', 'codigo_patrimonio', 'descricao', 'tipo_ativo', 'status', 'equipamento')
@@ -2129,8 +2132,14 @@ class PatrimonioAdmin(admin.ModelAdmin):
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         if not request.user.is_superuser:
-            if db_field.name in ["empresa", "equipamento", "localizacao"]:
-                kwargs["queryset"] = db_field.related_model.objects.filter(empresa__usuarios=request.user)
+            # Correção do FieldError: Trata cada campo de forma específica
+            if db_field.name == "empresa":
+                kwargs["queryset"] = Empresa.objects.filter(usuarios=request.user)
+            elif db_field.name == "equipamento":
+                kwargs["queryset"] = Equipamento.objects.filter(empresa__usuarios=request.user)
+            elif db_field.name == "localizacao":
+                kwargs["queryset"] = Pop.objects.filter(empresa__usuarios=request.user)
+
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
 admin_site.register(Patrimonio, PatrimonioAdmin)

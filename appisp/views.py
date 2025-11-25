@@ -285,6 +285,14 @@ def get_equipamentos(request):
     return JsonResponse([], safe=False)
 
 
+def get_pops_por_empresa(request):
+    empresa_id = request.GET.get("empresa_id")
+    if empresa_id:
+        pops = Pop.objects.filter(empresa_id=empresa_id).values("id", "nome")
+        return JsonResponse(list(pops), safe=False)
+    return JsonResponse([], safe=False)
+
+
 def get_ips(request):
     blocos = BlocoIP.objects.all()
     data = []

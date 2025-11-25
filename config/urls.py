@@ -22,7 +22,7 @@ from django.urls import path, include
 from django.shortcuts import render
 from appisp.views import (EquipamentoAutocomplete, PortaAutocomplete, mapa, atualizar_posicao, mapa_racks,
                           mapa_racks_dados, get_equipamentos_por_empresa, adicionar_endereco_ip,
-                          listar_ips_por_bloco, get_sub_blocos, visualizar_vlans_por_equipamento, mapa_vlans_json,
+                          listar_ips_por_bloco, get_sub_blocos, visualizar_vlans_por_equipamento, mapa_vlans_json, get_pops_por_empresa,
                           relatorio_vlans, alertas_vlans, lista_empresas_json, lista_vlans_json, estrutura_bloco,
                           get_portas, verificar_status_equipamentos, listar_equipamentosApi,
                           atualizar_status_equipamento, get_map_data, get_equipamento, api_portas, conectar_portas,
@@ -55,6 +55,7 @@ urlpatterns = [
     path('mapa-rack/', mapa_racks, name='mapa_rack'),
     path('mapa-rack/dados/', mapa_racks_dados, name='mapa_rack_dados'),
     path('get-equipamentos/', get_equipamentos_por_empresa, name='get-equipamentos'),
+    path('get-pops/', get_pops_por_empresa, name='get-pops'),
     path("get-portas/", get_portas, name="get-portas"),
     path('api/portas', api_portas, name='api_portas'),
     path('api/conectar-portas/', conectar_portas, name='conectar-portas'),
