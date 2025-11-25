@@ -86,10 +86,40 @@ JAZZMIN_SETTINGS = {
     "hide_models": [],
 
     # List of apps (and/or models) to base side menu ordering off of (does not need to contain all apps/models)
-    "order_with_respect_to": ["books", "appisp", "auth", "admin:index", "admin",],
+    # "order_with_respect_to": ["books", "appisp", "auth", "admin:index", "admin",],
+    "apps": [
+        {"app": "appisp", "label": "Gestão de Ativos", "icon": "fas fa-archive", "models": [
+            {"model": "appisp.Empresa", "label": "Empresas"},
+            {"model": "appisp.Pop", "label": "POPs"},
+            {"model": "appisp.Rack", "label": "Racks"},
+            {"model": "appisp.RackEquipamento", "label": "Alocação em Racks"},
+        ]},
+        {"app": "appisp", "label": "Inventário", "icon": "fas fa-boxes", "models": [
+            {"model": "appisp.Fabricante", "label": "Fabricantes"},
+            {"model": "appisp.Modelo", "label": "Modelos de Equipamentos"},
+            {"model": "appisp.Equipamento", "label": "Equipamentos"},
+            {"model": "appisp.Porta", "label": "Portas"},
+            {"model": "appisp.Patrimonio", "label": "Patrimônios"},
+        ]},
+        {"app": "appisp", "label": "Rede", "icon": "fas fa-network-wired", "models": [
+            {"model": "appisp.BlocoIP", "label": "Blocos de IP"},
+            {"model": "appisp.EnderecoIP", "label": "Endereços IP"},
+            {"model": "appisp.Vlan", "label": "VLANs"},
+            {"model": "appisp.VlanPorta", "label": "VLANs por Porta"},
+        ]},
+        {"app": "appisp", "label": "Virtualização", "icon": "fas fa-server", "models": [
+            {"model": "appisp.MaquinaVirtual", "label": "Máquinas Virtuais"},
+        ]},
+        {"app": "appisp", "label": "Configurações", "icon": "fas fa-cogs", "models": [
+            {"model": "appisp.EmpresaToken", "label": "Tokens de API"},
+            {"model": "appisp.IntegracaoZabbix", "label": "Integração Zabbix"},
+            {"model": "appisp.IntegracaoNetbox", "label": "Integração NetBox"},
+        ]},
+    ],
 
     # Custom links to append to app groups, keyed on app name
     #"custom_links": {
+
     #    "appisp": [
     #        {
     #            "name": "Dashboard",
@@ -121,6 +151,7 @@ JAZZMIN_SETTINGS = {
         "appisp.Vlan": "fa-classic fa-solid fa-sitemap fa-fw",
         "appisp.Rack": "fa-classic fa-solid fa-table-list fa-fw",
         "appisp.RackEquipamento": "fa-classic fa-regular fa-rectangle-list fa-fw",
+        "appisp.Patrimonio": "fa-solid fa-barcode fa-fw",
     },
     # Icons that are used when one is not manually specified
     #"default_icon_parents": "fas fa-chevron-circle-right",

@@ -19,9 +19,10 @@ from django.http import HttpResponseRedirect, JsonResponse
 from .forms import PortaForm, RackForm, RackEquipamentoForm, EnderecoIPForm, MaquinaVirtualForm, EquipamentoForm, \
     EnderecoIPForm, CadastrarEnderecosForm, ModeloForm
 from .views import mapa, mapa_racks
-from django.contrib.admin import SimpleListFilter
+from django.contrib.admin import SimpleListFilter, FieldListFilter
 from .models import Empresa, Pop, Fabricante, Modelo, Equipamento, Porta, BlocoIP, EnderecoIP, Rack, RackEquipamento, \
-    MaquinaVirtual, Disco, Rede, Vlan, VlanPorta, EmpresaToken, IntegracaoZabbix, IntegracaoNetbox, Interface
+    MaquinaVirtual, Disco, Rede, Vlan, VlanPorta, EmpresaToken, IntegracaoZabbix, IntegracaoNetbox, Interface, \
+    Patrimonio
 import ipaddress
 from django.utils.html import format_html
 from django.contrib import admin
@@ -211,7 +212,6 @@ class PopUsuarioFilter(SimpleListFilter):
         return queryset
 
 
-@admin.register(Vlan)
 class VlanAdmin(admin.ModelAdmin):
     list_display = ('numero', 'nome', 'empresa', 'equipamento', 'tipo', 'status')
     list_filter = ('empresa', 'tipo', 'status')
@@ -245,7 +245,6 @@ class VlanAdmin(admin.ModelAdmin):
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
 
-@admin.register(VlanPorta)
 class VlanPortaAdmin(admin.ModelAdmin):
     list_display = ('vlan', 'porta', 'get_equipamento', 'tipo', 'vlan_nativa')
     list_filter = (EmpresaUsuarioFilter, EquipamentoEmpresaFilter, EquipamentoPortaFilter, VlanPortaFilter)
@@ -295,7 +294,6 @@ class VlanPortaAdmin(admin.ModelAdmin):
         return obj.porta.equipamento.nome  # Obtém o nome do equipamento associado à porta
 
 
-@admin.register(MaquinaVirtual)
 class MaquinaVirtualAdmin(admin.ModelAdmin):
     form = MaquinaVirtualForm
     list_display = ('nome', 'empresa', 'equipamento', 'sistema_operacional', 'tipo_acesso')
@@ -371,7 +369,6 @@ class RackEquipamentoInline(admin.TabularInline):
     def has_change_permission(self, request, obj=None):
         return False
 
-@admin.register(Rack)
 class RackAdmin(admin.ModelAdmin):
     form = RackForm  # Usa o formulário com validação
     list_display = ('nome', 'pop', 'empresa', 'us', 'modelo')
@@ -406,7 +403,6 @@ class RackAdmin(admin.ModelAdmin):
         return (EmpresaUsuarioFilter, PopEmpresaFilter,)  # Usuário comum vê apenas as empresas permitidas
 
 
-@admin.register(RackEquipamento)
 class RackEquipamentoAdmin(admin.ModelAdmin):
     form = RackEquipamentoForm  # Usa o formulário com validação
     list_display = ('rack', 'equipamento', 'us_inicio', 'us_fim', 'lado')
@@ -630,7 +626,6 @@ def carregar_portas(request):
     return JsonResponse(list(portas), safe=False)
 
 
-@admin.register(BlocoIP)
 class BlocoIPAdmin(admin.ModelAdmin):
     list_display = (
         'bloco_indented', 'empresa', 'bloco_cidr', 'sub_blocos_count',
@@ -925,7 +920,6 @@ class BlocoIPAdmin(admin.ModelAdmin):
     visualizar_ips_link.short_description = "IPs"
 
 
-@admin.register(EnderecoIP)
 class EnderecoIPAdmin(admin.ModelAdmin):
     list_display = ("ip", "equipamento", "porta", "bloco", "is_gateway", "criado_em")
     list_filter = (EnderecoIPEmpresaFilter, EquipamentoEmpresaFilter, BlocoEmpresaFilter, "is_gateway")
@@ -1006,7 +1000,6 @@ class EnderecoIPAdmin(admin.ModelAdmin):
         return render(request, "admin/adicionar_endereco_ip.html", context)
 
 
-@admin.register(Porta)
 class PortaAdmin(admin.ModelAdmin):
     form = PortaForm
     list_display = ('nome', 'equipamento', 'lado', 'conexao', 'mapeamento_traseiro', 'speed', 'tipo')
@@ -1115,14 +1108,12 @@ class PortaAdmin(admin.ModelAdmin):
 
         return CustomPortaForm
 
-@admin.register(Empresa)
 class EmpresaAdmin(admin.ModelAdmin):
     list_display = ('nome', 'cidade', 'telefone', 'representante', 'status')
     list_filter = ('status', 'representante', 'estado')
     search_fields = ('nome', 'cidade', 'estado', 'cpf_cnpj', 'representante')
 
 
-@admin.register(Pop)
 class PopAdmin(admin.ModelAdmin):
     list_display = ('nome', 'cidade', 'empresa')
     search_fields = ('nome', 'cidade', 'empresa__nome')
@@ -1149,7 +1140,6 @@ class PopAdmin(admin.ModelAdmin):
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
 
-@admin.register(Fabricante)
 class FabricanteAdmin(admin.ModelAdmin):
     list_display = ('nome',)
     search_fields = ('nome',)
@@ -1163,7 +1153,6 @@ class InterfaceInline(admin.TabularInline):
     show_change_link = True
 
 # Model para modelo de equipamentos
-@admin.register(Modelo)
 class ModeloAdmin(admin.ModelAdmin):
     list_display = ('modelo', 'fabricante')
     search_fields = ('modelo',)
@@ -1188,7 +1177,6 @@ class PortaInline(admin.TabularInline):
         return False
 
 
-@admin.register(Equipamento)
 class EquipamentoAdmin(admin.ModelAdmin):
     form = EquipamentoForm
     list_display = ('nome', 'ip', 'status', 'pop', 'empresa', 'fabricante', 'tipo')
@@ -1304,13 +1292,11 @@ class EquipamentoAdmin(admin.ModelAdmin):
         return redirect("admin:appisp_equipamento_change", equipamento_id)
 
 
-@admin.register(EmpresaToken)
 class EmpresaTokenAdmin(admin.ModelAdmin):
     list_display = ("empresa", "token")
     readonly_fields = ("token",)  # Deixa o token apenas para leitura
 
 
-@admin.register(IntegracaoZabbix)
 class IntegracaoZabbixAdmin(admin.ModelAdmin):
     list_display = ('empresa', 'url', 'ativo', 'ultima_sincronizacao', 'testar_conexao_button', 'sincronizar_equipamentos_button', 'sincronizar_portas_link')
     readonly_fields = ('ultima_sincronizacao', 'testar_conexao_button', 'sincronizar_equipamentos_button', 'sincronizar_portas_link')
@@ -2103,6 +2089,51 @@ admin_site.register(VlanPorta, VlanPortaAdmin)
 admin_site.register(EmpresaToken, EmpresaTokenAdmin)
 admin_site.register(IntegracaoZabbix, IntegracaoZabbixAdmin)
 admin_site.register(IntegracaoNetbox, IntegracaoNetboxAdmin)
+
+
+class PatrimonioAdmin(admin.ModelAdmin):
+    list_display = ('codigo_patrimonio', 'descricao', 'empresa', 'equipamento', 'status', 'localizacao', 'valor_aquisicao', 'data_aquisicao')
+    search_fields = ('codigo_patrimonio', 'descricao', 'equipamento__nome', 'empresa__nome', 'nota_fiscal', 'fornecedor')
+    autocomplete_fields = ('equipamento', 'localizacao', 'responsavel')
+
+    fieldsets = (
+        ('Informações Principais', {
+            'fields': ('empresa', 'codigo_patrimonio', 'descricao', 'tipo_ativo', 'status', 'equipamento')
+        }),
+        ('Localização e Responsabilidade', {
+            'fields': ('localizacao', 'responsavel')
+        }),
+        ('Dados de Aquisição', {
+            'fields': ('data_aquisicao', 'valor_aquisicao', 'nota_fiscal', 'fornecedor')
+        }),
+        ('Dados de Baixa', {
+            'classes': ('collapse',),
+            'fields': ('data_baixa', 'motivo_baixa')
+        }),
+        ('Outras Informações', {
+            'fields': ('observacoes',)
+        }),
+    )
+
+    def get_list_filter(self, request):
+        """Aplica os filtros personalizados para exibir apenas dados acessíveis ao usuário."""
+        if request.user.is_superuser:
+            return ('empresa', 'status', 'tipo_ativo', 'localizacao')
+        return (EmpresaUsuarioFilter, 'status', 'tipo_ativo', PopUsuarioFilter)
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if request.user.is_superuser:
+            return qs
+        return qs.filter(empresa__usuarios=request.user)
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if not request.user.is_superuser:
+            if db_field.name in ["empresa", "equipamento", "localizacao"]:
+                kwargs["queryset"] = db_field.related_model.objects.filter(empresa__usuarios=request.user)
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
+admin_site.register(Patrimonio, PatrimonioAdmin)
 
 # Em vez de usar admin.site, agora usamos admin_site
 # Para fazer isso funcionar, você precisará alterar as URLs do seu projeto Django para usar o custom_admin

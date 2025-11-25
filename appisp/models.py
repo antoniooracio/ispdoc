@@ -809,3 +809,61 @@ class IntegracaoNetbox(models.Model):
 
     def __str__(self):
         return f'NetBox - {self.empresa.nome}'
+
+
+# Modelo de Patrimônio
+class Patrimonio(models.Model):
+    STATUS_CHOICES = [
+        ('EM_USO', 'Em Uso'),
+        ('EM_ESTOQUE', 'Em Estoque'),
+        ('EM_MANUTENCAO', 'Em Manutenção'),
+        ('BAIXADO', 'Baixado'),
+    ]
+
+    TIPO_ATIVO_CHOICES = [
+        ('HARDWARE', 'Hardware'),
+        ('SOFTWARE', 'Software'),
+        ('MOBILIARIO', 'Mobiliário'),
+        ('VEICULO', 'Veículo'),
+        ('OUTRO', 'Outro'),
+    ]
+
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name='patrimonios', verbose_name="Empresa")
+    equipamento = models.OneToOneField(
+        Equipamento,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='patrimonio',
+        verbose_name="Equipamento Vinculado",
+        help_text="Vincule este ativo a um equipamento funcional, se aplicável."
+    )
+    codigo_patrimonio = models.CharField(max_length=100, verbose_name="Código do Patrimônio")
+    descricao = models.CharField(max_length=255, verbose_name="Descrição do Ativo")
+    tipo_ativo = models.CharField(max_length=20, choices=TIPO_ATIVO_CHOICES, default='HARDWARE', verbose_name="Tipo do Ativo")
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='EM_ESTOQUE', verbose_name="Status")
+    localizacao = models.ForeignKey(Pop, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Localização (POP)")
+    responsavel = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Responsável")
+
+    # Informações de Aquisição
+    data_aquisicao = models.DateField(verbose_name="Data de Aquisição")
+    valor_aquisicao = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Valor de Aquisição (R$)")
+    nota_fiscal = models.CharField(max_length=100, blank=True, null=True, verbose_name="Nota Fiscal")
+    fornecedor = models.CharField(max_length=255, blank=True, null=True, verbose_name="Fornecedor")
+
+    # Informações de Baixa (Descarte)
+    data_baixa = models.DateField(null=True, blank=True, verbose_name="Data da Baixa")
+    motivo_baixa = models.TextField(blank=True, null=True, verbose_name="Motivo da Baixa")
+
+    observacoes = models.TextField(blank=True, null=True, verbose_name="Observações")
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Patrimônio"
+        verbose_name_plural = "Patrimônios"
+        ordering = ['-data_aquisicao', 'descricao']
+        unique_together = ('empresa', 'codigo_patrimonio')  # Garante que o código é único por empresa
+
+    def __str__(self):
+        return f"{self.codigo_patrimonio} - {self.descricao} ({self.empresa.nome})"
