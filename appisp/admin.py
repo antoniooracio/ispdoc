@@ -2092,8 +2092,8 @@ admin_site.register(IntegracaoNetbox, IntegracaoNetboxAdmin)
 
 
 class PatrimonioAdmin(admin.ModelAdmin):
-    list_display = ('codigo_patrimonio', 'descricao', 'empresa', 'equipamento', 'status', 'localizacao', 'valor_aquisicao', 'data_aquisicao')
-    search_fields = ('codigo_patrimonio', 'descricao', 'equipamento__nome', 'empresa__nome', 'nota_fiscal', 'fornecedor')
+    list_display = ('codigo_patrimonio', 'numero_serie', 'descricao', 'empresa', 'equipamento', 'status', 'localizacao')
+    search_fields = ('codigo_patrimonio', 'numero_serie', 'descricao', 'equipamento__nome', 'empresa__nome', 'nota_fiscal', 'fornecedor')
     autocomplete_fields = ('equipamento', 'localizacao', 'responsavel')
 
     class Media:
@@ -2101,7 +2101,7 @@ class PatrimonioAdmin(admin.ModelAdmin):
 
     fieldsets = (
         ('Informações Principais', {
-            'fields': ('empresa', 'codigo_patrimonio', 'descricao', 'tipo_ativo', 'status', 'equipamento')
+            'fields': ('empresa', 'codigo_patrimonio', 'numero_serie', 'descricao', 'tipo_ativo', 'status', 'equipamento')
         }),
         ('Localização e Responsabilidade', {
             'fields': ('localizacao', 'responsavel')

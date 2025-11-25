@@ -839,6 +839,7 @@ class Patrimonio(models.Model):
         help_text="Vincule este ativo a um equipamento funcional, se aplicável."
     )
     codigo_patrimonio = models.CharField(max_length=100, verbose_name="Código do Patrimônio")
+    numero_serie = models.CharField(max_length=255, blank=True, null=True, verbose_name="Número de Série")
     descricao = models.CharField(max_length=255, verbose_name="Descrição do Ativo")
     tipo_ativo = models.CharField(max_length=20, choices=TIPO_ATIVO_CHOICES, default='HARDWARE', verbose_name="Tipo do Ativo")
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='EM_ESTOQUE', verbose_name="Status")
